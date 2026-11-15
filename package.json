@@ -1,0 +1,15 @@
+{
+  "name": "txtvein",
+  "version": "2.0.0",
+  "private": true,
+  "description": "TxtVein · 纯文本、双极无分录、多域、唯一 ID 的极简账本引擎",
+  "license": "AGPL-3.0",
+  "scripts": {
+    "dev": "python serve.py 8899",
+    "build": "node tools/build.cjs",
+    "test": "node --test tests/*.test.cjs",
+    "gate": "node tools/check.cjs",
+    "serve": "python serve.py 8899",
+    "verify": "node tools/build.cjs && node --test tests/*.test.cjs && node tools/check.cjs"
+  }
+}

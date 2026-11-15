@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#1e1e1e">
+<title>TxtVein · 纯文本双极账本</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="vendor/codemirror/codemirror.min.css">
+<link rel="stylesheet" href="vendor/codemirror/addon/hint/show-hint.min.css">
+<link rel="stylesheet" href="vendor/codemirror/addon/lint/lint.min.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/ledger.css">
+<link rel="stylesheet" href="css/report.css">
+<link rel="stylesheet" href="css/panels.css">
+<link rel="stylesheet" href="css/editor.css">
+</head>
+<body>
+<div id="gate" class="gate" hidden></div>
+<div id="app" class="app" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">TXTVEIN</span>
+    </div>
+    <nav class="top-menu" aria-label="菜单">
+      <button type="button" class="menu-btn" id="btn-security" data-i18n="security">安全</button>
+      <button type="button" class="menu-btn" id="btn-import" data-i18n="import">导入</button>
+      <button type="button" class="menu-btn" id="btn-export" data-i18n="export">导出</button>
+      <button type="button" class="menu-btn" id="btn-mode" title="Ctrl+Shift+P" data-i18n="modeCode">简码</button>
+      <button type="button" class="menu-btn" id="btn-lang" title="Ctrl+Shift+L">中</button>
+      <button type="button" class="menu-btn" id="btn-help" data-i18n="help">帮助</button>
+    </nav>
+    <div class="top-right">
+      <button class="chip" id="btn-candidates" title="未知节点候选" hidden data-i18n="candidates">候选</button>
+      <button class="chip icon" id="btn-lock" title="Ctrl+Shift+K">锁</button>
+    </div>
+  </header>
+  <nav class="page-tabs" id="page-tabs" aria-label="页面">
+    <button class="page-tab" id="btn-query" data-view="query" data-i18n="query">查询</button>
+    <button class="page-tab is-active" id="btn-ledger" data-view="ledger" data-i18n="ledger">流水</button>
+    <button class="page-tab" id="btn-dict" data-view="dict" data-i18n="dict">字典</button>
+    <button class="page-tab" id="btn-fixed" data-view="fixed" data-i18n="fixed">固定</button>
+    <button class="page-tab" id="btn-report" data-view="report" data-i18n="report">统计</button>
+  </nav>
+  <main class="main" id="main">
+    <section class="editor-view" id="editor-view"></section>
+    <section class="query-view" id="query-view" hidden></section>
+    <section class="fixed-view" id="fixed-view" hidden></section>
+    <section class="report-view" id="report-view" hidden></section>
+  </main>
+  <div class="feedback" id="feedback">
+    <span class="feedback-text" id="feedback-text"></span>
+    <button type="button" class="feedback-action" id="feedback-action" hidden></button>
+  </div>
+  <footer class="composer" id="composer">
+    <div class="composer-inner">
+      <div class="bubble-layer" id="bubbles" hidden></div>
+      <div class="prediction" id="prediction" hidden></div>
+      <div class="entry-row">
+        <span class="entry-prompt" id="entry-prompt">&gt;</span>
+        <input id="entry" class="entry" type="text" autocomplete="off" autocorrect="off"
+               autocapitalize="off" spellcheck="false" enterkeyhint="done"
+               placeholder="wx1 > din 35 < 咖啡"> 
+        <button class="entry-go" id="btn-submit" tabindex="-1">ENTER</button>
+      </div>
+      <div class="entry-meta">
+        <span class="state" id="entry-state">STATE_FROM</span>
+        <span class="hint" id="entry-hint"></span>
+        <span class="entry-error" id="entry-error" hidden></span>
+      </div>
+    </div>
+    <button type="button" class="composer-toggle" id="composer-toggle" title="随手记一笔（可拖动）">TV</button>
+  </footer>
+</div>
+<div id="modal" class="modal" hidden>
+  <div class="modal-backdrop" data-close="1"></div>
+  <section class="modal-panel" role="dialog" aria-modal="true">
+    <header class="modal-head">
+      <h2 id="modal-title"></h2>
+      <button class="modal-close" id="modal-close" aria-label="关闭">×</button>
+    </header>
+    <div class="modal-body" id="modal-body"></div>
+    <footer class="modal-foot" id="modal-foot"></footer>
+  </section>
+</div>
+<div id="toast" class="toast" hidden>
+  <span id="toast-text"></span>
+  <button id="toast-action" class="toast-action" hidden></button>
+</div>
+
+<script src="js/core/text.js"></script>
+<script src="js/core/amount.js"></script>
+<script src="js/core/date.js"></script>
+<script src="js/core/dict.js"></script>
+<script src="js/core/ids.js"></script>
+<script src="js/core/parser.js"></script>
+<script src="js/core/source.js"></script>
+<script src="js/core/calc.js"></script>
+<script src="js/core/domain.js"></script>
+<script src="js/core/rules.js"></script>
+<script src="js/core/report.js"></script>
+<script src="js/core/ledger-file.js"></script>
+<script src="js/core/dict-file.js"></script>
+<script src="js/core/crypto.js"></script>
+<script src="js/core/envelope.js"></script>
+<script src="js/core/example.js"></script>
+<script src="js/core/legacy.js"></script>
+<script src="js/browser/store.js"></script>
+<script src="js/browser/files.js"></script>
+<script src="vendor/codemirror/codemirror.min.js"></script>
+<script src="vendor/codemirror/addon/hint/show-hint.min.js"></script>
+<script src="vendor/codemirror/addon/lint/lint.min.js"></script>
+<script src="vendor/codemirror/addon/edit/matchbrackets.min.js"></script>
+<script src="vendor/codemirror/addon/edit/closebrackets.min.js"></script>
+<script src="vendor/codemirror/addon/selection/active-line.min.js"></script>
+<script src="js/ui/dom.js"></script>
+<script src="js/ui/gate.js"></script>
+<script src="js/ui/editor.js"></script>
+<script src="js/ui/panes.js"></script>
+<script src="js/ui/report-view.js"></script>
+<script src="js/ui/input.js"></script>
+<script src="js/ui/panels.js"></script>
+<script src="js/ui/app.js"></script>
+</body>
+</html>
