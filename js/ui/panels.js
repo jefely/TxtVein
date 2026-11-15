@@ -609,8 +609,7 @@
     /* ---------------- 帮助 ---------------- */
 
     function showHelp(app) {
-      const help = el('div', { class: 'help-grid' }, [
-        el('div', {}, [
+      const help = el('div', { class: 'help-grid' }, [        el('div', {}, [
           el('h3', {}, ['一句语法']),
           el('p', {}, [
             el('code', {}, ['转出 > 转入 金额 < 标签']),
@@ -653,8 +652,34 @@
           el('p', {}, ['ledger 只存 ID 与整数分；dict 存名字/简码/极性/域/树。改名只改 dict，历史流水不动。加密：PBKDF2-SHA-256 150,000 → AES-GCM-256。']),
         ]),
       ]);
+      const update = button(app.getState().lang === 'en' ? 'Update' : '更新', 'btn-primary', async () => {
+        update.disabled = true;
+        const old = update.textContent;
+        update.textContent = app.getState().lang === 'en' ? 'Updating…' : '更新中…';
+        try {
+          if (navigator.serviceWorker) {
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (reg) {
+              await reg.update().catch(() => {});
+              if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+            const keys = await caches.keys();
+            await Promise.all(keys.map((key) => caches.delete(key)));
+          }
+          await fetch(location.pathname + '?fresh=' + Date.now(), { cache: 'reload' }).catch(() => {});
+          location.reload();
+        } catch (e) {
+          update.disabled = false;
+          update.textContent = old;
+        }
+      });
+      update.title = app.getState().lang === 'en'
+        ? 'Check and switch to the latest version'
+        : '检查并切换到最新版本';
       open('帮助与协议', help, closeFoot([
         el('span', { class: 'help-text' }, ['TxtVein · 纯文本双极账本']),
+        update,
       ]));
     }
 
