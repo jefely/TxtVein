@@ -2776,6 +2776,12 @@
     gateCtl.show();
   }
 
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+
   boot();
 
   /* 测试/调试用只读入口：不暴露密钥，不提供写入钩子。 */

@@ -39,6 +39,19 @@
 
 > 忘记密码 = 数据永久销毁；没有服务器、没有找回。请自己保管 `ledger.txt + dict.json` 明文导出。
 
+### 手机安装成独立窗口（PWA）
+
+手机直接打开：
+
+**https://jefely.github.io/TxtVein/TxtVein.html**
+
+- Android Chrome：菜单 →「安装应用 / 添加到主屏幕」；
+- iPhone Safari：分享 →「添加到主屏幕」；
+- `manifest.webmanifest` 已设置 `display: standalone`，安装后无地址栏，按软件窗口打开；
+- 首次打开仍需设置主密码；数据只存在当前手机浏览器本地；
+- 如果之前加过旧图标，请先删除旧图标，再重新「添加到主屏幕」，否则旧快捷方式仍会带地址栏。
+
+
 ---
 
 ## 二、它是什么
