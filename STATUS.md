@@ -22,7 +22,7 @@
 
 ```text
 D:\myproject\TxtVein\
-├─ TxtVein.html          794.7 KB 单文件成品（内置 Maple Mono Web 字体）
+├─ TxtVein.html          795.1 KB 单文件成品（内置 Maple Mono Web 字体）
 ├─ index.html            开发入口
 ├─ css/ (5)              base / ledger / report / panels / editor
 ├─ js/core/ (17)         text/amount/date/dict/ids/parser/source/calc/
@@ -45,7 +45,7 @@ D:\myproject\TxtVein\
 
 | 项 | 现状 |
 |---|---|
-| 单文件 | `TxtVein.html` **794.7 KB**；零外链、零 CDN；字体 base64 内嵌 |
+| 单文件 | `TxtVein.html` **795.1 KB**；零外链、零 CDN；字体 base64 内嵌 |
 | 数据事实 | 后台 ID 图；编辑器文本是投影 + 手稿；ID 不出现在 UI |
 | 源码编辑器 | 流水 `ledger.tv` / 字典 `dict.tv` 双 CM5；行号、高亮、单波浪线（只标出错 token）、补全、运算符工具条 |
 | 相对日期 | `-1` 自动补昨天日期，并按日期插入到昨天位置；`0/-2/+1` 同理 |

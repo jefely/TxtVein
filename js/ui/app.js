@@ -902,7 +902,7 @@
       mode: 'txtvein-ledger',
       theme: 'txtvein',
       lineNumbers: true,
-      lineWrapping: false,
+      lineWrapping: window.matchMedia('(max-width: 760px)').matches,
       tabSize: 2,
       indentUnit: 2,
     });

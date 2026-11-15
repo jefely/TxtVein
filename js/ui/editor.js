@@ -183,6 +183,9 @@
       cm.on('keydown', (cmx, ev) => {
         if (ev.key !== ' ') cm._spaceRun = 0;
       });
+      const syncWrap = () => cm.setOption('lineWrapping', window.matchMedia('(max-width: 760px)').matches);
+      syncWrap();
+      window.addEventListener('resize', syncWrap);
       cm.on('change', () => {
         if (suspended) return;
         dirty[file] = true;
