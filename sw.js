@@ -1,11 +1,11 @@
 /* TxtVein PWA shell. Keep the single-file app available offline. */
-const CACHE = 'txtvein-shell-v1';
+const CACHE = 'txtvein-shell-v3';
 const SHELL = [
   './TxtVein.html',
   './manifest.webmanifest',
-  './assets/icons/txtvein-192.png',
-  './assets/icons/txtvein-512.png',
-  './assets/icons/apple-touch-icon.png',
+  './assets/icons/txtvein-ve-192.png',
+  './assets/icons/txtvein-ve-512.png',
+  './assets/icons/apple-touch-icon-ve.png',
 ];
 
 self.addEventListener('install', (event) => {
