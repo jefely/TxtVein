@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-ve.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="TxtVein">
-<meta name="app-version" content="2.2.1">
+<meta name="app-version" content="2.2.2">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -3367,7 +3367,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   'use strict';
 
   const TV = (root.TxtVein = root.TxtVein || {});
-  const APP_VER = 'txtvein-v2.2.1';
+  const APP_VER = 'txtvein-v2.2.2';
 
   function parseVer(v) {
     const m = String(v || '').match(/v?(\d+)\.(\d+)\.(\d+)/);
@@ -13962,6 +13962,10 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   function bodyForHash(dict) {
     const copy = normalizeDict(dict);
     delete copy.link;
+    // 导出时间不是内容：两次导出只要字典内容相同，指纹就必须相同。
+    // 否则流水和字典分开点两次「导出」时，LINK 会因为 meta.updatedAt 秒级变化而误报不匹配。
+    if (copy.meta) delete copy.meta.updatedAt;
+    delete copy.updatedAt;
     return canonicalJson(copy) + '\n';
   }
 

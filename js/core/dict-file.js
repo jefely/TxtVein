@@ -29,6 +29,10 @@
   function bodyForHash(dict) {
     const copy = normalizeDict(dict);
     delete copy.link;
+    // 导出时间不是内容：两次导出只要字典内容相同，指纹就必须相同。
+    // 否则流水和字典分开点两次「导出」时，LINK 会因为 meta.updatedAt 秒级变化而误报不匹配。
+    if (copy.meta) delete copy.meta.updatedAt;
+    delete copy.updatedAt;
     return canonicalJson(copy) + '\n';
   }
 

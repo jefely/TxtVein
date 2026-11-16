@@ -12,7 +12,7 @@
   'use strict';
 
   const TV = (root.TxtVein = root.TxtVein || {});
-  const APP_VER = 'txtvein-v2.2.1';
+  const APP_VER = 'txtvein-v2.2.2';
 
   function parseVer(v) {
     const m = String(v || '').match(/v?(\d+)\.(\d+)\.(\d+)/);

@@ -220,6 +220,8 @@ def main():
     j(sid, "document.querySelector('#modal-close').click()", b)
     pair_import = j(sid, "(async()=>await window.__txtvein.importFiles([{name:'ledger.enc',text:window.__ledText},{name:'dict.enc',text:window.__dictText}],{password:'test1234'}))()", b)
     ok("deep snapshot pair import", pair_import.get("ok") is True, json.dumps(pair_import, ensure_ascii=False)[:200])
+    split_import = j(sid, "(async()=>{const a=await window.__txtvein.exportText('deep');const b=await window.__txtvein.exportText('deep');return await window.__txtvein.importFiles([a.files[0],b.files[1]],{password:'test1234'});})()", b)
+    ok("deep separate exports still match", split_import.get("ok") is True, json.dumps(split_import, ensure_ascii=False)[:200])
 
     deep_import = j(sid, "(async()=>await window.__txtvein.importFiles(window.__deep,{password:'test1234'}))()", b)
     ok("deep files import", deep_import.get("ok") is True, json.dumps(deep_import, ensure_ascii=False)[:200])

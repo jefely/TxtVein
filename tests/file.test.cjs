@@ -73,7 +73,7 @@ test('流水文件：校验能抓出未绑定节点', () => {
   assert.ok(issues.some((x) => x.code === 'EVENT_FROM'));
 });
 
-test('字典文件：往返与 canonical 稳定', () => {
+test('字典文件：往返与 canonical 稳定；导出时间不参与哈希', () => {
   const txt = TV.dictFile.serializeDict(EX.dict);
   const p = TV.dictFile.parseDict(txt);
   assert.equal(p.ok, true);
@@ -83,6 +83,10 @@ test('字典文件：往返与 canonical 稳定', () => {
   const a = TV.dictFile.bodyForHash(EX.dict);
   const b = TV.dictFile.bodyForHash(Object.assign(JSON.parse(JSON.stringify(EX.dict)), { link: 'x' }));
   assert.equal(a, b);
+  const c = TV.dictFile.bodyForHash(Object.assign(JSON.parse(JSON.stringify(EX.dict)), {
+    meta: Object.assign({}, EX.dict.meta, { updatedAt: '2099-01-01T00:00:00.000Z' }),
+  }));
+  assert.equal(a, c);
   const reordered = {};
   Object.keys(EX.dict).sort().reverse().forEach((k) => { reordered[k] = EX.dict[k]; });
   assert.equal(TV.dictFile.bodyForHash(reordered), a);
