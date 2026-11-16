@@ -138,6 +138,7 @@
     }
 
     function handleEditorSpace(cm) {
+      cm._spaceKeyAt = Date.now();
       const now = Date.now();
       cm._spaceRun = (cm._lastSpace && now - cm._lastSpace < 360) ? (cm._spaceRun || 0) + 1 : 1;
       cm._lastSpace = now;
@@ -149,7 +150,7 @@
       cm.replaceSelection(' ');
     }
 
-    /* 手机软键盘没有可靠的 Space keydown；从 CodeMirror 的 inputRead 兜底。 */
+    /* 手机软键盘没有可靠的 Space keydown；从 CodeMirror 的 changes 兜底。 */
     function bindSoftSpaceFallback(cm) {
       let run = 0;
       let last = 0;
@@ -168,15 +169,13 @@
         justOp = true;
       }
 
-      cm.on('inputRead', (cmx, change) => {
+      cm.on('changes', (cmx, changes) => {
         if (syncing) return;
-        if (change.origin !== '+input') {
-          run = 0;
-          justOp = false;
-          return;
-        }
-        const text = (change.text || []).join('\n');
-        if (!/^ +$/.test(text)) {
+        if (cmx._spaceKeyAt && Date.now() - cmx._spaceKeyAt < 40) return;
+        const lastChange = changes[changes.length - 1];
+        if (!lastChange || !lastChange.text) return;
+        const text = lastChange.text.join('\n');
+        if (!/ +$/.test(text)) {
           run = 0;
           justOp = false;
           if (timer) { clearTimeout(timer); timer = 0; }
@@ -188,8 +187,10 @@
           const m = before.match(/ +$/);
           if (m) {
             const start = cur.ch - m[0].length;
+            syncing = true;
             cmx.replaceRange(' ', { line: cur.line, ch: start }, { line: cur.line, ch: cur.ch });
             cmx.setCursor({ line: cur.line, ch: start + 1 });
+            syncing = false;
           }
           return;
         }
