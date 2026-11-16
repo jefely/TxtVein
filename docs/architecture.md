@@ -225,3 +225,20 @@ input.js
 - `calc.compute` 是全量遍历；10 万行需要按区间预筛或增量索引。
 - `buildTexts` 每次保存全量序列化 + 两次 SHA-256；10 万行需要 Worker 或增量哈希。
 - localStorage 5–10MB；换 IndexedDB 是下一步。
+
+---
+
+## 十一、母树 / 子树（设计定稿，尚未接线）
+
+当前 `Dict.nodes` 已有 `parent_id`、`domain`、`system`，但还没有公共母树与 `anchor_id`。
+下一步的规范见 [`mother-tree.md`](mother-tree.md)：
+
+- `system.dict` 只读，随版本发布；
+- `user_p.dict` / `user_c.dict` 按域物理隔离；
+- 私人节点用 `anchor_id` 挂到母树，`parent_id` 仍只表示私人树；
+- 母树提供 `type` / `polarity`，私人节点默认继承；
+- 报表同时支持私人明细与按母树祖先链的公共汇总；
+- 本地模型只生成候选归属，用户确认后才写入，永不自动改账。
+
+在接线前，当前 `dict.tv` 仍是唯一字典来源；迁移会保留全部 `N_* / T_* / H_*` ID。
+

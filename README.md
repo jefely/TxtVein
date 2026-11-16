@@ -465,7 +465,7 @@ python tools/smoke_file.py        # file:// 单文件冒烟（含设密码 / 刷
 | §14 验收 | `e2e.py` 逐条覆盖；见 `STATUS.md` |
 | §15 三大铁律 | README/实现均以此为准 |
 
-逐条验收对照见 [`docs/v1.1-acceptance.md`](docs/v1.1-acceptance.md)；分层与不变量见 [`docs/architecture.md`](docs/architecture.md)。
+逐条验收对照见 [`docs/v1.1-acceptance.md`](docs/v1.1-acceptance.md)；分层与不变量见 [`docs/architecture.md`](docs/architecture.md)；公共母树 / 私人子树规范见 [`docs/mother-tree.md`](docs/mother-tree.md)。
 
 ---
 
