@@ -232,7 +232,7 @@ def main():
     j(sid, "document.querySelector('#gate-pw').value='%s'; document.querySelector('#gate form').requestSubmit();" % PW, b)
     ok("unlock", wait(b, sid, "!document.querySelector('#app').hidden", 12))
     ok("source survives", "wx1 > din 35" in j(sid, "window.__txtvein.source().ledger", b))
-    j(sid, "document.querySelector('#btn-lock').click()", b)
+    j(sid, "window.__txtvein.lock()", b)
     ok("lock", wait(b, sid, "!document.querySelector('#gate').hidden && document.querySelector('#app').hidden", 6))
 
     print("")

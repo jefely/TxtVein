@@ -2990,27 +2990,27 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .sd-empty, .stats-empty { padding: 20px 10px; color: #777; font-size: 12px; text-align: center; }
 @media (max-width: 760px) {
   .topbar {
-    height: auto;
+    height: 36px;
     min-height: 36px;
-    padding: 3px 8px 4px;
-    gap: 2px 8px;
-    flex-wrap: wrap;
+    padding: 0 8px;
+    gap: 8px;
+    flex-wrap: nowrap;
     align-items: center;
   }
   .topbar .brand { flex: 0 0 auto; }
   .topbar .brand-mark { font-size: 11px; letter-spacing: 0.08em; }
-  .top-right { order: 2; margin-left: auto; flex: 0 0 auto; }
+  .top-right { display: none; }
   .top-menu {
-    order: 3;
-    flex: 1 0 100%;
-    width: 100%;
+    order: 2;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
     overflow-x: auto;
-    padding-bottom: 1px;
+    padding-bottom: 0;
     scrollbar-width: none;
   }
   .top-menu::-webkit-scrollbar { display: none; }
   .menu-btn { font-size: 12px; padding: 5px 7px; }
-  .top-right .chip { min-width: 30px; height: 28px; padding: 0 7px; }
   .stats-top-row { gap: 6px; }
   .stats-months { padding-bottom: 2px; }
   .stats-tab { flex: 1 1 auto; }
@@ -3084,7 +3084,6 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     </nav>
     <div class="top-right">
       <button class="chip" id="btn-candidates" title="未知节点候选" hidden data-i18n="candidates">候选</button>
-      <button class="chip icon" id="btn-lock" title="Ctrl+Shift+K">锁</button>
     </div>
   </header>
   <nav class="page-tabs" id="page-tabs" aria-label="页面">
@@ -11198,6 +11197,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
             el('li', {}, ['关闭软件，数据不死；导出必须能被记事本打开。']),
             el('li', {}, ['灯下黑：复杂都在底层，界面只留发光的输入框。']),
           ]),
+          el('h3', { style: 'margin-top:16px' }, ['自动锁定']),
+          el('p', {}, ['无操作 5 分钟，或退到后台 30 秒，自动锁定；不再提供手动锁按钮。']),
           el('h3', { style: 'margin-top:16px' }, ['文件']),
           el('p', {}, ['ledger 只存 ID 与整数分；dict 存名字/简码/极性/域/树。改名只改 dict，历史流水不动。加密：PBKDF2-SHA-256 150,000 → AES-GCM-256。']),
         ]),
@@ -11399,8 +11400,6 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       const key = node.getAttribute('data-i18n');
       if (key) node.textContent = t(key);
     });
-    const lock = dom.btnLock;
-    if (lock) lock.textContent = t('lock');
     const cand = dom.btnCandidates;
     if (cand) cand.textContent = t('candidates');
     if (dom.btnMode) dom.btnMode.textContent = S.mode === 'CODE' ? t('modeCode') : t('modePlain');
@@ -11452,7 +11451,6 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     btnImport: $('#btn-import'),
     btnExport: $('#btn-export'),
     btnHelp: $('#btn-help'),
-    btnLock: $('#btn-lock'),
   };
 
   let saveTimer = 0;
@@ -11460,6 +11458,12 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   let saveAgain = false;
   let booted = false;
   let needsOnboarding = false;
+  let autoLockTimer = 0;
+  let hiddenLockTimer = 0;
+  let hiddenAt = 0;
+  let autoLockBound = false;
+  const AUTO_LOCK_IDLE = 5 * 60 * 1000;
+  const AUTO_LOCK_HIDDEN = 30 * 1000;
 
   const panels = TV.panels.create({
     modal: dom.modal,
@@ -13733,6 +13737,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     renderAll();
     applyView();
     applyLang();
+    bindAutoLock();
     if (needsOnboarding) {
       needsOnboarding = false;
       toast('盲打一笔试试：wx1 > din 35 < 咖啡', 'ok', {
@@ -13889,7 +13894,42 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     });
   }
 
+  function armAutoLock() {
+    clearTimeout(autoLockTimer);
+    if (!store.isUnlocked()) return;
+    autoLockTimer = setTimeout(() => {
+      if (!document.hidden) lockApp();
+    }, AUTO_LOCK_IDLE);
+  }
+
+  function bindAutoLock() {
+    if (autoLockBound) { armAutoLock(); return; }
+    autoLockBound = true;
+    ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach((name) => {
+      document.addEventListener(name, armAutoLock, { passive: true });
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        clearTimeout(hiddenLockTimer);
+        clearTimeout(autoLockTimer);
+        hiddenLockTimer = setTimeout(() => {
+          if (document.visibilityState === 'hidden') lockApp();
+        }, AUTO_LOCK_HIDDEN);
+        return;
+      }
+      clearTimeout(hiddenLockTimer);
+      const away = hiddenAt ? Date.now() - hiddenAt : 0;
+      hiddenAt = 0;
+      if (away >= AUTO_LOCK_HIDDEN) lockApp();
+      else armAutoLock();
+    });
+    armAutoLock();
+  }
+
   async function lockApp() {
+    clearTimeout(autoLockTimer);
+    clearTimeout(hiddenLockTimer);
     if (!store.isUnlocked()) return;
     await saveNow();
     store.lock();
@@ -13993,7 +14033,6 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     dom.btnImport.addEventListener('click', () => panels.showImport(app));
     dom.btnExport.addEventListener('click', () => panels.showExport(app));
     dom.btnHelp.addEventListener('click', () => panels.showHelp(app));
-    dom.btnLock.addEventListener('click', () => lockApp());
     dom.feedbackAction.addEventListener('click', () => {
       const fn = feedbackFn;
       feedbackFn = null;
@@ -14110,6 +14149,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     hint: (file, token, before) => sourceHint(file, token, before),
     setRange: (r) => { S.range = r; renderHUD(); renderReport(); },
     setView: (v) => setView(v),
+    lock: () => lockApp(),
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 

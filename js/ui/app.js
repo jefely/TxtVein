@@ -99,8 +99,6 @@
       const key = node.getAttribute('data-i18n');
       if (key) node.textContent = t(key);
     });
-    const lock = dom.btnLock;
-    if (lock) lock.textContent = t('lock');
     const cand = dom.btnCandidates;
     if (cand) cand.textContent = t('candidates');
     if (dom.btnMode) dom.btnMode.textContent = S.mode === 'CODE' ? t('modeCode') : t('modePlain');
@@ -152,7 +150,6 @@
     btnImport: $('#btn-import'),
     btnExport: $('#btn-export'),
     btnHelp: $('#btn-help'),
-    btnLock: $('#btn-lock'),
   };
 
   let saveTimer = 0;
@@ -160,6 +157,12 @@
   let saveAgain = false;
   let booted = false;
   let needsOnboarding = false;
+  let autoLockTimer = 0;
+  let hiddenLockTimer = 0;
+  let hiddenAt = 0;
+  let autoLockBound = false;
+  const AUTO_LOCK_IDLE = 5 * 60 * 1000;
+  const AUTO_LOCK_HIDDEN = 30 * 1000;
 
   const panels = TV.panels.create({
     modal: dom.modal,
@@ -2433,6 +2436,7 @@
     renderAll();
     applyView();
     applyLang();
+    bindAutoLock();
     if (needsOnboarding) {
       needsOnboarding = false;
       toast('盲打一笔试试：wx1 > din 35 < 咖啡', 'ok', {
@@ -2589,7 +2593,42 @@
     });
   }
 
+  function armAutoLock() {
+    clearTimeout(autoLockTimer);
+    if (!store.isUnlocked()) return;
+    autoLockTimer = setTimeout(() => {
+      if (!document.hidden) lockApp();
+    }, AUTO_LOCK_IDLE);
+  }
+
+  function bindAutoLock() {
+    if (autoLockBound) { armAutoLock(); return; }
+    autoLockBound = true;
+    ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach((name) => {
+      document.addEventListener(name, armAutoLock, { passive: true });
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        clearTimeout(hiddenLockTimer);
+        clearTimeout(autoLockTimer);
+        hiddenLockTimer = setTimeout(() => {
+          if (document.visibilityState === 'hidden') lockApp();
+        }, AUTO_LOCK_HIDDEN);
+        return;
+      }
+      clearTimeout(hiddenLockTimer);
+      const away = hiddenAt ? Date.now() - hiddenAt : 0;
+      hiddenAt = 0;
+      if (away >= AUTO_LOCK_HIDDEN) lockApp();
+      else armAutoLock();
+    });
+    armAutoLock();
+  }
+
   async function lockApp() {
+    clearTimeout(autoLockTimer);
+    clearTimeout(hiddenLockTimer);
     if (!store.isUnlocked()) return;
     await saveNow();
     store.lock();
@@ -2693,7 +2732,6 @@
     dom.btnImport.addEventListener('click', () => panels.showImport(app));
     dom.btnExport.addEventListener('click', () => panels.showExport(app));
     dom.btnHelp.addEventListener('click', () => panels.showHelp(app));
-    dom.btnLock.addEventListener('click', () => lockApp());
     dom.feedbackAction.addEventListener('click', () => {
       const fn = feedbackFn;
       feedbackFn = null;
@@ -2810,5 +2848,6 @@
     hint: (file, token, before) => sourceHint(file, token, before),
     setRange: (r) => { S.range = r; renderHUD(); renderReport(); },
     setView: (v) => setView(v),
+    lock: () => lockApp(),
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

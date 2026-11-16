@@ -1279,27 +1279,27 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .sd-empty, .stats-empty { padding: 20px 10px; color: #777; font-size: 12px; text-align: center; }
 @media (max-width: 760px) {
   .topbar {
-    height: auto;
+    height: 36px;
     min-height: 36px;
-    padding: 3px 8px 4px;
-    gap: 2px 8px;
-    flex-wrap: wrap;
+    padding: 0 8px;
+    gap: 8px;
+    flex-wrap: nowrap;
     align-items: center;
   }
   .topbar .brand { flex: 0 0 auto; }
   .topbar .brand-mark { font-size: 11px; letter-spacing: 0.08em; }
-  .top-right { order: 2; margin-left: auto; flex: 0 0 auto; }
+  .top-right { display: none; }
   .top-menu {
-    order: 3;
-    flex: 1 0 100%;
-    width: 100%;
+    order: 2;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
     overflow-x: auto;
-    padding-bottom: 1px;
+    padding-bottom: 0;
     scrollbar-width: none;
   }
   .top-menu::-webkit-scrollbar { display: none; }
   .menu-btn { font-size: 12px; padding: 5px 7px; }
-  .top-right .chip { min-width: 30px; height: 28px; padding: 0 7px; }
   .stats-top-row { gap: 6px; }
   .stats-months { padding-bottom: 2px; }
   .stats-tab { flex: 1 1 auto; }
