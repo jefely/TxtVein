@@ -149,6 +149,68 @@
       cm.replaceSelection(' ');
     }
 
+    /* 手机软键盘没有可靠的 Space keydown；从 CodeMirror 的 inputRead 兜底。 */
+    function bindSoftSpaceFallback(cm) {
+      let run = 0;
+      let last = 0;
+      let timer = 0;
+      let justOp = false;
+      let syncing = false;
+
+      function commit(n) {
+        const cur = cm.getCursor();
+        const start = Math.max(0, cur.ch - n);
+        syncing = true;
+        cm.replaceRange('', { line: cur.line, ch: start }, { line: cur.line, ch: cur.ch });
+        cm.setCursor({ line: cur.line, ch: start });
+        insertEditorSpaceOp(cm, n >= 3 ? '<' : '>');
+        syncing = false;
+        justOp = true;
+      }
+
+      cm.on('inputRead', (cmx, change) => {
+        if (syncing) return;
+        if (change.origin !== '+input') {
+          run = 0;
+          justOp = false;
+          return;
+        }
+        const text = (change.text || []).join('\n');
+        if (!/^ +$/.test(text)) {
+          run = 0;
+          justOp = false;
+          if (timer) { clearTimeout(timer); timer = 0; }
+          return;
+        }
+        if (justOp) {
+          const cur = cmx.getCursor();
+          const before = cmx.getLine(cur.line).slice(0, cur.ch);
+          const m = before.match(/ +$/);
+          if (m) {
+            const start = cur.ch - m[0].length;
+            cmx.replaceRange(' ', { line: cur.line, ch: start }, { line: cur.line, ch: cur.ch });
+            cmx.setCursor({ line: cur.line, ch: start + 1 });
+          }
+          return;
+        }
+        const now = Date.now();
+        run = (now - last < 360) ? run + 1 : 1;
+        last = now;
+        if (run < 2) return;
+        if (timer) { clearTimeout(timer); timer = 0; }
+        if (run >= 3) {
+          run = 0;
+          commit(3);
+        } else {
+          timer = setTimeout(() => {
+            timer = 0;
+            run = 0;
+            commit(2);
+          }, 320);
+        }
+      });
+    }
+
     function makePane(file, mode) {
       const pane = el('div', { class: 'editor-pane' + (file === active ? ' is-active' : ''), dataset: { file } });
       main.appendChild(pane);
@@ -186,6 +248,9 @@
       const syncWrap = () => cm.setOption('lineWrapping', window.matchMedia('(max-width: 760px)').matches);
       syncWrap();
       window.addEventListener('resize', syncWrap);
+      if (window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 760) {
+        bindSoftSpaceFallback(cm);
+      }
       cm.on('change', () => {
         if (suspended) return;
         dirty[file] = true;

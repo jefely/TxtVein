@@ -30,6 +30,7 @@
     let spaceTimer = 0;
     let rawSpaceTimer = 0;
     let rawSpaceCount = 0;
+    let justInsertedOp = false;
     let editing = false;
     let ghost = null;
     let errorTimer = 0;
@@ -214,6 +215,7 @@
       input.value = input.value.slice(0, start) + input.value.slice(pos);
       setCaret(start);
       insertSpaceOperator((count >= 3 || m[0].length >= 3) ? '<' : '>');
+      justInsertedOp = true;
     }
 
     input.addEventListener('keydown', (ev) => {
@@ -353,6 +355,16 @@
         const before = input.value.slice(0, pos);
         const m = before.match(/ +$/);
         const n = m ? m[0].length : 0;
+        if (justInsertedOp) {
+          if (n >= 1) {
+            const start = pos - n;
+            input.value = input.value.slice(0, start) + ' ' + input.value.slice(pos);
+            setCaret(start + 1);
+            query(true);
+            return;
+          }
+          justInsertedOp = false;
+        }
         if (n >= 2) {
           if (rawSpaceTimer) clearTimeout(rawSpaceTimer);
           rawSpaceCount = n;
