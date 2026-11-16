@@ -19,21 +19,21 @@ function read(rel) {
   return fs.readFileSync(p, 'utf8');
 }
 
-function mapleData() {
-  const p = path.join(ROOT, 'assets', 'maple', 'MapleMono-Regular.ttf.woff2');
+function fontData() {
+  const p = path.join(ROOT, 'assets', 'cascadia', 'CascadiaCode.woff2');
   if (!fs.existsSync(p)) return '';
   return fs.readFileSync(p).toString('base64');
 }
 
 function inlineCss(html) {
-  const maple = mapleData();
+  const font = fontData();
   return html.replace(/<link\s+rel="stylesheet"\s+href="([^"]+)"\s*\/?>/g, (m, href) => {
     if (/^https?:/i.test(href)) throw new Error('不允许外链 CSS：' + href);
     let css = read(href);
-    if (maple) {
+    if (font) {
       css = css.replace(
-        /url\(["']?\.\.\/assets\/maple\/MapleMono-Regular\.ttf\.woff2["']?\)/g,
-        'url("data:font/woff2;base64,' + maple + '")',
+        /url\(["']?\.\.\/assets\/cascadia\/CascadiaCode\.woff2["']?\)/g,
+        'url("data:font/woff2;base64,' + font + '")',
       );
     }
     return '<style>\n/* ' + href + ' */\n' + css + '\n</style>';

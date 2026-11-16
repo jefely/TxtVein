@@ -22,8 +22,8 @@
   --accent-dim: rgba(74, 222, 128, 0.14);
   --err: #B45454;
   --err-dim: rgba(180, 84, 84, 0.12);
-  --mono: "JetBrains Maple Mono", "Maple Mono Web", "Maple Mono", "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
-  --sans: "Inter", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  --mono: "Cascadia Code Web", "Cascadia Code", "Cascadia Mono", Consolas, "Microsoft YaHei", monospace;
+  --sans: "Cascadia Code Web", "Cascadia Code", "Cascadia Mono", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
   --row: 33px;
 }

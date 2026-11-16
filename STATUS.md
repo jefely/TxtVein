@@ -22,7 +22,7 @@
 
 ```text
 D:\myproject\TxtVein\
-├─ TxtVein.html          801.0 KB 单文件成品（内置 Maple Mono Web 字体）
+├─ TxtVein.html          860.2 KB 单文件成品（内置 Maple Mono Web 字体）
 ├─ index.html            开发入口
 ├─ css/ (5)              base / ledger / report / panels / editor
 ├─ js/core/ (17)         text/amount/date/dict/ids/parser/source/calc/
@@ -45,14 +45,14 @@ D:\myproject\TxtVein\
 
 | 项 | 现状 |
 |---|---|
-| 单文件 | `TxtVein.html` **801.0 KB**；零外链、零 CDN；字体 base64 内嵌 |
+| 单文件 | `TxtVein.html` **860.2 KB**；零外链、零 CDN；字体 base64 内嵌 |
 | 数据事实 | 后台 ID 图；编辑器文本是投影 + 手稿；ID 不出现在 UI |
 | 源码编辑器 | 流水 `ledger.tv` / 字典 `dict.tv` 双 CM5；行号、高亮、单波浪线（只标出错 token）、补全、运算符工具条 |
 | 相对日期 | `-1` 自动补昨天日期，并按日期插入到昨天位置；`0/-2/+1` 同理 |
 | 时间单位 | `d/h/m`：`1d=1440m`、`1h=60m`；输入 `1d2h30m`，后台存整数分钟 `1590`，`ledger.txt` 写 `1590m`，界面显示 `1d2h30m` |
 | 后台单位 | 金额只存整数分 `amountCents`；时间只存整数分钟 `minutes`；行为强度只存整数 `weight` |
 | 账本域 | 顶部域栏已移除；所有流水同一列表；不写域即 `P`，只有显式写 `F`/`C`/`H` 才记录对应域 |
-| 界面 | 高对比深黑；字号 15px / 编辑器 14px；字体栈 JetBrains Maple Mono + 内置 Maple Mono Web |
+| 界面 | 高对比深黑；字号 15px / 编辑器 14px；字体栈 Cascadia Code + 内置 CascadiaCode.woff2 |
 | 页签 | 查询 / 流水 / 字典 / 固定 / 统计；顶栏菜单只放 安全/导入/导出/简码/中英/帮助 |
 | 反馈 | 输入框上方反馈栏；输入改成右下角可拖动 TV 气泡，点击展开单输入框 |
 | 输入宏 | 输入框与编辑器都支持双击 `>`、三击 `<`；候选支持 `1 2 3`、鼠标点击、单击空格确认；缺省今日、域=P |
