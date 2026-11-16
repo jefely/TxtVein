@@ -10,16 +10,63 @@
 ```powershell
 cd D:\myproject\TxtVein
 
-node --test tests/*.test.cjs      # 1. 核心测试（107）
-node tools/build.cjs              # 2. 单文件
-node tools/check.cjs              # 3. 工程门禁（121）
-python serve.py 8899              # 4. 另开一个终端
-python tools/e2e.py               # 5. 浏览器 E2E（52）
-python tools/smoke_file.py        # 6. file:// 单文件冒烟
+node --test tests/*.test.cjs      # 1. 核心测试（198）
+node tools/gen-system-dict.cjs    # 2. 母树生成（build 会自动跑）
+node tools/build.cjs              # 3. 单文件
+node tools/check.cjs              # 4. 工程门禁（158）
+python serve.py 8899              # 5. 另开一个终端
+python tools/e2e.py               # 6. 浏览器 E2E（56）
+python tools/smoke_file.py        # 7. file:// 单文件冒烟
 ```
 
 改动后至少跑：`test` → `build` → `check` → `e2e`。
 只改 CSS/UI 也要 `build`，因为用户双击的是 `TxtVein.html`。
+
+---
+
+## 一之二、母树数据层
+
+```text
+js/core/system.dict        唯一可编辑源（Tree / Alias / Merchant）
+        ↓ node tools/gen-system-dict.cjs
+js/core/system-dict.js     生成物：VERSION / HASH / 冻结 nodes
+js/core/system-dict-core.js 解析 / 索引 / 图算法 / 路径 / 类型继承
+```
+
+- **只改 `system.dict`，不要手改 `system-dict.js`**；`tools/build.cjs` 会先跑生成器。
+- 首版：190 节点 / 162 叶子 / 56 银行 / 30 商户；深度 3；G1–G21。
+- 一个概念一个顶点；中英名成对；推荐简码在行内，不是身份。
+- 内部节点只汇总，叶子才可记账；每个内部节点有 `.GENERAL` 叶子。
+- 商户是 facet，不是锚点目标；`default_category` 指向可记账叶子。
+- 测试：`tests/system-graph.test.cjs`、`system-dict.test.cjs`、`system-i18n.test.cjs`。
+- 门禁会校验生成物哈希是否新鲜；改了 `.dict` 没生成会失败。
+
+### 一之三、v3 保险库与 P/C 拆分
+
+```text
+js/core/user-dict.js        split / merge / checkSide
+js/browser/store.js         payload v3：dictSourceP / dictSourceC / systemVersion
+```
+
+- 新保险库直接 v3；v2 只读兼容，不做迁移。
+- `dictSourceP` = P/F，`dictSourceC` = C/H；编译时合并成一个 Dict。
+- 同域唯一：P/C 可以各有一个 `coffee`；`resolveAlias`/`resolveTag` 先按域过滤。
+- 跨域同码的别名写成 `N:P:code` / `N:C:code`；`dictToSource` 自动加限定。
+- 测试：`tests/split-dict.test.cjs`、`tree-view.test.cjs`、`anchor.test.cjs`；E2E 走新保险库 setup/save/reload。
+
+### 一之四、私人树 sort 与锚点
+
+```text
+js/core/tree-view.js       会计类型块头 + 私人 parent_id 树；sort 优先
+js/core/anchor.js          锚点 set/clear/validate；类型/极性继承
+```
+
+- `sort` 是显示顺序（0–100000，默认 100）；`weight` 仍是候选排序。
+- 字典源码尾部可写 `sort:10`；`dictToSource` 只在非 100 时输出。
+- 锚点在源码尾部写 `^SYS.CAT.DINING.COFFEE`；`@SYS...` 兼容读。
+- 锚点必须是母树叶子；有历史时翻转极性拒绝；未确认不写。
+- 顶栏不再单独开“树”弹窗；字典源码 `[树]` 段用缩进列出私人树，改缩进即改父级。
+- 节点表单显示“公共：…”副标签，并提供“建议归属”按钮；建议只填选择，保存才写入。
 
 ---
 

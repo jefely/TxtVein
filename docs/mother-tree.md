@@ -1,8 +1,15 @@
 # TxtVein · 母树 / 子树架构规范
 
-> 状态：**v0.1 设计定稿，尚未接线**。
+> 状态：**v0.1 设计定稿；母树数据层已接，P/C 拆分/锚点/公共报表待接**。
 > 这份文档定义数据模型与不变量；当前代码仍使用单一 `dict.tv`。
 > 实现顺序见 [`../NEXT.md`](../NEXT.md)。
+>
+> **2026-11-16 更新**：账本尚未开始使用，**不做迁移**；§8 迁移仅保留为历史参考。
+> 母树的图论模型见 [`mother-tree-graph.md`](mother-tree-graph.md)，
+> 无迁移接线方案见 [`mother-tree-wiring.md`](mother-tree-wiring.md)，
+> 双语与简码规则见 [`mother-tree-bilingual.md`](mother-tree-bilingual.md)。
+> 两处与本文旧示例不同时，以新方案为准（尤其是 `^SYS...` 锚点语法、“只挂叶子”、
+> “一个概念一个顶点、简码权威在私人树”）。
 
 ---
 

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.2.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-green.svg" alt="License">
   <img src="https://img.shields.io/badge/data-100%25%20Local-black.svg" alt="Local First">
 </p>
@@ -152,6 +152,7 @@ wx1 > din 35 < 咖啡 < 拿铁
 - **顶部域栏已移除**：所有流水在同一个列表里；不写域即 `P`，只有显式写 `F` / `C` / `H` 才记录为对应域。
 - 编辑区可切 4 态（简码/明文 × 中文/英文）；错误行原位保留，合法行重投影；跨域自动补 `P:`/`C:` 前缀。
 - 对话框录入仍保留：成功写源码，失败也先写成 `X_` 纯文本，并把输入框留在「第 N 行待修复」状态；改完回车替换原行，不弹窗、不抢光标。
+- **字典树**：字典源码顶部 `[树]` 段用纯文本缩进列出私人树；改缩进即改父级，字段仍在 `[会计]` 段。
 - **行为树/备注树节点可点**：重挂父级、合并；合并后行为边/备注/标签引用改指目标，旧 code 保留别名。
 - **字典候选**：未知节点只进「候选」，确认后建会计节点或行为项；一波事务写 ID 图并重编译。
 - **明文单文件导出前校验**：重读并比对流水/行为/节点/标签/行为项/备注/错误行数量，检查段落与 ID 泄露。
@@ -255,15 +256,16 @@ dict.link   = Hash_A
 - PBKDF2-SHA-256 **150,000** 次 → AES-GCM-**256**；盐 16B、IV 12B，每次保存换新 IV；密钥不可导出，只在内存。
 - 刷新 / 锁定即丢密钥；没有服务器、没有后门。
 
-### 5.2 三种导出模式
+### 5.2 四种导出模式
 
 | 模式 | 文件 | 说明 |
 |---|---|---|
-| 明文 | `ledger.txt` + `dict.json` | 全人类可读；适合 Git / 记事本 / 迁移；不受密码保护 |
-| 初级密文 | `ledger.shadow` + `dict.vault` | 流水是纯 ID 明文；字典加密。可公开流水、藏住语义 |
-| 深度密文 | `ledger.enc` + `dict.enc` | 两份都加密；解开流水仍只看到 ID，还要再解字典 |
+| 明文 | `txtvein-export.txt` | 单文件；统计 → 流水 → 行为 → 备注 → 字典 |
+| 初级密文 | `ledger.shadow` + `dict.vault` | 流水是纯 ID 明文；字典加密 |
+| 深度密文 | `ledger.enc` + `dict.enc` | 两份都加密；解开流水仍只看到 ID |
 
-加密文件带 ASCII 装甲：
+加密始终使用 TxtVein 自己的 PBKDF2-SHA-256（150000）→ AES-GCM-256；
+密文带 ASCII 装甲：
 
 ```txt
 # [SECURE_START: P, AES-GCM-256]
@@ -271,14 +273,22 @@ dict.link   = Hash_A
 # [SECURE_END]
 ```
 
-解析器只提取起止标记之间的 Base64；缺结束标记会报「截断」，有污染字符会报错，旁边写日记也不影响。
+解析器只提取起止标记之间的 Base64；缺结束标记会报「截断」，有污染字符会报错。
 
-### 5.3 导入
+### 5.3 导入 / 粘贴
 
-- 双文件一起导入；只给一个文件会拦下并提示缺字典。
-- 支持 `.txt / .json / .shadow / .vault / .enc`；按内容识别，不只看扩展名。
-- 支持旧版文脉明文（old1 合订账本 / old2 的 `## 节点` + `## 流水`）：自动把旧「期初金额」转成「期初权益 → 节点」的真实流水，旧三列备注转成标签层级。
-- 加密文件需要密码；密码错误不会进入账本。
+- **明文是单文件**：一个文本框，支持 TxtVein 单 TXT、NT 明文。
+- **密文是双文件**：两个文本框，分别粘流水密文和字典密文，再输密码。
+- 也支持文件导入；按内容识别，不只看扩展名。
+- 支持旧版文脉明文，自动把旧「期初金额」转成「期初权益 → 节点」的真实流水。
+- 手机不能存文件时，直接复制/粘贴；详见 [文本导入导出](docs/import-export.md)。
+
+### 5.4 NT 互通
+
+- NT 不再单列一套明文格式：NT 的导入/导出直接使用 TxtVein 单 TXT。
+- TxtVein → NT：导出单 TXT，粘到 NT 导入框。
+- NT → TxtVein：粘 TxtVein 单 TXT；也兼容读取 NT 旧明文 / NT 加密备份（用 NT 密码解开后转 TxtVein）。
+- 密文两边都按 TxtVein 的双文件信封；TxtVein 密文暂不被旧版 NT 读取，需要 NT 侧更新。
 
 ---
 
@@ -384,7 +394,7 @@ TxtVein/
 │  ├─ build.cjs           ← 把 index.html 内联成单文件
 │  ├─ check.cjs           ← 工程门禁（121 项）
 │  ├─ cdp.py              ← Chrome DevTools 小助手
-│  ├─ e2e.py              ← 浏览器端到端（52 项断言）
+│  ├─ e2e.py              ← 浏览器端到端（56 项断言）
 │  ├─ smoke_file.py       ← file:// 单文件冒烟
 │  └─ smoke.py            ← 快速截图/冒烟
 ├─ docs/screens/          ← 截图
@@ -409,7 +419,7 @@ node --test tests/*.test.cjs      # 108 条核心测试
 node tools/build.cjs              # 生成 TxtVein.html
 node tools/check.cjs              # 121 项工程门禁
 python serve.py 8899              # 另开一个终端（E2E 用）
-python tools/e2e.py               # 52 项浏览器断言（需先起 8899 服务）
+python tools/e2e.py               # 56 项浏览器断言（需先起 8899 服务）
 python tools/smoke_file.py        # file:// 单文件冒烟（含设密码 / 刷新解锁）
 ```
 
@@ -465,7 +475,7 @@ python tools/smoke_file.py        # file:// 单文件冒烟（含设密码 / 刷
 | §14 验收 | `e2e.py` 逐条覆盖；见 `STATUS.md` |
 | §15 三大铁律 | README/实现均以此为准 |
 
-逐条验收对照见 [`docs/v1.1-acceptance.md`](docs/v1.1-acceptance.md)；分层与不变量见 [`docs/architecture.md`](docs/architecture.md)；公共母树 / 私人子树规范见 [`docs/mother-tree.md`](docs/mother-tree.md)。
+逐条验收对照见 [`docs/v1.1-acceptance.md`](docs/v1.1-acceptance.md)；分层与不变量见 [`docs/architecture.md`](docs/architecture.md)；公共母树 / 私人子树规范见 [`docs/mother-tree.md`](docs/mother-tree.md)，图论模型见 [`docs/mother-tree-graph.md`](docs/mother-tree-graph.md)，双语与简码见 [`docs/mother-tree-bilingual.md`](docs/mother-tree-bilingual.md)，私有树覆盖检查见 [`docs/private-tree-coverage.md`](docs/private-tree-coverage.md)。
 
 ---
 

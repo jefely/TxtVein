@@ -27,12 +27,14 @@
     rules: [],
     ledgerSource: '',
     dictSource: '',
+    systemVersion: '',
     sourceDiags: [],
     vaultId: '',
     domain: '',
     mode: 'CODE',
     lang: 'zh',
     view: 'ledger',
+    reportMode: 'private',
     range: '本月',
     query: { text: '', fromDate: '', toDate: '', type: '', domain: '', from: '', to: '', tag: '', min: '', max: '' },
     queries: [],
@@ -63,6 +65,9 @@
       reset: '重置', count: '条', total: '合计',
       colDate: '日期', colDomain: '域', colFrom: '转出', colTo: '转入', colAmount: '金额', colTags: '标签',
       category: '分类', node: '节点', note: '备注', event: '事件', allMonths: '全', statsTitle: '统计',
+      reportPrivate: '私人结构', reportPublic: '公共归属',
+      publicTitle: '公共归属 · 按母树汇总', anchored: '已归类', unclassified: '未归类',
+      staleAnchor: '归属失效', reconcile: '对账',
       statsColName: '分类', statsColNode: '节点', statsColOther: '对方', statsWeight: '强度',
       statsMonth: '月', statsItems: '项', statsRecords: '条', statsSelect: '左侧选择一项',
       noRows: '没有匹配的流水', fixedTitle: '固定收支与规则',
@@ -81,6 +86,9 @@
       reset: 'Reset', count: 'rows', total: 'Total',
       colDate: 'Date', colDomain: 'Book', colFrom: 'From', colTo: 'To', colAmount: 'Amount', colTags: 'Tags',
       category: 'Categories', node: 'Nodes', note: 'Notes', event: 'Events', allMonths: 'All', statsTitle: 'Stats',
+      reportPrivate: 'Private', reportPublic: 'Public',
+      publicTitle: 'Public grouping · mother tree', anchored: 'Anchored', unclassified: 'Unclassified',
+      staleAnchor: 'Stale anchor', reconcile: 'Reconcile',
       statsColName: 'Category', statsColNode: 'Node', statsColOther: 'Counterpart', statsWeight: 'Weight',
       statsMonth: 'month', statsItems: 'items', statsRecords: 'records', statsSelect: 'Select an item on the left',
       noRows: 'No matching entries', fixedTitle: 'Fixed entries & rules',
@@ -242,9 +250,17 @@
     const ledgerHash = await crypto.sha256Hex(ledgerFile.bodyForHash(ledger));
     S.dict.link = ledgerHash;
     const dict = dictFile.serializeDict(S.dict);
+    const split = TV.userDict.split(S.dictSource);
+    if (!split.ok) {
+      const first = split.diagnostics.find((x) => x.severity === 'error') || split.diagnostics[0];
+      throw new Error('字典拆分失败' + (first ? '（第 ' + first.line + ' 行）：' + first.message : ''));
+    }
+    S.systemVersion = TV.systemDict.VERSION_STRING;
     S.texts = {
       ledger, dict, vaultId: S.vaultId, ledgerHash, dictHash,
       ledgerSource: S.ledgerSource, dictSource: S.dictSource,
+      dictSourceP: split.p, dictSourceC: split.c,
+      systemVersion: S.systemVersion,
     };
     return S.texts;
   }
@@ -257,10 +273,11 @@
     try {
       const texts = await buildTexts();
       await store.save({
-        ledger: texts.ledger,
-        dict: texts.dict,
+        vaultId: S.vaultId,
         ledgerSource: texts.ledgerSource,
-        dictSource: texts.dictSource,
+        dictSourceP: texts.dictSourceP,
+        dictSourceC: texts.dictSourceC,
+        systemVersion: texts.systemVersion,
       });
       if (editorCtl) editorCtl.setDirty('both', false);
       setSaveState('saved');
@@ -356,7 +373,7 @@
     const id = TV.ids.newBehaviorItemId((x) => !!d.behaviors[x]);
     d.behaviors[id] = {
       zh_name: token, en_name: token, zh_code: code, en_code: code,
-      domain: S.domain || 'P', parent_id: '', weight: 10,
+      domain: S.domain || 'P', parent_id: '', weight: 10, sort: 100,
       created_at: new Date().toISOString(),
     };
     D.addAlias(d, token, id);
@@ -618,7 +635,7 @@
     clearTimeout(compileTimer);
     try {
       const r = TV.source.compileAll(S.dictSource, S.ledgerSource, {
-        vaultId: S.vaultId, now: new Date(), domain: S.domain,
+        vaultId: S.vaultId, now: new Date(), domain: S.domain, system: TV.systemDict,
       });
       S.dict = r.dict;
       S.events = r.events || [];
@@ -1505,7 +1522,104 @@
       '30px 58px minmax(46px,1fr) minmax(46px,1fr) 34px minmax(46px,.8fr)', { numCols: [4], empty: S.lang === 'en' ? 'Pick a behavior on the left' : '点左侧行为项查看明细' });
   }
 
+  function reportModeToggle() {
+    const wrap = el('div', { class: 'report-mode' });
+    [['private', t('reportPrivate')], ['public', t('reportPublic')]].forEach((pair) => {
+      const b = el('button', {
+        class: 'report-mode-btn' + (S.reportMode === pair[0] ? ' is-active' : ''),
+        type: 'button',
+      }, [pair[1]]);
+      b.addEventListener('click', () => {
+        if (S.reportMode === pair[0]) return;
+        S.reportMode = pair[0];
+        renderReport();
+      });
+      wrap.appendChild(b);
+    });
+    return wrap;
+  }
+
+  function renderPublicReportPage() {
+    clear(dom.reportView);
+    const now = new Date();
+    const pub = TV.publicReport.build(S.dict, S.events, TV.systemDict, {
+      range: S.range, domain: S.domain, lang: S.lang, now,
+    });
+    const page = el('div', { class: 'stats-page public-report' });
+    page.appendChild(reportModeToggle());
+    const head = el('div', { class: 'public-head' }, [
+      el('h2', { class: 'public-title' }, [t('publicTitle')]),
+      el('span', { class: 'public-range' }, [pub.rangeLabel || S.range || '']),
+    ]);
+    page.appendChild(head);
+
+    const cards = el('div', { class: 'public-cards' });
+    const card = (label, value, cls) => el('div', { class: 'public-card ' + (cls || '') }, [
+      el('span', { class: 'public-card-label' }, [label]),
+      el('b', { class: 'public-card-value' }, [amount.formatPlain(value)]),
+    ]);
+    cards.appendChild(card(t('anchored'), pub.anchored.closing, 'is-anchored'));
+    cards.appendChild(card(t('unclassified'), pub.unclassified.totals.closing, 'is-unclassified'));
+    cards.appendChild(card(t('staleAnchor'), pub.stale.totals.closing, 'is-stale'));
+    page.appendChild(cards);
+
+    const treeWrap = el('div', { class: 'public-tree' });
+    const renderTree = (arr, depth) => {
+      (arr || []).forEach((n) => {
+        treeWrap.appendChild(el('div', {
+          class: 'public-tree-row',
+          style: 'padding-left:' + (depth * 16) + 'px',
+        }, [
+          el('span', { class: 'public-tree-label' }, [n.label || n.id]),
+          el('span', { class: 'public-tree-amount' }, [amount.formatPlain(n.totals.closing)]),
+          el('span', { class: 'public-tree-count' }, [String(n.totals.count || 0)]),
+        ]));
+        renderTree(n.children, depth + 1);
+      });
+    };
+    const root = pub.tree.children && pub.tree.children[0];
+    if (root) renderTree(root.children, 0);
+    if (!treeWrap.children.length) {
+      treeWrap.appendChild(el('p', { class: 'help-text' }, [
+        S.lang === 'en' ? 'No anchored entries in this range.' : '本期还没有已归类节点。',
+      ]));
+    }
+    page.appendChild(treeWrap);
+
+    const bucket = (title, b, cls) => {
+      const sec = el('section', { class: 'public-bucket ' + (cls || '') }, [
+        el('h3', {}, [title + ' · ' + amount.formatPlain(b.totals.closing)]),
+      ]);
+      (b.rows || []).slice(0, 12).forEach((row) => {
+        sec.appendChild(el('div', { class: 'public-bucket-row' }, [
+          el('span', {}, [statsNodeLabel(row.id)]),
+          el('span', {}, [amount.formatPlain(row.closing)]),
+        ]));
+      });
+      return sec;
+    };
+    page.appendChild(bucket(t('unclassified'), pub.unclassified, 'is-unclassified'));
+    page.appendChild(bucket(t('staleAnchor'), pub.stale, 'is-stale'));
+
+    const rc = pub.reconcile;
+    page.appendChild(el('div', {
+      class: 'public-reconcile ' + (rc.ok ? 'is-ok' : 'is-bad'),
+    }, [
+      t('reconcile') + '：'
+        + amount.formatPlain(rc.privateTotal) + ' = '
+        + amount.formatPlain(rc.anchored) + ' + '
+        + amount.formatPlain(rc.unclassified) + ' + '
+        + amount.formatPlain(rc.stale)
+        + (rc.ok ? '  ✓' : '  ✗'),
+    ]));
+    dom.reportView.appendChild(page);
+  }
+
   function renderStatsPage() {
+    if (S.reportMode === 'public') {
+      renderPublicReportPage();
+      return;
+    }
     if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', split: 380 };
     if (!S.stats.first) {
       const savedFirst = Number(localStorage.getItem('txtvein:stats-first'));
@@ -1515,6 +1629,7 @@
     const calc = statsCalc();
     clear(dom.reportView);
     const page = el('div', { class: 'stats-page' });
+    page.appendChild(reportModeToggle());
     page.dataset.pane = S.stats.pane || 'list';
     page.style.setProperty('--stats-first', (Number(S.stats.first) || 80) + 'px');
     const top = el('div', { class: 'stats-top' });
@@ -2103,15 +2218,46 @@
     compileSources();
   }
 
+  function nodeHasHistory(id) {
+    return (S.events || []).some((e) => e.from === id || e.to === id);
+  }
+
   function addNode(spec) {
-    const r = D.addNode(S.dict, spec);
-    if (r.ok) syncDictSourceAndCompile();
+    const anchorId = spec && spec.anchor_id != null ? String(spec.anchor_id) : null;
+    const clean = Object.assign({}, spec || {});
+    delete clean.anchor_id;
+    const r = D.addNode(S.dict, clean);
+    if (!r.ok) return r;
+    if (anchorId != null && anchorId !== '') {
+      const a = TV.anchor.set(S.dict, r.id, anchorId, TV.systemDict, { hasHistory: false });
+      if (!a.ok) {
+        D.removeNode(S.dict, r.id);
+        return a;
+      }
+    }
+    syncDictSourceAndCompile();
     return r;
   }
 
   function updateNode(id, spec) {
-    const r = D.updateNode(S.dict, id, spec);
-    if (r.ok) syncDictSourceAndCompile();
+    const before = S.dict.nodes[id] ? Object.assign({}, S.dict.nodes[id]) : null;
+    const hasAnchor = spec && Object.prototype.hasOwnProperty.call(spec, 'anchor_id');
+    const anchorId = hasAnchor ? String(spec.anchor_id || '') : null;
+    const clean = Object.assign({}, spec || {});
+    delete clean.anchor_id;
+    const r = D.updateNode(S.dict, id, clean);
+    if (!r.ok) return r;
+    if (hasAnchor) {
+      const a = TV.anchor.set(S.dict, id, anchorId, TV.systemDict, { hasHistory: nodeHasHistory(id) });
+      if (!a.ok) {
+        if (before) {
+          S.dict.nodes[id] = before;
+          D.rebuildAliases(S.dict);
+        }
+        return a;
+      }
+    }
+    syncDictSourceAndCompile();
     return r;
   }
 
@@ -2209,7 +2355,7 @@
     const stats = TV.report.reportToText(rep).trim();
     if (stats && s.indexOf(stats) < 0) return { ok: false, error: '单 TXT 统计段与当前报表不一致' };
     const r = TV.source.compileAll(p.dictSource, p.ledgerSource, {
-      vaultId: S.vaultId, now: new Date(), domain: S.domain,
+      vaultId: S.vaultId, now: new Date(), domain: S.domain, system: TV.systemDict,
     });
     const countNotes = (arr) => {
       const out = { note: 0, invalid: 0, comment: 0 };
@@ -2253,13 +2399,12 @@
     return lines.join('\n');
   }
 
-  async function exportMode(mode) {
+  async function buildExport(mode) {
     if (mode === 'single') {
       const text = buildSingleText();
       const v = validateSingleText(text);
       if (!v.ok) return v;
-      files.downloadText('txtvein-export.txt', text);
-      return { ok: true };
+      return { ok: true, mode, files: [{ name: 'txtvein-export.txt', text }], text };
     }
     const texts = await buildTexts();
     if (mode === 'shadow') {
@@ -2267,11 +2412,11 @@
       const vault = TV.envelope.packSecure('dict', {
         vaultId: S.vaultId, iterations: sealed.iterations, salt: sealed.salt, iv: sealed.iv,
       }, sealed.ciphertext, { domain: 'P', updatedAt: new Date().toISOString() });
-      await files.downloadAll([
+      const out = [
         { name: 'ledger.shadow', text: texts.ledger },
         { name: 'dict.vault', text: vault },
-      ]);
-      return { ok: true };
+      ];
+      return { ok: true, mode, files: out, text: TV.textBundle.pack(out, { mode }) };
     }
     if (mode === 'deep') {
       const l = await store.encryptWithCurrent(texts.ledger);
@@ -2282,13 +2427,24 @@
       const dictEnc = TV.envelope.packSecure('dict', {
         vaultId: S.vaultId, iterations: d.iterations, salt: d.salt, iv: d.iv,
       }, d.ciphertext, { domain: S.domain || 'P', updatedAt: new Date().toISOString() });
-      await files.downloadAll([
+      const out = [
         { name: 'ledger.enc', text: ledgerEnc },
         { name: 'dict.enc', text: dictEnc },
-      ]);
-      return { ok: true };
+      ];
+      return { ok: true, mode, files: out, text: TV.textBundle.pack(out, { mode }) };
     }
     return { ok: false, error: '未知导出模式' };
+  }
+
+  async function exportMode(mode) {
+    const r = await buildExport(mode);
+    if (!r.ok) return r;
+    await files.downloadAll(r.files);
+    return { ok: true };
+  }
+
+  async function exportText(mode) {
+    return buildExport(mode);
   }
 
   async function importSingleText(text, opts) {
@@ -2296,7 +2452,7 @@
     if (!p.ok) return p;
     const vaultId = crypto.randomVaultId();
     const r = TV.source.compileAll(p.dictSource, p.ledgerSource, {
-      vaultId, now: new Date(), domain: 'P',
+      vaultId, now: new Date(), domain: 'P', system: TV.systemDict,
     });
     S.ledgerSource = TV.source.normalizeDomainSyntax(p.ledgerSource);
     S.dictSource = p.dictSource;
@@ -2317,6 +2473,43 @@
         + r.notes.filter((n) => n.kind === 'note').length + ' 备注'
         + (r.errors ? '（' + r.errors + ' 行未编译，已保留为 X_）' : ''),
     };
+  }
+
+  async function importText(text, opts) {
+    const t = String(text == null ? '' : text).replace(/^\uFEFF/, '').trim();
+    if (!t) return { ok: false, error: '粘贴内容是空的' };
+    const o = opts || {};
+    const kind = TV.ntBridge.detect(t);
+    if (kind === 'txtvein-single') return importSingleText(t, o);
+    if (kind === 'txtvein-bundle') {
+      const b = TV.textBundle.unpack(t);
+      if (!b || !b.ok) return { ok: false, error: (b && b.error) || 'bundle 解析失败' };
+      return importBundle(b.files, o);
+    }
+    if (kind === 'nt-backup') {
+      if (!o.password) return { ok: false, error: 'NT 加密备份需要密码', needsPassword: true };
+      let state;
+      try {
+        state = await TV.ntBridge.decryptBackup(t, o.password);
+      } catch (e) {
+        return { ok: false, error: 'NT 备份解不开：密码不对，或内容损坏' };
+      }
+      const built = TV.ntBridge.fromNTState(state);
+      const r = await importSingleText(built.singleText, o);
+      if (r.ok && built.errors.length) r.message += '；' + built.errors.length + ' 行未导入';
+      return r;
+    }
+    if (kind === 'nt-text') {
+      const parsed = TV.ntBridge.parseText(t);
+      const built = TV.ntBridge.toTxtVein(parsed);
+      const r = await importSingleText(built.singleText, o);
+      if (r.ok && built.errors.length) r.message += '；' + built.errors.length + ' 行未导入';
+      return r;
+    }
+    if (kind === 'txtvein-secure') {
+      return { ok: false, error: '这是单个密文块；请用导出的完整 bundle（含流水和字典两份）' };
+    }
+    return { ok: false, error: '认不出这段文本：需要 TxtVein 单文件 / bundle / NT 文本 / NT 加密备份' };
   }
 
   async function importBundle(inputFiles, opts) {
@@ -2422,8 +2615,11 @@
   async function changePassword(oldPw, newPw, hint) {
     const texts = await buildTexts();
     return store.changePassword(oldPw, newPw, {
-      ledger: texts.ledger, dict: texts.dict,
-      ledgerSource: texts.ledgerSource, dictSource: texts.dictSource,
+      vaultId: S.vaultId,
+      ledgerSource: texts.ledgerSource,
+      dictSourceP: texts.dictSourceP,
+      dictSourceC: texts.dictSourceC,
+      systemVersion: texts.systemVersion,
     }, hint);
   }
 
@@ -2449,7 +2645,8 @@
 
   async function loadPayload(payload) {
     if (!payload) throw new Error('保险库里的账本为空');
-    const hasSources = payload.ledgerSource && payload.dictSource;
+    const isV3 = Number(payload.version) >= 3 || payload.dictSourceP != null || payload.dictSourceC != null;
+    const hasSources = isV3 || (payload.ledgerSource && payload.dictSource);
     let dict;
     let events = [];
     let plans = [];
@@ -2459,10 +2656,22 @@
     let diags = [];
 
     if (hasSources) {
-      S.ledgerSource = TV.source.normalizeDomainSyntax(payload.ledgerSource);
-      S.dictSource = payload.dictSource;
+      S.ledgerSource = TV.source.normalizeDomainSyntax(payload.ledgerSource || '');
+      if (isV3) {
+        const merged = TV.userDict.merge(payload.dictSourceP || '', payload.dictSourceC || '');
+        if (!merged.ok) {
+          const first = merged.diagnostics.find((x) => x.severity === 'error') || merged.diagnostics[0];
+          throw new Error('保险库里的 P/C 字典无法合并'
+            + (first ? '（第 ' + first.line + ' 行）：' + first.message : ''));
+        }
+        S.dictSource = merged.source;
+        S.systemVersion = payload.systemVersion || TV.systemDict.VERSION_STRING;
+      } else {
+        S.dictSource = payload.dictSource;
+        S.systemVersion = payload.systemVersion || TV.systemDict.VERSION_STRING;
+      }
       const r = TV.source.compileAll(S.dictSource, S.ledgerSource, {
-        vaultId: payload.vaultId || '', now: new Date(), domain: 'P',
+        vaultId: payload.vaultId || '', now: new Date(), domain: 'P', system: TV.systemDict,
       });
       dict = r.dict;
       events = r.events || [];
@@ -2473,6 +2682,7 @@
       diags = (r.dictDiagnostics || []).map((x) => Object.assign({ file: 'dict' }, x))
         .concat((r.ledgerDiagnostics || []).map((x) => Object.assign({ file: 'ledger' }, x)));
       if (!r.ok) toast('源码有 ' + r.errors + ' 个错误；已按合法部分加载', 'error');
+      if (isV3) S.dictSource = TV.source.dictToSource(dict);
     } else {
       if (!payload.dict || !payload.ledger) throw new Error('保险库里的账本为空或格式不对');
       const dp = dictFile.parseDict(payload.dict);
@@ -2484,6 +2694,7 @@
       rules = lp.rules;
       S.ledgerSource = TV.source.ledgerToSource(dict, events, [], []);
       S.dictSource = TV.source.dictToSource(dict);
+      S.systemVersion = payload.systemVersion || TV.systemDict.VERSION_STRING;
     }
 
     adopt(dict, events, plans, rules, dict.vaultId || payload.vaultId);
@@ -2505,8 +2716,11 @@
     refreshSources(true);
     const texts = await buildTexts();
     await store.createVault(password, {
-      ledger: texts.ledger, dict: texts.dict,
-      ledgerSource: texts.ledgerSource, dictSource: texts.dictSource,
+      vaultId,
+      ledgerSource: texts.ledgerSource,
+      dictSourceP: texts.dictSourceP,
+      dictSourceC: texts.dictSourceC,
+      systemVersion: texts.systemVersion,
     });
     store.saveHint(hint || '');
     needsOnboarding = true;
@@ -2530,6 +2744,7 @@
     S.rules = [];
     S.ledgerSource = '';
     S.dictSource = '';
+    S.systemVersion = '';
     S.sourceDiags = [];
     S.ignoredCandidates = new Set();
     S.texts = null;
@@ -2641,6 +2856,7 @@
     S.rules = [];
     S.ledgerSource = '';
     S.dictSource = '';
+    S.systemVersion = '';
     S.sourceDiags = [];
     S.ignoredCandidates = new Set();
     S.texts = null;
@@ -2764,6 +2980,8 @@
     deletePlan,
     deleteRule,
     exportMode,
+    exportText,
+    importText,
     importBundle,
     importSingleText,
     changePassword,
@@ -2825,7 +3043,7 @@
 
   /* 测试/调试用只读入口：不暴露密钥，不提供写入钩子。 */
   root.__txtvein = {
-    version: '2.0.0',
+    version: TV.version ? TV.version.VERSION : '2.2.0',
     state: () => ({
       domain: S.domain, mode: S.mode, lang: S.lang, view: S.view,
       events: S.events.length, behaviors: S.behaviors.length, notes: S.notes.length,
@@ -2844,6 +3062,9 @@
     importFiles: (list, opts) => app.importBundle(list, opts || {}),
     importSingle: (text, opts) => importSingleText(text, opts || {}),
     exportMode: (mode) => exportMode(mode),
+    exportText: (mode) => exportText(mode),
+    importText: (text, opts) => importText(text, opts || {}),
+    ntText: () => TV.ntBridge.toNTText(S.dict, S.events),
     singleText: () => buildSingleText(),
     validateSingle: () => validateSingleText(buildSingleText()),
     hint: (file, token, before) => sourceHint(file, token, before),

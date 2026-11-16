@@ -8,6 +8,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { generate } = require('./gen-system-dict.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 const INDEX = path.join(ROOT, 'index.html');
@@ -51,6 +52,7 @@ function inlineJs(html) {
 }
 
 function build() {
+  generate({ quiet: true });
   let html = fs.readFileSync(INDEX, 'utf8');
   if (!/<link\s+rel="stylesheet"/.test(html)) throw new Error('index.html 没有 CSS 引用');
   if (!/<script\s+src="/.test(html)) throw new Error('index.html 没有 JS 引用');

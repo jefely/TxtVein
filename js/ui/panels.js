@@ -341,6 +341,45 @@
         .filter((k) => k !== id)
         .map((k) => ({ value: k, label: s.dict.nodes[k].zh_name }))), n ? n.parent_id : '');
       const weight = input({ type: 'number', value: n ? n.weight : 100, min: '0', max: '1000' });
+      const sort = input({ type: 'number', value: n ? n.sort : 100, min: '0', max: '100000' });
+      const pin = select([{ value: '0', label: '否' }, { value: '1', label: '是' }], n && n.pin ? '1' : '0');
+      const systemLeaves = Object.keys((TV.systemDict && TV.systemDict.nodes) || {})
+        .filter((sid) => TV.systemDictCore && TV.systemDictCore.isPostable(TV.systemDict.nodes, sid))
+        .map((sid) => ({
+          value: sid,
+          label: (TV.systemDictCore.pathLabel(TV.systemDict.nodes, sid, s.lang) || sid)
+            + '  ·  ' + (TV.systemDict.nodes[sid].zh_code || ''),
+        }));
+      const anchor = select([{ value: '', label: '（未归类）' }].concat(systemLeaves), n ? (n.anchor_id || '') : '');
+      const suggestBox = el('div', { class: 'suggest-box' });
+      const suggestBtn = mini('建议归属', '', () => {
+        const list = TV.suggester ? TV.suggester.suggestForSpec(s.dict, {
+          id: id || '',
+          zh_name: zhName.value.trim(),
+          en_name: enName.value.trim(),
+          zh_code: zhCode.value.trim(),
+          en_code: enCode.value.trim(),
+          type: type.value,
+          parent_id: parent.value,
+          anchor_id: anchor.value,
+        }, TV.systemDict, { limit: 5, lang: s.lang }) : [];
+        clear(suggestBox);
+        if (!list.length) {
+          suggestBox.appendChild(el('span', { class: 'suggest-empty' }, ['没有匹配建议；可手动选择或保持未归类。']));
+          return;
+        }
+        list.forEach((x) => {
+          const b = el('button', { class: 'suggest-item', type: 'button' }, [
+            el('b', {}, [x.path || x.id]),
+            el('span', {}, [x.reason + ' · ' + x.score]),
+          ]);
+          b.addEventListener('click', () => {
+            anchor.value = x.id;
+            suggestBox.appendChild(el('span', { class: 'suggest-picked' }, ['已填入选择，保存后才写入。']));
+          });
+          suggestBox.appendChild(b);
+        });
+      });
       const error = el('div', { class: 'form-error' });
 
       function syncForm() {
@@ -364,6 +403,9 @@
           domain: domain.value,
           parent_id: parent.value,
           weight: Number(weight.value),
+          sort: Number(sort.value),
+          pin: Number(pin.value),
+          anchor_id: anchor.value,
         };
         if (!spec.zh_name && !spec.en_name) { error.textContent = '节点要有名字'; return; }
         const r = id ? app.updateNode(id, spec) : app.addNode(spec);
@@ -382,7 +424,12 @@
         el('div', { class: 'form-row' }, [field('中文名', zhName), field('英文名', enName)]),
         el('div', { class: 'form-row' }, [field('中文简码', zhCode), field('英文简码', enCode)]),
         el('div', { class: 'form-row-3' }, [field('大类', type), field('A 极形态', form), field('域', domain)]),
-        el('div', { class: 'form-row' }, [field('父节点（可选）', parent), field('权重', weight)]),
+        el('div', { class: 'form-row-3' }, [field('权重', weight), field('排序', sort), field('置顶', pin)]),
+        field('父节点（可选）', parent),
+        field('公共归属（可选）', el('div', { class: 'anchor-pick' }, [
+          el('div', { class: 'anchor-row' }, [anchor, suggestBtn]),
+          suggestBox,
+        ])),
         error,
         el('p', { class: 'help-text' }, ['极性由大类决定：资产/费用/成本 = A，负债/收入/权益 = B。流水只存 ID。']),
       ], closeFoot([submit]));
@@ -400,6 +447,9 @@
         .filter((k) => k !== id)
         .map((k) => ({ value: k, label: s.dict.tags[k].zh_name }))), t ? t.parent_id : '');
       const kind = select(Object.keys(dictMod.KIND_TAG).map((k) => ({ value: k, label: dictMod.KIND_TAG[k] })), t ? t.kind : 'plain');
+      const weight = input({ type: 'number', value: t ? t.weight : 10, min: '0', max: '1000' });
+      const sort = input({ type: 'number', value: t ? t.sort : 100, min: '0', max: '100000' });
+      const pin = select([{ value: '0', label: '否' }, { value: '1', label: '是' }], t && t.pin ? '1' : '0');
       const error = el('div', { class: 'form-error' });
       const submit = button(id ? '保存修改' : '创建标签', 'btn-primary', () => {
         const spec = {
@@ -409,6 +459,9 @@
           domain: domain.value,
           parent_id: parent.value,
           kind: kind.value,
+          weight: Number(weight.value),
+          sort: Number(sort.value),
+          pin: Number(pin.value),
         };
         if (!spec.zh_name) { error.textContent = '标签要有名字'; return; }
         const r = id ? app.updateTag(id, spec) : app.addTag(spec);
@@ -421,6 +474,7 @@
       open(id ? '编辑标签 · ' + t.zh_name : '新建标签', [
         el('div', { class: 'form-row' }, [field('中文名', zhName), field('英文名', enName)]),
         el('div', { class: 'form-row-3' }, [field('简码', zhCode), field('域', domain), field('类型', kind)]),
+        el('div', { class: 'form-row-3' }, [field('权重', weight), field('排序', sort), field('置顶', pin)]),
         field('父标签（可选）', parent),
         error,
         el('p', { class: 'help-text' }, ['标签是语义层；< 表达从属层级，空格表达同级。']),
@@ -467,70 +521,268 @@
     /* ---------------- 导出 ---------------- */
 
     function showExport(app) {
-      const cards = [
-        exportCard(app, 'single', '明文单文件', ['txtvein-export.txt'], '统计 → 流水 → 行为 → 备注 → 字典明文；不含 ID 附录。'),
-        exportCard(app, 'shadow', '初级密文', ['ledger.shadow', 'dict.vault'], '流水是纯 ID 明文；字典 AES-GCM-256 加密。适合公开流水、隐藏语义。'),
-        exportCard(app, 'deep', '深度密文', ['ledger.enc', 'dict.enc'], '两份文件都加密，纵深防御：解开流水仍只看到 ID。'),
-      ];
+      const out = el('textarea', {
+        class: 'export-output',
+        spellcheck: 'false',
+        placeholder: '点一个生成按钮，文本框就显示那个文件的文本；点「复制」带走。',
+      });
+      const note = el('div', { class: 'import-note' });
+
+      async function gen(mode, part) {
+        try {
+          const r = await app.exportText(mode);
+          if (!r.ok) { toast(r.error || '导出失败', 'error'); return; }
+          const f = mode === 'single' ? { text: r.text, name: '明文单文件' }
+            : (part === 'dict' ? r.files[1] : r.files[0]);
+          out.value = f.text;
+          out.scrollTop = 0;
+          note.className = 'import-note';
+          note.textContent = '已生成 ' + f.name + ' · ' + f.text.length + ' 字符。点「复制」带走。';
+        } catch (e) {
+          toast(e.message || '导出失败', 'error');
+        }
+      }
+
+      async function dl(mode, part) {
+        try {
+          if (mode === 'single') {
+            const r = await app.exportMode('single');
+            if (!r.ok) { toast(r.error || '下载失败', 'error'); return; }
+          } else {
+            const r = await app.exportText(mode);
+            if (!r.ok) { toast(r.error || '下载失败', 'error'); return; }
+            const f = part === 'dict' ? r.files[1] : r.files[0];
+            TV.files.downloadText(f.name, f.text);
+          }
+          note.className = 'import-note';
+          note.textContent = '已开始下载：' + (mode === 'single' ? '明文单文件'
+            : (part === 'dict' ? '字典密文' : '流水密文'));
+          toast('已开始下载', 'ok');
+        } catch (e) {
+          toast(e.message || '下载失败', 'error');
+        }
+      }
+
+      async function copy() {
+        if (!out.value) { toast('先生成文本', 'error'); return; }
+        let ok = false;
+        try { ok = await TV.files.copyText(out.value); } catch (e) { ok = false; }
+        if (!ok) {
+          out.focus();
+          out.select();
+          if (out.setSelectionRange) out.setSelectionRange(0, out.value.length);
+          try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        }
+        note.className = 'import-note ' + (ok ? 'is-ok' : 'is-bad');
+        note.textContent = ok ? '已复制 ' + out.value.length + ' 个字符。' : '复制失败：请长按文本框，全选后复制。';
+        if (ok) toast('已复制', 'ok');
+      }
+
       open('导出', [
-        el('div', { class: 'export-grid' }, cards),
+        el('div', { class: 'panel-section' }, [
+          el('h3', {}, ['导出文件']),
+          el('div', { class: 'row-gap' }, [button('导出明文', '', () => dl('single'))]),
+          el('div', { class: 'row-gap', style: 'margin-top:6px' }, [
+            button('导出初级流水密文', '', () => dl('shadow', 'ledger')),
+            button('导出初级字典密文', '', () => dl('shadow', 'dict')),
+          ]),
+          el('div', { class: 'row-gap', style: 'margin-top:6px' }, [
+            button('导出深度流水密文', '', () => dl('deep', 'ledger')),
+            button('导出深度字典密文', 'btn-primary', () => dl('deep', 'dict')),
+          ]),
+        ]),
+        el('div', { class: 'panel-section' }, [
+          el('h3', {}, ['复制内容']),
+          el('div', { class: 'row-gap', style: 'margin-bottom:6px' }, [
+            button('生成明文', '', () => gen('single')),
+          ]),
+          el('div', { class: 'row-gap', style: 'margin-bottom:6px' }, [
+            button('生成初级流水密文', '', () => gen('shadow', 'ledger')),
+            button('生成初级字典密文', '', () => gen('shadow', 'dict')),
+          ]),
+          el('div', { class: 'row-gap', style: 'margin-bottom:8px' }, [
+            button('生成深度流水密文', '', () => gen('deep', 'ledger')),
+            button('生成深度字典密文', '', () => gen('deep', 'dict')),
+            button('复制', 'btn-primary', copy),
+          ]),
+          out,
+          note,
+        ]),
         el('div', { class: 'import-note' }, [
-          '导出使用当前内存中的主密钥，不会再次询问密码。加密文件带 [SECURE_START] / [SECURE_END] 装甲与 SHA-256 互锁。',
+          '文本框只有一个：点哪个按钮，文本框就是哪个文件的文本，复制的也是它。',
+          '密文按 TxtVein 的 PBKDF2 + AES-GCM 信封生成；流水和字典分别导出/复制。',
         ]),
       ], closeFoot());
     }
 
-    function exportCard(app, mode, title, files, desc) {
-      const btn = button('生成并下载', mode === 'deep' ? 'btn-primary' : '', async () => {
-        btn.disabled = true;
-        btn.textContent = '生成中…';
+    function exportCard(app, mode, title, files, desc, output, note) {
+      const gen = button('生成文本', mode === 'deep' ? 'btn-primary' : '', async () => {
+        gen.disabled = true;
+        gen.textContent = '生成中…';
         try {
-          const r = await app.exportMode(mode);
+          const r = await app.exportText(mode);
           if (!r.ok) { toast(r.error || '导出失败', 'error'); return; }
-          toast('已生成 ' + files.join(' + '), 'ok');
+          output.value = r.text;
+          note.className = 'import-note';
+          note.textContent = '已生成 ' + files.join(' + ') + ' · ' + r.text.length + ' 字符；点「复制内容」带走。';
+          output.scrollTop = 0;
         } catch (e) {
           toast(e.message || '导出失败', 'error');
         } finally {
-          btn.disabled = false;
-          btn.textContent = '生成并下载';
+          gen.disabled = false;
+          gen.textContent = '生成文本';
+        }
+      });
+      const dl = mini('下载', '', async () => {
+        try {
+          const r = await app.exportMode(mode);
+          if (!r.ok) { toast(r.error || '导出失败', 'error'); return; }
+          toast('已生成下载', 'ok');
+        } catch (e) {
+          toast(e.message || '导出失败', 'error');
         }
       });
       return el('div', { class: 'export-card' }, [
         el('h4', {}, [title]),
         el('p', {}, [desc]),
         el('div', { class: 'file-list-mini' }, [files.join('  +  ')]),
-        btn,
+        el('div', { class: 'row-gap' }, [gen, dl]),
       ]);
     }
 
     /* ---------------- 导入 ---------------- */
 
     function showImport(app) {
-      let files = [];
       let result = null;
-      const drop = el('div', { class: 'drop-zone' }, [
-        el('b', {}, ['选择或拖入两个文件']),
-        el('br'),
-        'ledger.txt + dict.json / ledger.shadow + dict.vault / ledger.enc + dict.enc',
-        el('br'),
-        '也接受旧版文脉明文账本（单文件）',
-      ]);
-      const fileList = el('div', { class: 'file-list' });
-      const password = input({ type: 'password', placeholder: '加密文件的密码（如有）' });
+      const top = el('textarea', {
+        class: 'import-textarea import-top cipher-import-ledger',
+        spellcheck: 'false',
+        placeholder: '粘贴单文本（TxtVein 单 TXT / NT 明文），或粘贴流水密文（ledger.shadow / ledger.enc）。',
+      });
+      const bottom = el('textarea', {
+        class: 'import-textarea import-dict cipher-import-dict',
+        spellcheck: 'false',
+        placeholder: '粘贴字典密文（dict.vault / dict.enc）；单文本导入时留空。',
+      });
+      const note = el('div', { class: 'import-note' });
+      const cipherNote = el('div', { class: 'import-note cipher-note' });
+      const password = input({ type: 'password', placeholder: '密文密码（单文本留空）' });
       const force = el('input', { type: 'checkbox' });
       const forceWrap = el('label', { class: 'row-gap', style: 'font-size:11px;color:var(--dim)' }, [
         force, '指纹不匹配时仍然导入（不推荐）',
       ]);
-      const note = el('div', { class: 'import-note' });
+
+      async function pasteTo(target, tag) {
+        const clip = navigator.clipboard;
+        if (!clip || typeof clip.readText !== 'function') {
+          target.focus();
+          note.className = 'import-note is-bad';
+          note.textContent = '这个浏览器不能直接读剪贴板：长按框，用系统「粘贴」。';
+          return;
+        }
+        try {
+          const t = await clip.readText();
+          if (!t || !t.trim()) { note.className = 'import-note is-bad'; note.textContent = '剪贴板里没有文字。'; return; }
+          target.value = t;
+          note.className = 'import-note';
+          note.textContent = '已粘贴到' + tag + '，共 ' + t.length + ' 个字符。';
+          refresh();
+        } catch (e) {
+          target.focus();
+          note.className = 'import-note is-bad';
+          note.textContent = '浏览器不让读剪贴板：长按框，用系统「粘贴」。';
+        }
+      }
+
+      function refresh() {
+        const t = top.value.trim();
+        const d = bottom.value.trim();
+        note.className = 'import-note';
+        cipherNote.className = 'import-note cipher-note';
+        if (d) {
+          if (!t) {
+            cipherNote.className = 'import-note cipher-note is-bad';
+            cipherNote.textContent = '已经有字典密文，还缺流水密文。';
+          } else {
+            cipherNote.textContent = '流水、字典两份都齐了；输入密码后导入。';
+          }
+          password.parentElement.hidden = false;
+          return;
+        }
+        if (!t) {
+          note.textContent = '两个框：上面单文本或流水密文，下面字典密文。';
+          password.parentElement.hidden = true;
+          return;
+        }
+        const kind = TV.ntBridge.detect(t);
+        if (kind === 'txtvein-single' || kind === 'nt-text') {
+          note.textContent = '识别：' + (kind === 'nt-text' ? 'NT 明文' : 'TxtVein 单 TXT') + ' · 单文本导入。';
+          password.parentElement.hidden = true;
+        } else {
+          note.textContent = '上面像是密文：请把字典密文粘到下面的框；只导单文本时上面放单 TXT。';
+          password.parentElement.hidden = false;
+        }
+      }
+
+      top.addEventListener('input', refresh);
+      bottom.addEventListener('input', refresh);
+
+      const openBtn = button('打开两个密文文件', '', async () => {
+        const picked = await TV.files.pickFiles(true);
+        const arr = Array.from(picked || []);
+        if (!arr.length) return;
+        const read = await TV.files.readFiles(arr);
+        read.forEach((f) => {
+          let kind = TV.files.classify(f.name, f.text);
+          if (kind === 'secure') {
+            try { kind = TV.envelope.extractSecure(f.text).kind || kind; } catch (e) { /* 保持 */ }
+          }
+          const isDict = kind === 'dict' || /dict|vault|字典/i.test(f.name);
+          const isLedger = kind === 'ledger' || /ledger|shadow|流水/i.test(f.name);
+          if (isDict) bottom.value = f.text;
+          else if (isLedger) top.value = f.text;
+          else if (!top.value) top.value = f.text;
+          else bottom.value = f.text;
+        });
+        refresh();
+      });
+
       const submit = button('导入并替换当前账本', 'btn-primary', async () => {
-        if (!files.length) { note.className = 'import-note is-bad'; note.textContent = '先选文件。'; return; }
+        const t = top.value.trim();
+        const d = bottom.value.trim();
+        if (!t && !d) {
+          note.className = 'import-note is-bad';
+          note.textContent = '先粘贴单文本，或粘贴两份密文。';
+          return;
+        }
         submit.disabled = true;
         submit.textContent = '导入中…';
         try {
-          const r = await app.importBundle(files, {
-            password: password.value,
-            force: force.checked,
-          });
+          let r;
+          if (d) {
+            if (!t) {
+              cipherNote.className = 'import-note cipher-note is-bad';
+              cipherNote.textContent = '还缺流水密文。';
+              return;
+            }
+            if (/##\s*字典/.test(t)) {
+              cipherNote.className = 'import-note cipher-note is-bad';
+              cipherNote.textContent = '上面是单文本，不能和字典密文配对；请把流水密文放上面。';
+              return;
+            }
+            r = await app.importBundle([
+              { name: 'ledger.enc', text: t },
+              { name: 'dict.enc', text: d },
+            ], { password: password.value, force: force.checked });
+          } else {
+            const kind = TV.ntBridge.detect(t);
+            if (kind === 'txtvein-bundle' || kind === 'txtvein-secure') {
+              note.className = 'import-note is-bad';
+              note.textContent = '双文件密文要两个框都有内容：上面流水、下面字典。';
+              return;
+            }
+            r = await app.importText(t, { password: password.value, force: force.checked });
+          }
           result = r;
           if (!r.ok) {
             note.className = 'import-note is-bad';
@@ -538,72 +790,46 @@
             if (r.needsForce) forceWrap.hidden = false;
             return;
           }
-          note.className = 'import-note';
+          note.className = 'import-note is-ok';
           note.textContent = r.message || '导入成功';
           toast(r.message || '导入成功', 'ok');
           setTimeout(() => { close(); app.afterDataChange(); }, 350);
+        } catch (e) {
+          note.className = 'import-note is-bad';
+          note.textContent = e.message || '导入失败';
         } finally {
           submit.disabled = false;
           submit.textContent = '导入并替换当前账本';
         }
       });
 
-      function refresh() {
-        clear(fileList);
-        result = null;
-        if (!files.length) return;
-        files.forEach((f) => {
-          const kind = TV.files.classify(f.name, f.text);
-          const label = { ledger: 'LEDGER', dict: 'DICT', secure: 'SECURE', legacy: 'LEGACY', unknown: '?' }[kind] || '?';
-          fileList.appendChild(el('div', { class: 'file-row' }, [
-            el('span', { class: 'file-kind is-' + kind }, [label]),
-            el('span', { class: 'file-name' }, [f.name]),
-            el('span', { class: 'file-size' }, [TV.files.bytes(f.size || f.text.length)]),
-          ]));
-        });
-        const kinds = files.map((f) => TV.files.classify(f.name, f.text));
-        const secure = kinds.includes('secure');
-        password.parentElement.hidden = !secure;
-        if (files.length === 1 && kinds[0] !== 'legacy') {
-          note.className = 'import-note is-bad';
-          note.textContent = '只选了一个文件。明文/密文流水必须和字典一起导入；旧版单文件例外。';
-        } else {
-          note.className = 'import-note';
-          note.textContent = '导入会替换当前账本（当前账本请先导出备份）。';
-        }
-        forceWrap.hidden = true;
-      }
-
-      async function addFiles(list) {
-        const arr = Array.from(list || []);
-        if (!arr.length) return;
-        const read = await TV.files.readFiles(arr);
-        files = files.concat(read);
-        refresh();
-      }
-
-      drop.addEventListener('click', async () => {
-        const picked = await TV.files.pickFiles(true);
-        await addFiles(picked);
-      });
-      drop.addEventListener('dragover', (ev) => { ev.preventDefault(); drop.classList.add('is-over'); });
-      drop.addEventListener('dragleave', () => drop.classList.remove('is-over'));
-      drop.addEventListener('drop', async (ev) => {
-        ev.preventDefault();
-        drop.classList.remove('is-over');
-        await addFiles(ev.dataTransfer.files);
-      });
-
       open('导入', [
-        drop,
-        fileList,
-        el('div', { class: 'form-row', style: 'margin-top:12px' }, [field('密码', password), el('div', {}, [])]),
-        forceWrap,
-        note,
-        el('div', { class: 'help-text' }, ['校验：VAULT_ID 指纹 + 流水/字典 SHA-256 互锁。缺一个文件会被拦下。']),
-      ], closeFoot([submit]));
+        el('div', { class: 'panel-section import-area' }, [
+          el('h3', {}, ['文件导入']),
+          el('div', { class: 'row-gap' }, [openBtn]),
+        ]),
+        el('div', { class: 'panel-section import-area' }, [
+          el('h3', {}, ['粘贴导入']),
+          el('div', { class: 'row-gap' }, [
+            button('粘贴单文本', '', () => pasteTo(top, '上面的框')),
+            button('粘贴流水密文', '', () => pasteTo(top, '上面的框')),
+          ]),
+          top,
+          note,
+          el('div', { class: 'row-gap import-dictbar' }, [
+            button('粘贴字典密文', '', () => pasteTo(bottom, '下面的框')),
+            submit,
+          ]),
+          bottom,
+          cipherNote,
+          el('div', { class: 'form-row', style: 'margin-top:10px' }, [field('密码', password), el('div', {}, [])]),
+          forceWrap,
+          el('div', { class: 'help-text' }, ['两个框：单文本只填上面；密文上面放流水、下面放字典。导入会替换当前账本，先备份。']),
+        ]),
+      ], closeFoot());
       forceWrap.hidden = true;
       password.parentElement.hidden = true;
+      refresh();
     }
 
     /* ---------------- 帮助 ---------------- */
@@ -679,8 +905,8 @@
       update.title = app.getState().lang === 'en'
         ? 'Check and switch to the latest version'
         : '检查并切换到最新版本';
-      open('帮助与协议', help, closeFoot([
-        el('span', { class: 'help-text' }, ['TxtVein · 纯文本双极账本']),
+      open('帮助与协议 · v' + (TV.version ? TV.version.VERSION : '2.2.0'), help, closeFoot([
+        el('span', { class: 'help-text' }, ['TxtVein · 纯文本双极账本 · v' + (TV.version ? TV.version.VERSION : '2.2.0')]),
         update,
       ]));
     }

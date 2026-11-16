@@ -5,7 +5,17 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const FILES = [
+  'js/core/version.js',
   'js/core/text.js',
+  'js/core/system-dict-core.js',
+  'js/core/system-dict.js',
+  'js/core/user-dict.js',
+  'js/core/tree-view.js',
+  'js/core/anchor.js',
+  'js/core/public-report.js',
+  'js/core/suggester.js',
+  'js/core/text-bundle.js',
+  'js/core/nt-bridge.js',
   'js/core/amount.js',
   'js/core/date.js',
   'js/core/dict.js',
@@ -19,6 +29,7 @@ const FILES = [
   'js/core/dict-file.js',
   'js/core/crypto.js',
   'js/core/envelope.js',
+  'js/browser/store.js',
   'js/core/example.js',
   'js/core/legacy.js',
   'js/core/source.js',

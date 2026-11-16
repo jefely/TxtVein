@@ -99,6 +99,12 @@
     return Math.max(0, Math.min(1000, Math.round(n)));
   }
 
+  function normalizeSort(raw, fallback) {
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return fallback == null ? 100 : fallback;
+    return Math.max(0, Math.min(100000, Math.round(n)));
+  }
+
   function slug(raw) {
     return S(raw).trim().toLowerCase()
       .replace(/\s+/g, '_')
@@ -295,6 +301,10 @@
       domain: dm.domain,
       parent_id: S(p.parent_id),
       weight: normalizeWeight(p.weight, 100),
+      sort: normalizeSort(p.sort, 100),
+      pin: p.pin ? 1 : 0,
+      uses: Number.isFinite(Number(p.uses)) ? Math.max(0, Math.round(Number(p.uses))) : 0,
+      lastUsed: S(p.lastUsed || p.last_used || ''),
       system: !!p.system,
       created_at: new Date().toISOString(),
     };
@@ -329,6 +339,8 @@
       node.domain = d.domain;
     }
     if (p.weight != null) node.weight = normalizeWeight(p.weight, node.weight);
+    if (p.sort != null) node.sort = normalizeSort(p.sort, node.sort);
+    if (p.pin != null) node.pin = p.pin ? 1 : 0;
     if (p.parent_id && !dict.nodes[p.parent_id]) return { ok: false, error: '父节点不存在' };
     if (!node.zh_name && !node.en_name) return { ok: false, error: '节点要有名字' };
     rebuildAliases(dict);
@@ -375,6 +387,10 @@
       domain: dm.domain,
       parent_id: S(p.parent_id),
       weight: normalizeWeight(p.weight, 10),
+      sort: normalizeSort(p.sort, 100),
+      pin: p.pin ? 1 : 0,
+      uses: Number.isFinite(Number(p.uses)) ? Math.max(0, Math.round(Number(p.uses))) : 0,
+      lastUsed: S(p.lastUsed || p.last_used || ''),
       kind: p.kind || tagKindOf(name),
       created_at: new Date().toISOString(),
     };
@@ -398,6 +414,8 @@
       tag.domain = d.domain;
     }
     if (p.weight != null) tag.weight = normalizeWeight(p.weight, tag.weight);
+    if (p.sort != null) tag.sort = normalizeSort(p.sort, tag.sort);
+    if (p.pin != null) tag.pin = p.pin ? 1 : 0;
     if (p.kind) tag.kind = p.kind;
     if (!tag.zh_name && !tag.en_name) return { ok: false, error: '标签要有名字' };
     rebuildAliases(dict);
@@ -447,9 +465,26 @@
       form: x.form || '',
       domain: x.domain || 'P',
       weight: Number(x.weight) || 0,
+      sort: Number(x.sort) || 100,
+      pin: Number(x.pin) || 0,
+      uses: Number(x.uses) || 0,
+      lastUsed: x.lastUsed || '',
+      score: candidateScore(x),
       system: !!x.system,
       kindTag: tag ? tag.kind : '',
     };
+  }
+
+  function candidateScore(x) {
+    const base = Number(x.weight) || 0;
+    const pin = x.pin ? 300 : 0;
+    const uses = Math.min(30, Number(x.uses) || 0) * 3;
+    let recent = 0;
+    if (x.lastUsed) {
+      const t = Date.parse(x.lastUsed);
+      if (Number.isFinite(t) && Date.now() - t <= 7 * 24 * 3600 * 1000) recent = 20;
+    }
+    return base + pin + uses + recent;
   }
 
   function rankCandidates(dict, ids, ctx) {
@@ -463,37 +498,53 @@
         const pb = b.pole === c.polarity ? 1 : 0;
         if (pa !== pb) return pb - pa;
       }
-      if (b.weight !== a.weight) return b.weight - a.weight;
+      if (b.score !== a.score) return b.score - a.score;
       if (a.domain !== b.domain) return DOMAIN_ORDER.indexOf(a.domain) - DOMAIN_ORDER.indexOf(b.domain);
       return a.id.localeCompare(b.id);
     });
   }
 
-  function collectMatches(dict, token) {
+  function collectMatches(dict, token, domain) {
     const t = S(token).trim();
     const low = t.toLowerCase();
+    const d = domain ? S(domain).toUpperCase() : '';
     const ids = [];
     Object.keys(dict.nodes || {}).forEach((id) => {
       const n = dict.nodes[id];
       if (n.system) return;
+      if (d && S(n.domain).toUpperCase() !== d) return;
       if (S(n.zh_code).toLowerCase() === low || S(n.en_code).toLowerCase() === low
         || n.zh_name === t || n.en_name === t) ids.push(id);
     });
     return ids;
   }
 
-  function collectPrefix(dict, token) {
+  function collectPrefix(dict, token, domain) {
     const t = S(token).trim();
     if (!t) return [];
     const low = t.toLowerCase();
+    const d = domain ? S(domain).toUpperCase() : '';
     const ids = [];
     Object.keys(dict.nodes || {}).forEach((id) => {
       const n = dict.nodes[id];
       if (n.system) return;
+      if (d && S(n.domain).toUpperCase() !== d) return;
       if (S(n.zh_code).toLowerCase().startsWith(low) || S(n.en_code).toLowerCase().startsWith(low)
         || S(n.zh_name).startsWith(t) || S(n.en_name).toLowerCase().startsWith(low)) ids.push(id);
     });
     return ids;
+  }
+
+  function inDomain(dict, ids, domain) {
+    if (!domain) return ids.slice();
+    const d = S(domain).toUpperCase();
+    return ids.filter((id) => dict.nodes[id] && S(dict.nodes[id].domain).toUpperCase() === d);
+  }
+
+  function notInDomain(dict, ids, domain) {
+    if (!domain) return [];
+    const d = S(domain).toUpperCase();
+    return ids.filter((id) => dict.nodes[id] && S(dict.nodes[id].domain).toUpperCase() !== d);
   }
 
   function ambiguous(token, ranked) {
@@ -502,12 +553,14 @@
 
   function resolveAlias(dict, rawToken, ctx) {
     const c = ctx || {};
+    const domain = c.domain ? S(c.domain).toUpperCase() : '';
     let token = S(rawToken).trim();
     const forced = token.startsWith('!');
     if (forced) token = token.slice(1).trim();
     if (!token) return { ok: false, code: 'EMPTY', error: '缺节点' };
 
-    let ids = aliasIds(dict, token).filter((id) => dict.nodes[id]);
+    const allAlias = aliasIds(dict, token).filter((id) => dict.nodes[id]);
+    let ids = inDomain(dict, allAlias, domain);
     if (ids.length === 1) return { ok: true, id: ids[0], node: dict.nodes[ids[0]], via: 'alias', forced };
     if (ids.length > 1) {
       const ranked = rankCandidates(dict, ids, c);
@@ -515,7 +568,7 @@
       return ambiguous(token, ranked);
     }
 
-    ids = collectMatches(dict, token);
+    ids = collectMatches(dict, token, domain);
     if (ids.length === 1) return { ok: true, id: ids[0], node: dict.nodes[ids[0]], via: 'code', forced };
     if (ids.length > 1) {
       const ranked = rankCandidates(dict, ids, c);
@@ -527,9 +580,9 @@
     if (m) {
       const base = m[1];
       const idx = Number(m[2]);
-      let pool = aliasIds(dict, base).filter((id) => dict.nodes[id]);
-      if (!pool.length) pool = collectMatches(dict, base);
-      if (!pool.length) pool = collectPrefix(dict, base);
+      let pool = inDomain(dict, aliasIds(dict, base).filter((id) => dict.nodes[id]), domain);
+      if (!pool.length) pool = collectMatches(dict, base, domain);
+      if (!pool.length) pool = collectPrefix(dict, base, domain);
       const ranked = rankCandidates(dict, pool, c);
       if (idx >= 1 && idx <= ranked.length) {
         const pick = ranked[idx - 1];
@@ -541,36 +594,42 @@
       }
     }
 
-    ids = collectPrefix(dict, token);
+    ids = collectPrefix(dict, token, domain);
     if (ids.length === 1) return { ok: true, id: ids[0], node: dict.nodes[ids[0]], via: 'prefix', forced };
     const ranked = rankCandidates(dict, ids, c);
     if (ranked.length > 1) return ambiguous(token, ranked);
-    return { ok: false, code: 'UNBOUND', token, error: '找不到节点：' + token, suggest: token };
+    const cross = domain
+      ? notInDomain(dict, allAlias.concat(collectMatches(dict, token), collectPrefix(dict, token)), domain)
+      : [];
+    return {
+      ok: false, code: 'UNBOUND', token, error: '找不到节点：' + token,
+      suggest: token, crossDomain: cross.length > 0,
+    };
   }
 
   function tagMatches(dict, name, domain) {
     const t = S(name).trim();
     const low = t.toLowerCase();
+    const d = domain ? S(domain).toUpperCase() : '';
     const ids = [];
     Object.keys(dict.tags || {}).forEach((id) => {
       const x = dict.tags[id];
+      if (d && S(x.domain).toUpperCase() !== d) return;
       if (x.zh_name === t || x.en_name === t
         || S(x.zh_code).toLowerCase() === low || S(x.en_code).toLowerCase() === low) ids.push(id);
     });
-    if (domain) {
-      const inDomain = ids.filter((id) => dict.tags[id].domain === domain);
-      if (inDomain.length) return inDomain;
-    }
     return ids;
   }
 
   function resolveTag(dict, name, ctx) {
     const c = ctx || {};
+    const d = c.domain ? S(c.domain).toUpperCase() : '';
     const t = S(name).trim().replace(/^#/, '');
     if (!t) return { ok: false, code: 'EMPTY', error: '标签为空' };
     const aliasKey = Object.keys(dict.aliases || {}).find((k) => k.toLowerCase() === t.toLowerCase());
     if (aliasKey) {
-      const aliasIds = (dict.aliases[aliasKey] || []).filter((id) => dict.tags[id]);
+      let aliasIds = (dict.aliases[aliasKey] || []).filter((id) => dict.tags[id]);
+      if (d) aliasIds = aliasIds.filter((id) => S(dict.tags[id].domain).toUpperCase() === d);
       if (aliasIds.length === 1) return { ok: true, id: aliasIds[0], tag: dict.tags[aliasIds[0]], via: 'alias' };
       if (aliasIds.length > 1) return ambiguous(t, rankCandidates(dict, aliasIds, c));
     }
@@ -641,7 +700,10 @@
       .filter((id) => (!o.domain || dict.nodes[id].domain === o.domain))
       .filter((id) => (!o.type || dict.nodes[id].type === o.type))
       .map((id) => Object.assign({ id }, dict.nodes[id]))
-      .sort((a, b) => (b.weight || 0) - (a.weight || 0) || a.id.localeCompare(b.id));
+      .sort((a, b) => (normalizeSort(a.sort, 100) - normalizeSort(b.sort, 100))
+        || ((b.weight || 0) - (a.weight || 0))
+        || S(a.zh_name).localeCompare(S(b.zh_name), 'zh')
+        || a.id.localeCompare(b.id));
   }
 
   function searchNodes(dict, query, opts) {
@@ -675,7 +737,9 @@
   function bumpWeight(dict, id, n) {
     const x = dict.nodes[id] || dict.tags[id];
     if (!x) return;
-    x.weight = Math.min(1000, (Number(x.weight) || 0) + (n == null ? 1 : n));
+    const step = n == null ? 1 : Math.max(0, Math.round(Number(n) || 0));
+    x.uses = Math.min(100000, (Number(x.uses) || 0) + step);
+    x.lastUsed = new Date().toISOString();
   }
 
   function uniqueAliases(dict, id) {
@@ -694,15 +758,21 @@
   function displayCode(dict, id, lang) {
     const x = dict.nodes[id] || dict.tags[id];
     if (!x) return id;
+    const domain = S(x.domain || 'P').toUpperCase();
     const primary = lang === 'en' ? (x.en_code || x.zh_code) : (x.zh_code || x.en_code);
-    const arr = dict.aliases[primary] || [];
+    const arrAll = primary ? (dict.aliases[primary] || []) : [];
+    /* 只把同域目标算进多义判断：P 的 wx 不会因为 C 也有 wx 而变成 wx1。 */
+    const arr = arrAll.filter((other) => {
+      const y = dict.nodes[other] || dict.tags[other];
+      return y && S(y.domain || 'P').toUpperCase() === domain;
+    });
     if (primary && arr.length === 1 && arr[0] === id) return primary;
     const esc = String(primary || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const suffixed = uniqueAliases(dict, id)
       .filter((a) => primary && new RegExp('^' + esc + '\\d+$').test(a))
       .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
     if (suffixed.length) return suffixed[0];
-    /* 还没有显式固化 wx1/wx2 时，按别名数组顺序临时编号，保证屏幕不出现两个 wx */
+    /* 还没有显式固化 wx1/wx2 时，按同域别名顺序临时编号，保证屏幕不出现两个 wx */
     if (primary && arr.length > 1 && arr.includes(id)) return primary + (arr.indexOf(id) + 1);
     const ascii = uniqueAliases(dict, id).filter((a) => /^[A-Za-z0-9_]+$/.test(a));
     if (ascii.length) return ascii.sort((a, b) => a.length - b.length || a.localeCompare(b))[0];
@@ -799,10 +869,11 @@
   TV.dict = {
     DOMAINS, DOMAIN_ORDER, TYPES, TYPE_ALL, TYPE_ORDER, TYPE_ALIAS, FORMS, KIND_TAG,
     isDomain, domainInfo, domainLabel, normalizeDomain, normalizeType, normalizeForm,
-    normalizeCode, normalizeWeight, slug, emptyDict, ensureMeta, bumpMeta, nextId,
+    normalizeCode, normalizeWeight, normalizeSort, slug, emptyDict, ensureMeta, bumpMeta, nextId,
     aliasesFor, addAlias, removeAlias, rebuildAliases,
     addNode, updateNode, removeNode, addTag, updateTag, removeTag, tagKindOf,
     aliasIds, candidateInfo, rankCandidates, resolveAlias, resolveTag, ensureTag,
+    collectMatches, collectPrefix,
     getAncestorPath, pathLabel, getSiblingNodes, getChildren, listNodes, searchNodes,
     searchTags, bumpWeight, renderNode, renderTag, renderBehavior, nodeLabel, validateDict,
     uniqueAliases, displayCode,

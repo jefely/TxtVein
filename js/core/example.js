@@ -108,6 +108,7 @@
         domain: spec.domain || 'P',
         parent_id: spec.parent && H[spec.parent] ? H[spec.parent] : '',
         weight: spec.weight || 10,
+        sort: spec.sort || 100,
         created_at: new Date().toISOString(),
       };
       H[key] = id;

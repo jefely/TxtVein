@@ -7,7 +7,7 @@
 
 ## 一、这是什么
 
-**TxtVein（文脉）v2.1**：纯文本、无分录、双极图论账本，外加备注层和行为层。
+**TxtVein（文脉）v2.2**：纯文本、无分录、双极图论账本，外加备注层和行为层。
 
 - 会计层：`N_` 节点 + `E_` 原子边，进 A/B 余额。
 - 备注层：`T_` 标签 + `X_` 备注/错误/注释，两级统计，不进余额。
@@ -22,16 +22,19 @@
 
 ```text
 D:\myproject\TxtVein\
-├─ TxtVein.html          861.8 KB 单文件成品（内置 Cascadia Code 字体）
+├─ TxtVein.html          1069.7 KB 单文件成品（内置 Cascadia Code 字体）
 ├─ index.html            开发入口
 ├─ css/ (5)              base / ledger / report / panels / editor
-├─ js/core/ (17)         text/amount/date/dict/ids/parser/source/calc/
+├─ js/core/ (26)         text/system-dict-core/system-dict/user-dict/
+│                        tree-view/anchor/public-report/suggester/
+│                        text-bundle/nt-bridge/
+│                        amount/date/dict/ids/parser/source/calc/
 │                        domain/rules/report/ledger-file/dict-file/
 │                        crypto/envelope/example/legacy
 ├─ js/browser/ (2)       store / files
 ├─ js/ui/ (8)            dom/gate/editor/panes/report-view/input/panels/app
 ├─ vendor/codemirror/    CM5 + hint/lint/matchbrackets/active-line
-├─ tests/ (11 个文件)     104 条 node --test
+├─ tests/ (21 个文件)     205 条 node --test
 ├─ tools/                build / check / cdp / e2e / smoke_file
 ├─ docs/screens/         01-editor / 02-report / 03-invalid / 04-mobile /
 │                        06-tree / 07-candidates / 08-tree-edit
@@ -45,11 +48,11 @@ D:\myproject\TxtVein\
 
 | 项 | 现状 |
 |---|---|
-| 单文件 | `TxtVein.html` **861.8 KB**；零外链、零 CDN；字体 base64 内嵌 |
+| 单文件 | `TxtVein.html` **1069.7 KB**；零外链、零 CDN；字体 base64 内嵌 |
 | 数据事实 | 后台 ID 图；编辑器文本是投影 + 手稿；ID 不出现在 UI |
 | 源码编辑器 | 流水 `ledger.tv` / 字典 `dict.tv` 双 CM5；行号、高亮、单波浪线（只标出错 token）、补全、运算符工具条 |
 | 相对日期 | 输入框 `-1/-2` 提交时固化；直接编辑在日期 token 后按空格立即固化；`0/+1` 同理 |
-| 母树 / 子树 | 规范已定稿 `docs/mother-tree.md`（system.dict 只读 + user_p/user_c + anchor_id + 本地模型只建议）；**尚未接线** |
+| 母树 / 子树 | 母树数据层 + v3 保险库 + P/C 拆分 + `[树]` 纯文本树 + 锚点 + 公共报表 + 本地建议器 + `weight/pin` 重构；导入导出支持文本粘贴/复制（明文 / TxtVein 密文 bundle / NT 明文 / NT 加密备份兼容导入） |
 | 时间单位 | `d/h/m`：`1d=1440m`、`1h=60m`；输入 `1d2h30m`，后台存整数分钟 `1590`，`ledger.txt` 写 `1590m`，界面显示 `1d2h30m` |
 | 后台单位 | 金额只存整数分 `amountCents`；时间只存整数分钟 `minutes`；行为强度只存整数 `weight` |
 | 账本域 | 顶部域栏已移除；所有流水同一列表；不写域即 `P`，只有显式写 `F`/`C`/`H` 才记录对应域 |
@@ -69,14 +72,23 @@ D:\myproject\TxtVein\
 | 自动生成 | 备注标签自动；行为项自动（另一端已是行为项，或会计节点补行为角色）；会计节点只提议 |
 | 报表 | 双极四列 + 能量审计 + 时间 + 链式因果 + 顶部行为/备注统计 + 行为树/备注树 |
 | 存储 | localStorage 加密保险库；PBKDF2 150k → AES-GCM-256；CAS 防多标签覆盖 |
-| 测试 | **108** Node · **121** 门禁 · **52** E2E · 单文件冒烟 0 runtime error |
+| 测试 | **205** Node · **172** 门禁 · **66** E2E · 单文件冒烟通过 |
+
+最近验证（2026-11-16）：
+
+```text
+node --test tests/*.test.cjs    205 pass / 0 fail
+node tools/check.cjs            172 pass / 0 fail
+python tools/e2e.py             66 pass / 0 fail
+python tools/smoke_file.py      setup + render + reload unlock；manifest CORS 为 file:// 既有警告
+```
 
 最近验证（2026-11-15）：
 
 ```text
-node --test tests/*.test.cjs    108 pass / 0 fail
-node tools/check.cjs            121 pass / 0 fail
-python tools/e2e.py             52 pass / 0 fail
+node --test tests/*.test.cjs    198 pass / 0 fail
+node tools/check.cjs            158 pass / 0 fail
+python tools/e2e.py             56 pass / 0 fail
 python tools/smoke_file.py      setup + render + reload unlock, 0 runtime errors
 ```
 
@@ -86,7 +98,7 @@ python tools/smoke_file.py      setup + render + reload unlock, 0 runtime errors
 
 ```text
 js/core/ids.js        N_/T_/H_/X_ 8 hex；E_/B_ 12 hex；查重
-js/core/source.js     dict.tv 三段编译；ledger 一行多原子边；
+js/core/source.js     dict.tv 四段编译；ledger 一行多原子边；
                       备注 X_、行为 B_、错误 X_；双角色 N_↔H_
 js/ui/editor.js       CM5 双文件、模式、lint、hint（工具条/状态栏已隐藏）
 js/ui/app.js          S 状态；compileSources 单一编译入口；

@@ -158,7 +158,15 @@
         period = sp.period;
         tok = sp.token;
       }
-      const q = amount.parseQuantity(tok);
+      // 节点码/别名可能长得像数量：58D 既是「58 天」也可能是账户码。
+      // 在「节点位置」且能精确命中节点时，优先当节点；行尾的数量仍按金额/时间。
+      const prefForMatch = stripDomainPrefix(tok);
+      const matchDomain = prefForMatch.domain || lineDomain || o.domain || 'P';
+      const exactNode = prefForMatch.explicit
+        ? dictMod.collectMatches(dict, prefForMatch.rest, matchDomain)
+        : dictMod.collectMatches(dict, tok, matchDomain);
+      const nodePos = nodes.length === 0 || tokens[i - 1] === '>' || tokens[i + 1] === '>';
+      const q = exactNode.length && nodePos ? { ok: false } : amount.parseQuantity(tok);
       if (q.ok) {
         quantities.push(Object.assign({ raw: tok }, q));
         sawAmount = true;
@@ -229,6 +237,11 @@
             tokenIndex: i,
             candidates: r.candidates,
           });
+        }
+        if (r.crossDomain) {
+          return err('CROSS_DOMAIN_PREFIX_REQUIRED',
+            '「' + pref.rest + '」属于别的域；请写 ' + ctxDomain + ':' + pref.rest + ' 或对应域前缀',
+            { token: pref.rest, role: i === 0 ? 'from' : i === nodes.length - 1 ? 'to' : 'mid', tokenIndex: i });
         }
         return err('UNBOUND_NODE', r.error, {
           token: pref.rest,

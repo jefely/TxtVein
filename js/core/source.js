@@ -6,7 +6,8 @@
  *     E_ 微信>晚餐 120
  *     B_ 晚餐>开心 1
  *
- * 字典分三段：
+ * 字典分四段：
+ *   [树]      缩进树（改缩进 = 改父级；字段仍在 [会计]）
  *   [ACCOUNT] node ...   会计节点 N_
  *   [NOTE]    tag ...    备注标签 T_
  *   [BEHAVIOR] item ...  行为项 H_（身体/心理统一，树由字典定义）
@@ -65,41 +66,89 @@
   function sourceCodeMap(dict) {
     const out = new Map();
     ['nodes', 'tags', 'behaviors'].forEach((kind) => {
-      const used = new Set();
+      const usedByDomain = new Map();
       const groups = new Map();
       Object.keys(dict[kind] || {}).forEach((id) => {
         const x = dict[kind][id];
+        const domain = S(x.domain || 'P').toUpperCase();
         const base = codeSafe(x.zh_code || x.en_code || id) || 'x';
-        if (!groups.has(base)) groups.set(base, []);
-        groups.get(base).push(id);
+        const key = domain + '\u0000' + base;
+        if (!groups.has(key)) groups.set(key, { domain, base, ids: [] });
+        groups.get(key).ids.push(id);
       });
-      groups.forEach((arr, base) => {
-        if (arr.length === 1) { out.set(arr[0], uniqueCode(base, used)); return; }
-        arr.forEach((id, i) => out.set(id, uniqueCode(base + (i + 1), used)));
+      groups.forEach((g) => {
+        if (!usedByDomain.has(g.domain)) usedByDomain.set(g.domain, new Set());
+        const used = usedByDomain.get(g.domain);
+        if (g.ids.length === 1) { out.set(g.ids[0], uniqueCode(g.base, used)); return; }
+        g.ids.forEach((id, i) => out.set(id, uniqueCode(g.base + (i + 1), used)));
       });
     });
     return out;
   }
 
-  function dictTail(weight, parent, system) {
+  function dictTail(weight, parent, system, sort, anchor, pin) {
     const parts = [];
     if (Number(weight)) parts.push(String(Number(weight)));
     if (parent && parent !== '-') parts.push('@' + parent);
     if (system) parts.push('system');
+    if (sort != null && Number(sort) !== 100) parts.push('sort:' + Math.round(Number(sort)));
+    if (pin) parts.push('pin');
+    if (anchor) parts.push('^' + anchor);
     return parts.length ? ' ' + parts.join(' ') : '';
+  }
+
+  function treeSourceLines(dict) {
+    const out = ['[树]', '// 缩进 = 父级；行尾 [简码]；改缩进即可改父级。字段仍在 [会计]。'];
+    const nodes = (dict && dict.nodes) || {};
+    const codeMap = sourceCodeMap(dict);
+    const domains = dictMod.DOMAIN_ORDER.filter((d) => Object.keys(nodes).some((id) => nodes[id].domain === d && !nodes[id].system));
+    domains.forEach((domain) => {
+      dictMod.TYPE_ORDER.forEach((type) => {
+        const group = Object.keys(nodes).filter((id) => !nodes[id].system && nodes[id].domain === domain && nodes[id].type === type);
+        if (!group.length) return;
+        const map = {};
+        group.forEach((id) => { map[id] = { id, node: nodes[id], children: [] }; });
+        const roots = [];
+        group.forEach((id) => {
+          const p = nodes[id].parent_id;
+          if (p && map[p]) map[p].children.push(map[id]);
+          else roots.push(map[id]);
+        });
+        const sortTree = (arr) => {
+          arr.sort((a, b) => (Number(a.node.sort) || 100) - (Number(b.node.sort) || 100)
+            || (Number(b.node.weight) || 0) - (Number(a.node.weight) || 0)
+            || S(a.node.zh_name).localeCompare(S(b.node.zh_name), 'zh')
+            || a.id.localeCompare(b.id));
+          arr.forEach((x) => sortTree(x.children));
+        };
+        sortTree(roots);
+        out.push(domain + ' ' + type);
+        const walk = (arr, depth) => arr.forEach((x) => {
+          const n = x.node;
+          const code = codeMap.get(x.id) || n.zh_code || n.en_code || x.id;
+          out.push('  '.repeat(depth + 1) + (n.zh_name || n.en_name || code) + ' [' + code + ']');
+          walk(x.children, depth + 1);
+        });
+        walk(roots, 0);
+      });
+    });
+    return out;
   }
 
   function dictToSource(dict) {
     const codeMap = sourceCodeMap(dict);
     const lines = [];
-    lines.push('// TxtVein 字典 · 三段：会计 / 备注 / 行为');
+    lines.push('// TxtVein 字典 · 四段：树 / 会计 / 备注 / 行为');
     lines.push('// 会计节点：域 大类 形态 中文码 英文码 中文名 | 英文名 [权重] [@父码] [system]');
     lines.push('// 备注标签：域 类型 中文码 英文码 中文名 | 英文名 [权重] [@父码]');
     lines.push('// 行为项：域 中文码 英文码 中文名 | 英文名 [权重] [@父码]');
     lines.push('// 权重=候选排序（越大越前）；@父码=树上一级；不写即根');
     lines.push('// 别名：alias 别名 -> N:节点码 / T:标签码 / H:行为码');
+    lines.push('[树]');
+    treeSourceLines(dict).slice(1).forEach((line) => lines.push(line));
     lines.push('[会计]');
-    Object.keys(dict.nodes || {}).map((id) => ({ id, n: dict.nodes[id] }))
+    Object.keys(dict.nodes || {}).filter((id) => id !== 'N_sys_loss' && id !== 'N_sys_gain')
+      .map((id) => ({ id, n: dict.nodes[id] }))
       .sort((a, b) => (a.n.domain + a.n.type + (codeMap.get(a.id) || '')).localeCompare(b.n.domain + b.n.type + (codeMap.get(b.id) || '')))
       .forEach((x) => {
         const n = x.n;
@@ -107,7 +156,7 @@
         const en = S(n.en_name || n.zh_name).replace(/\|/g, '/') || '-';
         const parent = n.parent_id && codeMap.has(n.parent_id) ? codeMap.get(n.parent_id) : '-';
         lines.push('node ' + [n.domain, n.type, n.form || 'fluid', codeMap.get(x.id) || 'n', n.en_code || '-', zh].join(' ')
-          + ' | ' + en + dictTail(n.weight, parent, n.system));
+          + ' | ' + en + dictTail(n.weight, parent, n.system, n.sort, n.anchor_id, n.pin));
       });
     lines.push('[备注]');
     Object.keys(dict.tags || {}).map((id) => ({ id, t: dict.tags[id] }))
@@ -118,7 +167,7 @@
         const en = S(t.en_name || t.zh_name).replace(/\|/g, '/') || '-';
         const parent = t.parent_id && codeMap.has(t.parent_id) ? codeMap.get(t.parent_id) : '-';
         lines.push('tag ' + [t.domain, t.kind || 'plain', codeMap.get(x.id) || 't', t.en_code || '-', zh].join(' ')
-          + ' | ' + en + dictTail(t.weight, parent, false));
+          + ' | ' + en + dictTail(t.weight, parent, false, t.sort, ''));
       });
     lines.push('[行为]');
     Object.keys(dict.behaviors || {}).map((id) => ({ id, h: dict.behaviors[id] }))
@@ -129,7 +178,7 @@
         const en = S(h.en_name || h.zh_name).replace(/\|/g, '/') || '-';
         const parent = h.parent_id && codeMap.has(h.parent_id) ? codeMap.get(h.parent_id) : '-';
         lines.push('item ' + [h.domain, codeMap.get(x.id) || 'h', h.en_code || '-', zh].join(' ')
-          + ' | ' + en + dictTail(h.weight, parent, false));
+          + ' | ' + en + dictTail(h.weight, parent, false, h.sort, ''));
       });
     const autoKeys = new Set();
     ['nodes', 'tags', 'behaviors'].forEach((kind) => {
@@ -138,10 +187,31 @@
         [x.zh_name, x.en_name, x.zh_code, x.en_code, codeMap.get(id)].forEach((k) => k && autoKeys.add(k));
       });
     });
+    const codeDomains = { nodes: new Map(), tags: new Map(), behaviors: new Map() };
+    ['nodes', 'tags', 'behaviors'].forEach((kind) => {
+      Object.keys(dict[kind] || {}).forEach((id) => {
+        const code = codeMap.get(id);
+        if (!code) return;
+        const d = S(dict[kind][id].domain || 'P').toUpperCase();
+        if (!codeDomains[kind].has(code)) codeDomains[kind].set(code, new Set());
+        codeDomains[kind].get(code).add(d);
+      });
+    });
     Object.keys(dict.aliases || {}).forEach((key) => {
       const targets = (dict.aliases[key] || []).filter((id) => dict.nodes[id] || dict.tags[id] || dict.behaviors[id]);
       if (!targets.length) return;
-      const toks = targets.map((id) => (dict.nodes[id] ? 'N:' : dict.tags[id] ? 'T:' : 'H:') + codeMap.get(id));
+      const toks = targets.map((id) => {
+        const kind = dict.nodes[id] ? 'nodes' : dict.tags[id] ? 'tags' : 'behaviors';
+        const prefix = kind === 'nodes' ? 'N' : kind === 'tags' ? 'T' : 'H';
+        const code = codeMap.get(id);
+        if (!code) return '';
+        const domains = codeDomains[kind].get(code) || new Set();
+        if (domains.size > 1) {
+          return prefix + ':' + S(dict[kind][id].domain || 'P').toUpperCase() + ':' + code;
+        }
+        return prefix + ':' + code;
+      }).filter(Boolean);
+      if (!toks.length) return;
       if (targets.length === 1 && autoKeys.has(key)) return;
       lines.push('alias ' + key + ' -> ' + toks.join(', '));
     });
@@ -204,6 +274,24 @@
   function parseTail(right) {
     const toks = S(right).split(/[\s\u3000]+/).filter(Boolean);
     let system = false;
+    let sort = '100';
+    let anchor = '';
+    let pin = false;
+    const ai = toks.findIndex((t) => /^[\^@]SYS\./i.test(t));
+    if (ai >= 0) {
+      anchor = toks[ai].slice(1);
+      toks.splice(ai, 1);
+    }
+    const si = toks.findIndex((t) => /^sort:-?\d+$/i.test(t));
+    if (si >= 0) {
+      sort = toks[si].slice(5);
+      toks.splice(si, 1);
+    }
+    const pi = toks.findIndex((t) => /^pin(?::[01])?$/i.test(t));
+    if (pi >= 0) {
+      pin = !/:0$/.test(toks[pi]);
+      toks.splice(pi, 1);
+    }
     if (toks.length && toks[toks.length - 1] === 'system') { system = true; toks.pop(); }
     let parent = '-';
     let weight = '0';
@@ -220,7 +308,7 @@
         weight = toks.pop();
       }
     }
-    return { enName: toks.join(' '), weight, parent, system };
+    return { enName: toks.join(' '), weight, parent, system, sort, anchor, pin };
   }
 
   function compileDictSource(text, opts) {
@@ -229,7 +317,12 @@
     const diagnostics = [];
     const records = [];
     const aliases = [];
+    const treeLinks = [];
+    let treeDomain = '';
+    let treeType = '';
+    let treeStack = [];
     const seen = { node: new Map(), tag: new Map(), item: new Map() };
+    const codeKey = (kind, domain, code) => kind + '\u0000' + domain + '\u0000' + code;
     let section = 'account';
     const lines = S(text).replace(/\r\n?/g, '\n').split('\n');
 
@@ -237,11 +330,44 @@
       const lineNo = idx + 1;
       const line = stripComment(raw).trim();
       if (!line) return;
-      const sec = line.match(/^\[(ACCOUNT|NOTE|BEHAVIOR|会计|备注|行为)\]$/i);
+      const sec = line.match(/^\[(ACCOUNT|NOTE|BEHAVIOR|TREE|会计|备注|行为|树)\]$/i);
       if (sec) {
         const key = sec[1].toUpperCase();
         section = key === '会计' || key === 'ACCOUNT' ? 'account'
-          : key === '备注' || key === 'NOTE' ? 'note' : 'behavior';
+          : key === '备注' || key === 'NOTE' ? 'note'
+            : key === '树' || key === 'TREE' ? 'tree' : 'behavior';
+        treeStack = [];
+        return;
+      }
+      if (section === 'tree') {
+        const rawLine = stripComment(raw).replace(/\t/g, '  ');
+        const txt = rawLine.trim();
+        if (!txt) return;
+        const indent = rawLine.match(/^ */)[0].length;
+        const h = txt.match(/^([PCFH])\s+(费用|收入|资产|负债|成本|权益)$/);
+        if (h) {
+          treeDomain = h[1];
+          treeType = h[2];
+          treeStack = [];
+          return;
+        }
+        const m = txt.match(/^(.*?)\s*\[([^\]]+)\]$/);
+        if (!m) {
+          diagnostics.push(diag(lineNo, '树行格式：缩进 + 名称 + [简码]'));
+          return;
+        }
+        if (!treeDomain) {
+          diagnostics.push(diag(lineNo, '树行前缺少「域 类型」标题，例如 P 费用'));
+          return;
+        }
+        const code = m[2].trim();
+        const parent = treeStack.filter((x) => x.indent < indent).slice(-1)[0];
+        treeLinks.push({
+          domain: treeDomain, type: treeType, code,
+          parentCode: parent ? parent.code : '', line: lineNo,
+        });
+        while (treeStack.length && treeStack[treeStack.length - 1].indent >= indent) treeStack.pop();
+        treeStack.push({ indent, code });
         return;
       }
       if (/^alias\b/i.test(line)) {
@@ -269,11 +395,13 @@
         const zhName = toks.slice(6).join(' ') || toks[4];
         const tail = parseTail(right);
         if (!code) { diagnostics.push(diag(lineNo, '节点缺中文码')); return; }
-        if (seen.node.has(code)) { diagnostics.push(diag(lineNo, '节点码重复：' + code)); return; }
-        seen.node.set(code, true);
+        if (seen.node.has(codeKey('node', dm.domain, code))) { diagnostics.push(diag(lineNo, '节点码重复：' + code)); return; }
+        seen.node.set(codeKey('node', dm.domain, code), true);
         records.push({
           kind: 'node', line: lineNo, domain: dm.domain, type: ty.type, pole: ty.pole, form: form.form,
           code, enCode, zhName, enName: tail.enName || zhName, weight: Number(tail.weight) || 0,
+          sort: Number.isFinite(Number(tail.sort)) ? Number(tail.sort) : 100,
+          anchor: tail.anchor || '', pin: !!tail.pin,
           parentCode: tail.parent, system: tail.system,
         });
         return;
@@ -289,11 +417,12 @@
         const zhName = toks.slice(5).join(' ') || toks[3];
         const tail = parseTail(right);
         if (!code) { diagnostics.push(diag(lineNo, '标签缺中文码')); return; }
-        if (seen.tag.has(code)) { diagnostics.push(diag(lineNo, '标签码重复：' + code)); return; }
-        seen.tag.set(code, true);
+        if (seen.tag.has(codeKey('tag', dm.domain, code))) { diagnostics.push(diag(lineNo, '标签码重复：' + code)); return; }
+        seen.tag.set(codeKey('tag', dm.domain, code), true);
         records.push({
           kind: 'tag', line: lineNo, domain: dm.domain, tagKind, code, enCode,
           zhName, enName: tail.enName || zhName, weight: Number(tail.weight) || 0, parentCode: tail.parent,
+          sort: Number.isFinite(Number(tail.sort)) ? Number(tail.sort) : 100,
         });
         return;
       }
@@ -307,11 +436,12 @@
       const zhName = toks.slice(4).join(' ') || toks[2];
       const tail = parseTail(right);
       if (!code) { diagnostics.push(diag(lineNo, '行为项缺中文码')); return; }
-      if (seen.item.has(code)) { diagnostics.push(diag(lineNo, '行为项码重复：' + code)); return; }
-      seen.item.set(code, true);
+      if (seen.item.has(codeKey('item', dm.domain, code))) { diagnostics.push(diag(lineNo, '行为项码重复：' + code)); return; }
+      seen.item.set(codeKey('item', dm.domain, code), true);
       records.push({
         kind: 'item', line: lineNo, domain: dm.domain, code, enCode,
         zhName, enName: tail.enName || zhName, weight: Number(tail.weight) || 0, parentCode: tail.parent,
+        sort: Number.isFinite(Number(tail.sort)) ? Number(tail.sort) : 100,
       });
     });
 
@@ -322,40 +452,79 @@
     const nodeByCode = new Map();
     const tagByCode = new Map();
     const itemByCode = new Map();
+    const anyCode = { node: new Map(), tag: new Map(), item: new Map() };
+    const byCodeKey = (domain, code) => domain + '\u0000' + code;
+    const getByCode = (kind, domain, code) => {
+      if (kind === 'node') return nodeByCode.get(byCodeKey(domain, code));
+      if (kind === 'tag') return tagByCode.get(byCodeKey(domain, code));
+      return itemByCode.get(byCodeKey(domain, code));
+    };
+    const addCode = (kind, domain, code, id) => {
+      if (!code) return;
+      if (kind === 'node') nodeByCode.set(byCodeKey(domain, code), id);
+      else if (kind === 'tag') tagByCode.set(byCodeKey(domain, code), id);
+      else itemByCode.set(byCodeKey(domain, code), id);
+      if (!anyCode[kind].has(code)) anyCode[kind].set(code, []);
+      anyCode[kind].get(code).push({ domain, id });
+    };
     records.filter((r) => r.kind === 'node').forEach((r) => {
       const id = ids.newNodeId((x) => usedIds.has(x));
       usedIds.add(id);
       dict.nodes[id] = {
         zh_name: r.zhName, en_name: r.enName, zh_code: r.code, en_code: r.enCode,
         polarity: r.pole, type: r.type, form: r.form, domain: r.domain,
-        parent_id: '', weight: r.weight, system: !!r.system, created_at: now.toISOString(),
+        parent_id: '', weight: r.weight, sort: r.sort, pin: r.pin ? 1 : 0,
+        system: !!r.system, created_at: now.toISOString(),
       };
-      nodeByCode.set(r.code, id);
+      if (r.anchor) {
+        const system = o.system || TV.systemDict;
+        const core = TV.systemDictCore;
+        const leaf = system && system.nodes ? system.nodes[r.anchor] : null;
+        if (!leaf) {
+          dict.nodes[id].anchor_id = r.anchor;
+          diagnostics.push(diag(r.line, '锚点不在当前母树，保留为失效锚点：' + r.anchor, 'warn'));
+        } else if (core && !core.isPostable(system.nodes, r.anchor)) {
+          diagnostics.push(diag(r.line, '锚点必须是母树叶子：' + r.anchor));
+        } else {
+          const eff = core ? core.effectiveType(system.nodes, r.anchor) : null;
+          if (eff && eff.polarity !== r.pole) {
+            diagnostics.push(diag(r.line, '锚点「' + r.anchor + '」是 ' + eff.type + '（' + eff.polarity + ' 极），与节点 ' + r.type + '（' + r.pole + ' 极）冲突；不静默翻转'));
+          } else {
+            dict.nodes[id].anchor_id = r.anchor;
+            if (eff) {
+              dict.nodes[id].type = eff.type;
+              dict.nodes[id].polarity = eff.polarity;
+              dict.nodes[id].form = eff.form;
+            }
+          }
+        }
+      }
+      addCode('node', r.domain, r.code, id);
     });
     records.filter((r) => r.kind === 'tag').forEach((r) => {
       const id = ids.newTagId((x) => usedIds.has(x));
       usedIds.add(id);
       dict.tags[id] = {
         zh_name: r.zhName, en_name: r.enName, zh_code: r.code, en_code: r.enCode,
-        domain: r.domain, parent_id: '', weight: r.weight, kind: r.tagKind, created_at: now.toISOString(),
+        domain: r.domain, parent_id: '', weight: r.weight, sort: r.sort, kind: r.tagKind, created_at: now.toISOString(),
       };
-      tagByCode.set(r.code, id);
+      addCode('tag', r.domain, r.code, id);
     });
     records.filter((r) => r.kind === 'item').forEach((r) => {
       const id = ids.newBehaviorItemId((x) => usedIds.has(x));
       usedIds.add(id);
       dict.behaviors[id] = {
         zh_name: r.zhName, en_name: r.enName, zh_code: r.code, en_code: r.enCode,
-        domain: r.domain, parent_id: '', weight: r.weight, created_at: now.toISOString(),
+        domain: r.domain, parent_id: '', weight: r.weight, sort: r.sort, created_at: now.toISOString(),
       };
-      itemByCode.set(r.code, id);
+      addCode('item', r.domain, r.code, id);
     });
     records.forEach((r) => {
-      const id = r.kind === 'node' ? nodeByCode.get(r.code) : r.kind === 'tag' ? tagByCode.get(r.code) : itemByCode.get(r.code);
+      const id = getByCode(r.kind, r.domain, r.code);
       if (!id) return;
       if (r.parentCode && r.parentCode !== '-') {
-        const pid = r.kind === 'node' ? nodeByCode.get(r.parentCode) : r.kind === 'tag' ? tagByCode.get(r.parentCode) : itemByCode.get(r.parentCode);
-        if (!pid) diagnostics.push(diag(r.line, (r.kind === 'node' ? '节点' : r.kind === 'tag' ? '标签' : '行为项') + '父码不存在：' + r.parentCode));
+        const pid = getByCode(r.kind, r.domain, r.parentCode);
+        if (!pid) diagnostics.push(diag(r.line, (r.kind === 'node' ? '节点' : r.kind === 'tag' ? '标签' : '行为项') + '父码不存在或跨域：' + r.parentCode));
         else if (r.kind === 'node') dict.nodes[id].parent_id = pid;
         else if (r.kind === 'tag') dict.tags[id].parent_id = pid;
         else dict.behaviors[id].parent_id = pid;
@@ -367,24 +536,86 @@
     });
     aliases.forEach((a) => {
       a.targets.forEach((tok) => {
-        const m = tok.match(/^([NTH]):(.+)$/i);
-        const kind = m ? m[1].toUpperCase() : '';
-        const code = m ? m[2] : tok;
-        const id = kind === 'T' ? tagByCode.get(code)
-          : kind === 'H' ? itemByCode.get(code)
-            : kind === 'N' ? nodeByCode.get(code)
-              : (nodeByCode.get(code) || tagByCode.get(code) || itemByCode.get(code));
+        const m = tok.match(/^([NTH]):(?:([PFCH]):)?(.+)$/i);
+        const kind = m ? ({ N: 'node', T: 'tag', H: 'item' })[m[1].toUpperCase()] : '';
+        const domain = m && m[2] ? m[2].toUpperCase() : '';
+        const code = m ? m[3] : tok;
+        let id = '';
+        if (kind) {
+          if (domain) {
+            id = getByCode(kind, domain, code);
+          } else {
+            const arr = anyCode[kind].get(code) || [];
+            if (arr.length === 1) id = arr[0].id;
+            else if (arr.length > 1) {
+              diagnostics.push(diag(a.line, '别名目标跨域同码，请写 N:P:码 / N:C:码：' + tok));
+              return;
+            }
+          }
+        } else {
+          const arr = [];
+          ['node', 'tag', 'item'].forEach((k) => {
+            (anyCode[k].get(code) || []).forEach((x) => arr.push(x));
+          });
+          if (arr.length === 1) id = arr[0].id;
+          else if (arr.length > 1) {
+            diagnostics.push(diag(a.line, '别名目标跨域同码，请写域限定：' + tok));
+            return;
+          }
+        }
         if (!id) diagnostics.push(diag(a.line, '别名目标不存在：' + tok));
         else dictMod.addAlias(dict, a.key, id);
       });
     });
+    if (treeLinks.length) {
+      const byKey = new Map();
+      Object.keys(dict.nodes).forEach((id) => {
+        const n = dict.nodes[id];
+        if (n.system) return;
+        const key = S(n.domain) + '\u0000' + S(n.zh_code || n.en_code || id);
+        byKey.set(key, id);
+        byKey.set(S(n.domain) + '\u0000' + id, id);
+      });
+      const seenLink = new Set();
+      treeLinks.forEach((link) => {
+        const key = link.domain + '\u0000' + link.code;
+        const id = byKey.get(key);
+        if (!id) {
+          diagnostics.push(diag(link.line, '树行找不到节点：' + link.code));
+          return;
+        }
+        if (seenLink.has(id)) {
+          diagnostics.push(diag(link.line, '树行节点重复：' + link.code));
+          return;
+        }
+        seenLink.add(id);
+        if (!link.parentCode) {
+          dict.nodes[id].parent_id = '';
+          return;
+        }
+        const pid = byKey.get(link.domain + '\u0000' + link.parentCode);
+        if (!pid) {
+          diagnostics.push(diag(link.line, '树行父级找不到：' + link.parentCode));
+          return;
+        }
+        if (pid === id) {
+          diagnostics.push(diag(link.line, '树行不能把自己当父级：' + link.code));
+          return;
+        }
+        if (dict.nodes[pid].type !== dict.nodes[id].type) {
+          diagnostics.push(diag(link.line, '树行父子类型不同：' + link.parentCode + ' / ' + link.code));
+          return;
+        }
+        dict.nodes[id].parent_id = pid;
+      });
+    }
     [['N_sys_loss', 'loss', 'Loss', '费用', 'A', 'steam', '损耗'],
       ['N_sys_gain', 'gain', 'Gain', '收入', 'B', 'outside', '增益']].forEach((x) => {
       if (dict.nodes[x[0]]) return;
       dict.nodes[x[0]] = {
         zh_name: x[6], en_name: x[2], zh_code: x[1], en_code: x[1],
         polarity: x[4], type: x[3], form: x[5], domain: 'P',
-        parent_id: '', weight: 0, system: true, created_at: now.toISOString(),
+        parent_id: '', weight: 0, sort: 100, system: true, created_at: now.toISOString(),
       };
     });
     dict.meta.nextNode = 1;
@@ -457,7 +688,8 @@
     }
     if (force === 'N') {
       const r = dictMod.resolveAlias(dict, token, { domain: domain || ctx.domain, lang: 'zh' });
-      return r.ok ? { ok: true, account: r.id, behavior: null, force } : { ok: false, error: r.error, force };
+      return r.ok ? { ok: true, account: r.id, behavior: null, force }
+        : { ok: false, error: r.error, crossDomain: !!r.crossDomain, force };
     }
     const a = dictMod.resolveAlias(dict, token, { domain: domain || ctx.domain, lang: 'zh' });
     const b = resolveBehavior(dict, token, { domain: domain || ctx.domain });
@@ -467,7 +699,7 @@
     if (a.code === 'AMBIGUOUS' || b.ambiguous) {
       return { ok: false, error: '多义：' + token, ambiguous: true };
     }
-    return { ok: false, error: '找不到节点/行为项：' + token };
+    return { ok: false, error: '找不到节点/行为项：' + token, crossDomain: !!a.crossDomain };
   }
 
   function ensureNoteTag(dict, name, ctx, autoTags, usedIds) {
@@ -527,7 +759,7 @@
     usedIds.add(id);
     dict.behaviors[id] = {
       zh_name: name, en_name: name, zh_code: unique, en_code: unique,
-      domain, parent_id: '', weight: 10, created_at: new Date().toISOString(),
+      domain, parent_id: '', weight: 10, sort: 100, created_at: new Date().toISOString(),
     };
     dictMod.addAlias(dict, unique, id);
     dictMod.addAlias(dict, name, id);
@@ -664,7 +896,13 @@
       if (/^\*[dmy]$/i.test(t)) { period = t.slice(1).toLowerCase(); continue; }
       const sp = amount.splitPeriod(t);
       if (sp.period) period = sp.period;
-      const q = amount.parseQuantity(sp.token);
+      // 简码可以带数字、甚至以数字开头（58D）。在节点位置精确命中时，
+      // 优先当节点，避免被 parseQuantity 当成「58 天」。
+      const forceNode = /^[NH]:/i.test(t);
+      const probe = forceNode ? t.replace(/^[NH]:/i, '') : sp.token;
+      const exactNode = dictMod.collectMatches(dict, probe, domain);
+      const nodePos = forceNode || nodeToks.length === 0 || toks[i - 1] === '>' || toks[i + 1] === '>';
+      const q = exactNode.length && nodePos ? { ok: false } : amount.parseQuantity(sp.token);
       if (q.ok) { amountToks.push(sp.token); continue; }
       if (amountToks.length) {
         invalidNote(S(raw).trim(), '金额之后还有认不出的内容：' + t, domain, stamp);
@@ -694,24 +932,29 @@
         } else if (b.behavior && !a.behavior && !b.account) {
           a.behavior = ensureBehaviorItem(dict, nodeToks[i], { domain }, autoBehaviors, usedIds);
         }
-      } else if (!a.ok && !b.ok && /^\d+$/.test(rawAmt || '')) {
+      } else if (!a.ok && !b.ok && /^\d+$/.test(rawAmt || '') && !a.crossDomain && !b.crossDomain) {
         /* 两端都未知、强度是正整数：默认按行为项自动建，符合“行为模板优先” */
         a.behavior = ensureBehaviorItem(dict, nodeToks[i], { domain }, autoBehaviors, usedIds);
         b.behavior = ensureBehaviorItem(dict, nodeToks[i + 1], { domain }, autoBehaviors, usedIds);
         a.ok = true; a.account = null;
         b.ok = true; b.account = null;
-      } else if (a.ok && a.behavior && !b.ok) {
+      } else if (a.ok && a.behavior && !b.ok && !b.crossDomain) {
         b.behavior = ensureBehaviorItem(dict, nodeToks[i + 1], { domain }, autoBehaviors, usedIds);
         b.ok = true;
         b.account = null;
-      } else if (b.ok && b.behavior && !a.ok) {
+      } else if (b.ok && b.behavior && !a.ok && !a.crossDomain) {
         a.behavior = ensureBehaviorItem(dict, nodeToks[i], { domain }, autoBehaviors, usedIds);
         a.ok = true;
         a.account = null;
       }
     }
     resolved.forEach((r, i) => {
-      if (!r.ok) diagnostics.push(diag(lineNo, r.error || ('无法解析：' + nodeToks[i])));
+      if (r.ok) return;
+      if (r.crossDomain) {
+        diagnostics.push(diag(lineNo, '跨域节点：' + nodeToks[i] + ' 不在当前域；请写域前缀'));
+        return;
+      }
+      diagnostics.push(diag(lineNo, r.error || ('无法解析：' + nodeToks[i])));
     });
     const tagIds = parseTagBlocks(tagPart, dict, { domain }, autoTags, usedIds);
     const layers = [];
@@ -779,7 +1022,7 @@
       } else {
         const id = ids.newTextId((x) => usedIds.has(x)); usedIds.add(id);
         notes.push({
-          id, kind: 'invalid', raw: rawSeg, line: lineNo, domain, date: stamp,
+          id, kind: 'invalid', raw: S(raw).trim(), line: lineNo, domain, date: stamp,
           accounting: false, tagIds: tagIds.slice(),
           draft: { from: nodeToks[i], to: nodeToks[i + 1], amount: per[i] },
           diagnostics: [diag(lineNo, '该段未编译')],

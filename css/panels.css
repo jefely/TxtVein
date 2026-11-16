@@ -263,6 +263,50 @@
 }
 .import-note.is-bad { border-color: rgba(180, 84, 84, 0.4); color: #DDA0A0; background: var(--err-dim); }
 
+.import-textarea,
+.export-output {
+  width: 100%;
+  min-height: 170px;
+  max-height: 42vh;
+  box-sizing: border-box;
+  resize: vertical;
+  background: rgba(8, 10, 15, 0.92);
+  color: var(--text-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 9px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.65;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 2;
+}
+.import-textarea:focus,
+.export-output:focus { outline: none; border-color: var(--accent); }
+.export-output { min-height: 210px; max-height: 46vh; }
+.import-dictbar {
+  margin-top: 14px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+.import-dictbar .btn-primary { margin-left: auto; }
+.import-area {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.import-area h3 {
+  margin-top: 0;
+  color: var(--text-2);
+}
+.cipher-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.cipher-grid .export-output { min-height: 180px; max-height: 36vh; }
+
 .help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .help-grid h3 {
   margin: 0 0 8px;
@@ -295,6 +339,66 @@
 .shortcut-row:last-child { border-bottom: 0; }
 .shortcut-row span:first-child { color: var(--dim); }
 .shortcut-row span:last-child { color: var(--text-2); }
+
+/* 私人树 · 按会计类型分块 */
+.private-tree { display: grid; gap: 18px; }
+.private-tree-block {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.private-tree-block h3 {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.private-tree-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px 52px;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.private-tree-row:last-child { border-bottom: 0; }
+.private-tree-name { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
+.private-tree-code { color: var(--dim); text-align: right; }
+.private-tree-sort { color: var(--dim); text-align: right; font-variant-numeric: tabular-nums; }
+.private-tree-anchor {
+  color: var(--dim);
+  font-family: var(--mono);
+  font-size: 9px;
+  padding-top: 2px;
+  padding-bottom: 4px;
+}
+
+.anchor-pick { display: grid; gap: 6px; }
+.anchor-row { display: flex; align-items: center; gap: 6px; }
+.anchor-row select { flex: 1; min-width: 0; }
+.suggest-box { display: grid; gap: 4px; }
+.suggest-empty { color: var(--dim); font-family: var(--mono); font-size: 9.5px; }
+.suggest-picked { color: var(--ok, #8FBF8F); font-family: var(--mono); font-size: 9.5px; }
+.suggest-item {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-2);
+  text-align: left;
+  padding: 5px 7px;
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+  font-family: var(--mono);
+  font-size: 9.5px;
+}
+.suggest-item:hover { border-color: var(--accent); }
+.suggest-item b { color: var(--text-2); font-weight: 400; }
+.suggest-item span { color: var(--dim); }
 
 @media (max-width: 900px) {
   .dict-row { grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr) 70px 90px; }

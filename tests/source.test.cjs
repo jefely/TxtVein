@@ -200,3 +200,82 @@ test('ID 长度：N/T/H/X 8 位，E/B 12 位', () => {
     if (/^[EB]_/.test(id)) assert.match(id, /^[EB]_[0-9a-f]{12}$/, id);
   });
 });
+
+test('字典源码：[树] 缩进编辑父级并往返', () => {
+  const src = `[树]
+P 费用
+  餐饮 [din]
+    早餐 [zc]
+[ACCOUNT]
+node P 费用 steam din din 餐饮 | Dining 100 -
+node P 费用 steam zc zc 早餐 | Breakfast 100 -
+`;
+  const r = TV.source.compileDictSource(src, { now: NOW });
+  assert.equal(r.ok, true, JSON.stringify(r.diagnostics));
+  const byCode = (code) => Object.keys(r.dict.nodes)
+    .map((id) => r.dict.nodes[id]).find((x) => x.zh_code === code);
+  const idOf = (code) => Object.keys(r.dict.nodes).find((id) => r.dict.nodes[id].zh_code === code);
+  assert.equal(byCode('zc').parent_id, idOf('din'));
+  const text = TV.source.dictToSource(r.dict);
+  assert.ok(/\[树\]/.test(text));
+  assert.ok(/    早餐 \[zc\]/.test(text), text);
+  const r2 = TV.source.compileDictSource(text, { now: NOW });
+  const byCode2 = (code) => Object.keys(r2.dict.nodes)
+    .map((id) => r2.dict.nodes[id]).find((x) => x.zh_code === code);
+  const idOf2 = (code) => Object.keys(r2.dict.nodes).find((id) => r2.dict.nodes[id].zh_code === code);
+  assert.equal(byCode2('zc').parent_id, idOf2('din'));
+});
+
+test('字典源码：[树] 父子类型不同报错', () => {
+  const src = `[树]
+P 费用
+  餐饮 [din]
+P 资产
+  现金 [xj]
+    早餐 [zc]
+[ACCOUNT]
+node P 费用 steam din din 餐饮 | Dining 100 -
+node P 资产 fluid xj xj 现金 | Cash 100 -
+node P 费用 steam zc zc 早餐 | Breakfast 100 -
+`;
+  const r = TV.source.compileDictSource(src, { now: NOW });
+  assert.equal(r.ok, false);
+  assert.ok(r.diagnostics.some((x) => /父子类型不同/.test(x.message)));
+});
+
+test('简码以数字开头：58D 在节点位置优先于时间数量', () => {
+  const src = `[ACCOUNT]
+node P 资产 fluid GHC ghc 工行储 | ICBC 100 -
+node P 负债 outside 58D 58d 58贷 | 58 Loan 100 -
+`;
+  const d = TV.source.compileDictSource(src, { now: NOW });
+  assert.equal(d.ok, true, JSON.stringify(d.diagnostics));
+  const r = TV.source.compileLedgerSource('260824 GHC > 58D 948.08\n', d.dict, { now: NOW, domain: 'P' });
+  assert.equal(r.errors, 0, JSON.stringify(r.diagnostics));
+  assert.equal(r.events.length, 1);
+  assert.equal(r.events[0].amountCents, 94808);
+  assert.equal(d.dict.nodes[r.events[0].to].zh_code, '58D');
+});
+
+test('字典源码：sort 往返', () => {
+  const src = `[ACCOUNT]
+node P 资产 fluid wx wc 微信 | WeChat 120 - sort:10 pin
+node P 费用 steam din din 晚餐 | Dinner 120 - sort:20
+`;
+  const r = TV.source.compileDictSource(src, { now: NOW });
+  assert.equal(r.ok, true, JSON.stringify(r.diagnostics));
+  const byCode = (code) => Object.keys(r.dict.nodes)
+    .map((id) => r.dict.nodes[id]).find((x) => x.zh_code === code);
+  assert.equal(byCode('wx').sort, 10);
+  assert.equal(byCode('wx').pin, 1);
+  assert.equal(byCode('din').sort, 20);
+  const text = TV.source.dictToSource(r.dict);
+  assert.ok(/sort:10/.test(text), text);
+  assert.ok(/pin/.test(text), text);
+  const r2 = TV.source.compileDictSource(text, { now: NOW });
+  const byCode2 = (code) => Object.keys(r2.dict.nodes)
+    .map((id) => r2.dict.nodes[id]).find((x) => x.zh_code === code);
+  assert.equal(byCode2('wx').sort, 10);
+  assert.equal(byCode2('wx').pin, 1);
+  assert.equal(byCode2('din').sort, 20);
+});

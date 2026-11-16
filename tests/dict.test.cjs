@@ -56,6 +56,18 @@ test('字典：冲突简码产生多义候选', () => {
   assert.equal(r.candidates[0].id, 'N_001'); // weight 更高
 });
 
+test('字典：pin 优先于 weight；bump 只加 uses 不改 weight', () => {
+  const { d } = mk();
+  D.updateNode(d, 'N_003', { pin: 1 });
+  const r = D.resolveAlias(d, 'wx', { domain: 'P' });
+  assert.equal(r.candidates[0].id, 'N_003');
+  const before = d.nodes.N_002.weight;
+  D.bumpWeight(d, 'N_002', 1);
+  assert.equal(d.nodes.N_002.weight, before);
+  assert.equal(d.nodes.N_002.uses, 1);
+  assert.ok(d.nodes.N_002.lastUsed);
+});
+
 test('字典：数字后缀固化并写入别名', () => {
   const { d } = mk();
   const r = D.resolveAlias(d, 'wx2', { domain: 'P' });

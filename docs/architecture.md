@@ -228,17 +228,21 @@ input.js
 
 ---
 
-## 十一、母树 / 子树（设计定稿，尚未接线）
+## 十一、母树 / 子树（数据层已接，接线进行中）
 
-当前 `Dict.nodes` 已有 `parent_id`、`domain`、`system`，但还没有公共母树与 `anchor_id`。
-下一步的规范见 [`mother-tree.md`](mother-tree.md)：
+当前 `Dict.nodes` 已有 `parent_id`、`domain`、`system`，但还没有 `anchor_id`。
+母树的**数据层**已经接上：
 
-- `system.dict` 只读，随版本发布；
-- `user_p.dict` / `user_c.dict` 按域物理隔离；
-- 私人节点用 `anchor_id` 挂到母树，`parent_id` 仍只表示私人树；
-- 母树提供 `type` / `polarity`，私人节点默认继承；
-- 报表同时支持私人明细与按母树祖先链的公共汇总；
-- 本地模型只生成候选归属，用户确认后才写入，永不自动改账。
+- `js/core/system.dict` 是唯一可编辑源；
+- `tools/gen-system-dict.cjs` 生成 `js/core/system-dict.js`（版本 + SHA-256 + 冻结数据）；
+- `js/core/system-dict-core.js` 负责解析、索引、图算法校验、双语路径、类型继承；
+- 首版 190 节点 / 162 叶子 / 56 银行 / 30 商户 / 169 别名；深度 3；G1–G21 全过；
+- 生成物与源的一致性由 `tools/check.cjs` 和 `tests/system-*.test.cjs` 强制。
 
-在接线前，当前 `dict.tv` 仍是唯一字典来源；迁移会保留全部 `N_* / T_* / H_*` ID。
+仍未接：`user_p` / `user_c` 拆分、`anchor_id`、公共报表、建议器。
+详见 [`mother-tree-graph.md`](mother-tree-graph.md)、
+[`mother-tree-wiring.md`](mother-tree-wiring.md)、
+[`mother-tree-bilingual.md`](mother-tree-bilingual.md)。
+
+账本尚未开始使用，**不做迁移**；`dict.tv` 仍是当前用户字典来源。
 

@@ -191,11 +191,46 @@ def main():
     time.sleep(0.5)
     ok("import behavior", j(sid, "window.__txtvein.state().behaviors", b) >= 1)
 
+    print("== paste export / import ==")
+    j(sid, "document.querySelector('#btn-export').click()", b)
+    ok("export buttons", all(x in j(sid, "document.querySelector('#modal-body').innerText", b)
+       for x in ["导出初级流水密文", "导出深度字典密文", "生成初级流水密文", "生成深度字典密文"]))
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(b){return b.textContent==='生成明文';}).click()", b)
+    ok("export text", wait(b, sid, "document.querySelector('.export-output').value.length > 100", 8))
+    ok("export has dict", "## 字典" in j(sid, "document.querySelector('.export-output').value", b))
+    j(sid, "document.querySelector('#modal-close').click()", b)
+
+    j(sid, "document.querySelector('#btn-import').click()", b)
+    ok("import textarea", j(sid, "!!document.querySelector('.import-textarea')", b) is True)
+    j(sid, "var ta=document.querySelector('.import-textarea'); ta.value=window.__txtvein.singleText(); ta.dispatchEvent(new Event('input',{bubbles:true}));", b)
+    ok("import recognizes single", "TxtVein 单 TXT" in j(sid, "document.querySelector('.import-note').innerText", b))
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent.indexOf('导入并替换')>=0;}).click()", b)
+    ok("import single via paste", wait(b, sid, "document.querySelector('#modal').hidden", 8))
+
+    bundle = j(sid, "(async()=>{const r=await window.__txtvein.exportText('deep'); window.__deep=r.files; return r.ok && r.files.length===2;})()", b)
+    ok("export deep bundle", bundle is True)
+    j(sid, "document.querySelector('#btn-import').click()", b)
+    j(sid, "document.querySelector('.cipher-import-ledger').value=window.__deep[0].text; document.querySelector('.cipher-import-ledger').dispatchEvent(new Event('input',{bubbles:true}));", b)
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent.indexOf('导入并替换')>=0;}).click()", b)
+    time.sleep(0.4)
+    ok("cipher needs both boxes", j(sid, "!document.querySelector('#modal').hidden", b) is True
+       and "两个框" in j(sid, "document.querySelector('#modal-body').innerText", b))
+    j(sid, "document.querySelector('.cipher-import-dict').value=window.__deep[1].text; document.querySelector('.cipher-import-dict').dispatchEvent(new Event('input',{bubbles:true})); document.querySelector('#modal-body input[type=password]').value='test1234';", b)
+    ok("import recognizes cipher", "两份都齐" in j(sid, "document.querySelector('.cipher-note').innerText", b))
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent.indexOf('导入并替换')>=0;}).click()", b)
+    ok("import bundle via paste", wait(b, sid, "document.querySelector('#modal').hidden", 12))
+
     print("== report / tree edit ==")
     j(sid, "document.querySelector('#btn-report').click()", b)
     time.sleep(0.7)
     ok("report", "统计" in j(sid, "document.querySelector('#report-view').innerText", b))
     ok("stats tabs", j(sid, "document.querySelectorAll('.stats-tab').length", b) == 4)
+    j(sid, "document.querySelectorAll('.report-mode-btn')[1].click()", b)
+    ok("public report", "公共归属" in j(sid, "document.querySelector('#report-view').innerText", b))
+    ok("public cards", j(sid, "document.querySelectorAll('.public-card').length", b) == 3)
+    ok("public tree", j(sid, "document.querySelectorAll('.public-tree').length", b) == 1)
+    j(sid, "document.querySelectorAll('.report-mode-btn')[0].click()", b)
+    ok("report mode back", j(sid, "document.querySelectorAll('.stats-tab').length", b) == 4)
     ok("stats months", j(sid, "document.querySelectorAll('.stats-month').length", b) == 12)
     ok("stats year aligns month 12", j(sid, "Math.abs(document.querySelector('.stats-year-input').getBoundingClientRect().right - document.querySelectorAll('.stats-month')[11].getBoundingClientRect().right) < 1", b) is True)
     ok("stats items", j(sid, "document.querySelectorAll('.lst-group').length", b) >= 4)
@@ -248,3 +283,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

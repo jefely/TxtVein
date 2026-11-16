@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
 let pass = 0;
@@ -42,7 +43,17 @@ function walk(dir, out) {
 }
 
 const CORE = [
+  'js/core/version.js',
   'js/core/text.js',
+  'js/core/system-dict-core.js',
+  'js/core/system-dict.js',
+  'js/core/user-dict.js',
+  'js/core/tree-view.js',
+  'js/core/anchor.js',
+  'js/core/public-report.js',
+  'js/core/suggester.js',
+  'js/core/text-bundle.js',
+  'js/core/nt-bridge.js',
   'js/core/amount.js',
   'js/core/date.js',
   'js/core/dict.js',
@@ -77,7 +88,7 @@ const CSS = ['css/base.css', 'css/ledger.css', 'css/report.css', 'css/panels.css
 console.log('TxtVein gate');
 console.log('1) 文件存在');
 [...CORE, ...UI, ...CSS].forEach((f) => ok(f, exists(f)));
-['index.html', 'serve.py', 'start.cmd', 'package.json'].forEach((f) => ok(f, exists(f)));
+['index.html', 'serve.py', 'start.cmd', 'package.json', 'js/core/system.dict'].forEach((f) => ok(f, exists(f)));
 
 console.log('2) index.html 引用');
 const index = read('index.html');
@@ -86,6 +97,14 @@ CSS.forEach((f) => ok('index -> ' + f, index.includes('href="' + f + '"')));
 ok('index 没有外链 http(s) 资源', !/(?:src|href)="https?:/i.test(index));
 ok('index 没有内联事件', !/\son[a-z]+\s*=/.test(index));
 ok('index 没有 <table>', !/<table[\s>]/i.test(index));
+
+const pkg = JSON.parse(read('package.json'));
+const verSrc = read('js/core/version.js');
+const swSrc = read('sw.js');
+const appVer = (verSrc.match(/APP_VER\s*=\s*'([^']+)'/) || [])[1] || '';
+ok('package.json 与 version.js 版本一致', appVer === 'txtvein-v' + pkg.version, appVer + ' / ' + pkg.version);
+ok('sw.js 缓存版本与 package 一致', swSrc.includes("txtvein-shell-v" + pkg.version));
+ok('index 的 app-version 与 package 一致', index.includes('name="app-version" content="' + pkg.version + '"'));
 
 console.log('3) 核心层零 DOM');
 CORE.forEach((f) => {
@@ -127,11 +146,32 @@ if (!exists('TxtVein.html')) {
 console.log('7) 数据文件与测试');
 ['tests/amount.test.cjs', 'tests/date.test.cjs', 'tests/dict.test.cjs', 'tests/parser.test.cjs',
   'tests/calc.test.cjs', 'tests/rules.test.cjs', 'tests/file.test.cjs', 'tests/crypto.test.cjs',
-  'tests/report.test.cjs', 'tests/legacy.test.cjs', 'tests/source.test.cjs'].forEach((f) => ok(f, exists(f)));
+  'tests/report.test.cjs', 'tests/legacy.test.cjs', 'tests/source.test.cjs',
+  'tests/system-graph.test.cjs', 'tests/system-dict.test.cjs', 'tests/system-i18n.test.cjs',
+  'tests/split-dict.test.cjs', 'tests/tree-view.test.cjs', 'tests/anchor.test.cjs',
+  'tests/public-report.test.cjs', 'tests/suggester.test.cjs',
+  'tests/text-bundle.test.cjs', 'tests/nt-bridge.test.cjs'].forEach((f) => ok(f, exists(f)));
 ok('示例账本存在', exists('js/core/example.js'));
 ['vendor/codemirror/codemirror.min.js', 'vendor/codemirror/codemirror.min.css',
   'vendor/codemirror/addon/hint/show-hint.min.js', 'vendor/codemirror/addon/lint/lint.min.js',
   'vendor/codemirror/LICENSE'].forEach((f) => ok('vendor -> ' + f, exists(f)));
+
+console.log('8) 母树');
+const core = require(path.join(ROOT, 'js/core/system-dict-core.js'));
+const parsedSystem = core.parse(read('js/core/system.dict'));
+const systemErrors = parsedSystem.diagnostics.filter((x) => x.severity === 'error');
+ok('system.dict 解析与图算法', parsedSystem.ok, systemErrors.slice(0, 3).map((x) => x.code + ':' + x.message).join(' | '));
+const systemCanonical = core.canonical(core.publicData(parsedSystem));
+const systemHash = crypto.createHash('sha256').update(systemCanonical, 'utf8').digest('hex');
+const genSystem = read('js/core/system-dict.js');
+const genHash = (genSystem.match(/"HASH":\s*"([0-9a-f]{64})"/) || [])[1] || '';
+const genVersion = (genSystem.match(/"VERSION":\s*"([^"]+)"/) || [])[1] || '';
+ok('system-dict.js 哈希新鲜', genHash === systemHash, genHash + ' vs ' + systemHash);
+ok('system-dict.js 版本一致', genVersion === parsedSystem.version, genVersion + ' vs ' + parsedSystem.version);
+ok('母树叶子 140–175', parsedSystem.stats.leafCount >= 140 && parsedSystem.stats.leafCount <= 175, String(parsedSystem.stats.leafCount));
+ok('母树银行 ≥40', parsedSystem.stats.bankCount >= 40, String(parsedSystem.stats.bankCount));
+ok('母树深度 ≤3', parsedSystem.stats.maxDepth <= 3, String(parsedSystem.stats.maxDepth));
+ok('母树分支 ≤20', parsedSystem.stats.maxBranching <= 20, String(parsedSystem.stats.maxBranching));
 
 console.log('');
 console.log('gate: ' + pass + ' passed, ' + fails.length + ' failed');

@@ -80,7 +80,7 @@
     if (!t.ok && pole) type = pole === 'A' ? '资产' : '权益';
     const tt = dictMod.normalizeType(type);
     const domain = dictMod.isDomain(n.domain) ? S(n.domain).toUpperCase() : 'P';
-    return {
+    const out = {
       zh_name: S(n.zh_name || n.name || id),
       en_name: S(n.en_name || n.name || n.zh_name || id),
       zh_code: S(n.zh_code || n.code || ''),
@@ -91,9 +91,15 @@
       domain,
       parent_id: S(n.parent_id || ''),
       weight: dictMod.normalizeWeight(n.weight, 100),
+      sort: dictMod.normalizeSort(n.sort, 100),
+      pin: n.pin ? 1 : 0,
+      uses: Number.isFinite(Number(n.uses)) ? Math.max(0, Math.round(Number(n.uses))) : 0,
+      lastUsed: S(n.lastUsed || n.last_used || ''),
       system: !!n.system,
       created_at: S(n.created_at || ''),
     };
+    if (n.anchor_id) out.anchor_id = S(n.anchor_id);
+    return out;
   }
 
   function normalizeTag(id, raw) {
@@ -106,6 +112,10 @@
       domain: dictMod.isDomain(t.domain) ? S(t.domain).toUpperCase() : 'P',
       parent_id: S(t.parent_id || ''),
       weight: dictMod.normalizeWeight(t.weight, 10),
+      sort: dictMod.normalizeSort(t.sort, 100),
+      pin: t.pin ? 1 : 0,
+      uses: Number.isFinite(Number(t.uses)) ? Math.max(0, Math.round(Number(t.uses))) : 0,
+      lastUsed: S(t.lastUsed || t.last_used || ''),
       kind: t.kind || dictMod.tagKindOf(t.zh_name || id),
       created_at: S(t.created_at || ''),
     };
@@ -121,6 +131,7 @@
       domain: dictMod.isDomain(h.domain) ? S(h.domain).toUpperCase() : 'P',
       parent_id: S(h.parent_id || ''),
       weight: dictMod.normalizeWeight(h.weight, 10),
+      sort: dictMod.normalizeSort(h.sort, 100),
       created_at: S(h.created_at || ''),
     };
   }

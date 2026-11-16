@@ -1,0 +1,513 @@
+# TxtVein system.dict
+# format: 1
+# version: 2026.11.1
+#
+# 一组 = 一个节点 + 中英名 + 中英推荐码。
+# 推荐码不是身份；私人树按域查重后定稿。
+# 只有叶子可记账；每个内部节点必须有 .GENERAL 叶子。
+
+[Tree]
+ID | 中文名 | 英文名 | @父ID | kind | 大类 | 中文推荐码 | 英文推荐码 | 权重 | 排序
+SYS | 母树 | System | - | root | - | - | - | 0 | 0
+SYS.ACC.EXPENSE | 费用 | Expense | @SYS | type | 费用 | - | - | 100 | 10
+SYS.ACC.COST | 成本 | Cost | @SYS | type | 成本 | - | - | 100 | 20
+SYS.ACC.ASSET | 资产 | Asset | @SYS | type | 资产 | - | - | 100 | 30
+SYS.ACC.LIABILITY | 负债 | Liability | @SYS | type | 负债 | - | - | 100 | 40
+SYS.ACC.INCOME | 收入 | Income | @SYS | type | 收入 | - | - | 100 | 50
+SYS.ACC.EQUITY | 权益 | Equity | @SYS | type | 权益 | - | - | 100 | 60
+SYS.ACC.EXPENSE.GENERAL | 费用·未细分 | Expense General | @SYS.ACC.EXPENSE | category | - | fee_gen | fee_gen | 20 | 99
+SYS.ACC.COST.GENERAL | 成本·未细分 | Cost General | @SYS.ACC.COST | category | - | cost_gen | cost_gen | 20 | 99
+SYS.ACC.ASSET.GENERAL | 资产·未细分 | Asset General | @SYS.ACC.ASSET | category | - | asset_gen | asset_gen | 20 | 99
+SYS.ACC.LIABILITY.GENERAL | 负债·未细分 | Liability General | @SYS.ACC.LIABILITY | category | - | liab_gen | liab_gen | 20 | 99
+SYS.ACC.INCOME.GENERAL | 收入·未细分 | Income General | @SYS.ACC.INCOME | category | - | inc_gen | inc_gen | 20 | 99
+SYS.ACC.EQUITY.GENERAL | 权益·未细分 | Equity General | @SYS.ACC.EQUITY | category | - | eq_gen | eq_gen | 20 | 99
+
+# 费用 · 餐饮
+SYS.CAT.DINING | 餐饮 | Dining | @SYS.ACC.EXPENSE | category | - | - | - | 100 | 10
+SYS.CAT.DINING.BREAKFAST | 早餐 | Breakfast | @SYS.CAT.DINING | category | - | zc | breakfast | 80 | 10
+SYS.CAT.DINING.LUNCH | 午餐 | Lunch | @SYS.CAT.DINING | category | - | wucan | lunch | 80 | 20
+SYS.CAT.DINING.DINNER | 晚餐 | Dinner | @SYS.CAT.DINING | category | - | wancan | dinner | 80 | 30
+SYS.CAT.DINING.COFFEE | 咖啡茶饮 | Coffee | @SYS.CAT.DINING | category | - | kf | coffee | 90 | 40
+SYS.CAT.DINING.TAKEOUT | 外卖 | Takeout | @SYS.CAT.DINING | category | - | wm | takeout | 85 | 50
+SYS.CAT.DINING.GROUP_MEAL | 聚餐 | Group Meal | @SYS.CAT.DINING | category | - | jc | dining_group | 60 | 60
+SYS.CAT.DINING.GENERAL | 餐饮·未细分 | Dining General | @SYS.CAT.DINING | category | - | din_gen | din_gen | 50 | 99
+
+# 费用 · 交通
+SYS.CAT.TRANSPORT | 交通 | Transport | @SYS.ACC.EXPENSE | category | - | - | - | 95 | 20
+SYS.CAT.TRANSPORT.PUBLIC_TRANSIT | 公交地铁 | Public Transit | @SYS.CAT.TRANSPORT | category | - | gjdt | transit | 80 | 10
+SYS.CAT.TRANSPORT.RIDE_HAILING | 打车网约车 | Ride Hailing | @SYS.CAT.TRANSPORT | category | - | dc | ride | 85 | 20
+SYS.CAT.TRANSPORT.FUEL | 加油 | Fuel | @SYS.CAT.TRANSPORT | category | - | jy | fuel | 70 | 30
+SYS.CAT.TRANSPORT.PARKING | 停车 | Parking | @SYS.CAT.TRANSPORT | category | - | tc | parking | 65 | 40
+SYS.CAT.TRANSPORT.TRAIN | 火车高铁 | Train | @SYS.CAT.TRANSPORT | category | - | hc | train | 65 | 50
+SYS.CAT.TRANSPORT.FLIGHT | 飞机 | Flight | @SYS.CAT.TRANSPORT | category | - | fj | flight | 60 | 60
+SYS.CAT.TRANSPORT.CAR_MAINTENANCE | 车辆保养维修 | Car Care | @SYS.CAT.TRANSPORT | category | - | qc | car_care | 50 | 70
+SYS.CAT.TRANSPORT.GENERAL | 交通·未细分 | Transport General | @SYS.CAT.TRANSPORT | category | - | tra_gen | tra_gen | 50 | 99
+
+# 费用 · 居住
+SYS.CAT.HOUSING | 居住 | Housing | @SYS.ACC.EXPENSE | category | - | - | - | 95 | 30
+SYS.CAT.HOUSING.RENT | 房租 | Rent | @SYS.CAT.HOUSING | category | - | fz | rent | 90 | 10
+SYS.CAT.HOUSING.MORTGAGE_INTEREST | 房贷利息 | Mortgage Interest | @SYS.CAT.HOUSING | category | - | fd | mortgage_interest | 70 | 20
+SYS.CAT.HOUSING.PROPERTY_FEE | 物业费 | Property Fee | @SYS.CAT.HOUSING | category | - | wy | property_fee | 75 | 30
+SYS.CAT.HOUSING.UTILITIES | 水电燃气 | Utilities | @SYS.CAT.HOUSING | category | - | sdrq | utilities | 75 | 40
+SYS.CAT.HOUSING.REPAIR | 维修 | Home Repair | @SYS.CAT.HOUSING | category | - | weixiu | repair | 55 | 50
+SYS.CAT.HOUSING.FURNITURE_APPLIANCE | 家具家电 | Furniture | @SYS.CAT.HOUSING | category | - | jj | furniture | 55 | 60
+SYS.CAT.HOUSING.CLEANING | 家政保洁 | Cleaning | @SYS.CAT.HOUSING | category | - | bj | cleaning | 50 | 70
+SYS.CAT.HOUSING.GENERAL | 居住·未细分 | Housing General | @SYS.CAT.HOUSING | category | - | hou_gen | hou_gen | 50 | 99
+
+# 费用 · 购物
+SYS.CAT.SHOPPING | 购物 | Shopping | @SYS.ACC.EXPENSE | category | - | - | - | 90 | 40
+SYS.CAT.SHOPPING.DAILY | 日用百货 | Daily Goods | @SYS.CAT.SHOPPING | category | - | ry | daily | 70 | 10
+SYS.CAT.SHOPPING.SUPERMARKET | 超市生鲜 | Supermarket | @SYS.CAT.SHOPPING | category | - | cs | supermarket | 80 | 20
+SYS.CAT.SHOPPING.CLOTHING | 服装鞋帽 | Clothing | @SYS.CAT.SHOPPING | category | - | yifu | clothing | 60 | 30
+SYS.CAT.SHOPPING.BEAUTY | 美妆个护 | Beauty | @SYS.CAT.SHOPPING | category | - | mz | beauty | 60 | 40
+SYS.CAT.SHOPPING.ELECTRONICS | 数码电子 | Electronics | @SYS.CAT.SHOPPING | category | - | sm | electronics | 55 | 50
+SYS.CAT.SHOPPING.GIFTS | 礼品礼盒 | Gifts | @SYS.CAT.SHOPPING | category | - | lp | gifts | 50 | 60
+SYS.CAT.SHOPPING.GENERAL | 购物·未细分 | Shopping General | @SYS.CAT.SHOPPING | category | - | shop_gen | shop_gen | 50 | 99
+
+# 费用 · 通讯
+SYS.CAT.COMMUNICATION | 通讯 | Communication | @SYS.ACC.EXPENSE | category | - | - | - | 80 | 50
+SYS.CAT.COMMUNICATION.MOBILE | 手机话费 | Mobile | @SYS.CAT.COMMUNICATION | category | - | hf | mobile | 70 | 10
+SYS.CAT.COMMUNICATION.BROADBAND | 宽带网络 | Broadband | @SYS.CAT.COMMUNICATION | category | - | kd | broadband | 65 | 20
+SYS.CAT.COMMUNICATION.SOFTWARE | 软件订阅 | Software | @SYS.CAT.COMMUNICATION | category | - | rj | software | 60 | 30
+SYS.CAT.COMMUNICATION.CLOUD | 云服务 | Cloud | @SYS.CAT.COMMUNICATION | category | - | yun | cloud | 50 | 40
+SYS.CAT.COMMUNICATION.GENERAL | 通讯·未细分 | Communication General | @SYS.CAT.COMMUNICATION | category | - | com_gen | com_gen | 50 | 99
+
+# 费用 · 医疗健康
+SYS.CAT.HEALTH | 医疗健康 | Health | @SYS.ACC.EXPENSE | category | - | - | - | 85 | 60
+SYS.CAT.HEALTH.CLINIC | 门诊 | Clinic | @SYS.CAT.HEALTH | category | - | menzhen | clinic | 75 | 10
+SYS.CAT.HEALTH.HOSPITAL | 住院 | Hospital | @SYS.CAT.HEALTH | category | - | zy | hospital | 70 | 20
+SYS.CAT.HEALTH.PHARMACY | 药品 | Pharmacy | @SYS.CAT.HEALTH | category | - | yp | pharmacy | 75 | 30
+SYS.CAT.HEALTH.CHECKUP | 体检 | Checkup | @SYS.CAT.HEALTH | category | - | tj | checkup | 60 | 40
+SYS.CAT.HEALTH.DENTAL | 牙科 | Dental | @SYS.CAT.HEALTH | category | - | yk | dental | 55 | 50
+SYS.CAT.HEALTH.FITNESS | 健身运动 | Fitness | @SYS.CAT.HEALTH | category | - | js | fitness | 55 | 60
+SYS.CAT.HEALTH.GENERAL | 医疗健康·未细分 | Health General | @SYS.CAT.HEALTH | category | - | health_gen | health_gen | 50 | 99
+
+# 费用 · 教育
+SYS.CAT.EDUCATION | 教育 | Education | @SYS.ACC.EXPENSE | category | - | - | - | 80 | 70
+SYS.CAT.EDUCATION.TUITION | 学费 | Tuition | @SYS.CAT.EDUCATION | category | - | xf | tuition | 75 | 10
+SYS.CAT.EDUCATION.TRAINING | 培训 | Training | @SYS.CAT.EDUCATION | category | - | px | training | 65 | 20
+SYS.CAT.EDUCATION.EXAM | 考试考证 | Exam | @SYS.CAT.EDUCATION | category | - | ks | exam | 55 | 30
+SYS.CAT.EDUCATION.TEXTBOOK | 教材 | Textbook | @SYS.CAT.EDUCATION | category | - | jiaocai | textbook | 50 | 40
+SYS.CAT.EDUCATION.ONLINE_COURSE | 在线课程 | Online Course | @SYS.CAT.EDUCATION | category | - | wk | online_course | 50 | 50
+SYS.CAT.EDUCATION.GENERAL | 教育·未细分 | Education General | @SYS.CAT.EDUCATION | category | - | edu_gen | edu_gen | 50 | 99
+
+# 费用 · 娱乐
+SYS.CAT.ENTERTAINMENT | 娱乐 | Entertainment | @SYS.ACC.EXPENSE | category | - | - | - | 75 | 80
+SYS.CAT.ENTERTAINMENT.MOVIE | 电影 | Movie | @SYS.CAT.ENTERTAINMENT | category | - | dy | movie | 65 | 10
+SYS.CAT.ENTERTAINMENT.SHOW | 演出展览 | Show | @SYS.CAT.ENTERTAINMENT | category | - | yc | show | 55 | 20
+SYS.CAT.ENTERTAINMENT.GAME | 游戏 | Game | @SYS.CAT.ENTERTAINMENT | category | - | yx | game | 55 | 30
+SYS.CAT.ENTERTAINMENT.SUBSCRIPTION | 内容订阅 | Subscription | @SYS.CAT.ENTERTAINMENT | category | - | dingyue | subscription | 60 | 40
+SYS.CAT.ENTERTAINMENT.HOBBY | 爱好玩具 | Hobby | @SYS.CAT.ENTERTAINMENT | category | - | ah | hobby | 45 | 50
+SYS.CAT.ENTERTAINMENT.GENERAL | 娱乐·未细分 | Entertainment General | @SYS.CAT.ENTERTAINMENT | category | - | ent_gen | ent_gen | 50 | 99
+
+# 费用 · 旅行
+SYS.CAT.TRAVEL | 旅行 | Travel | @SYS.ACC.EXPENSE | category | - | - | - | 75 | 90
+SYS.CAT.TRAVEL.TRANSPORT | 大交通 | Travel Transport | @SYS.CAT.TRAVEL | category | - | djt | travel_transport | 70 | 10
+SYS.CAT.TRAVEL.ACCOMMODATION | 住宿 | Lodging | @SYS.CAT.TRAVEL | category | - | zs | lodging | 70 | 20
+SYS.CAT.TRAVEL.FOOD | 旅行餐饮 | Travel Food | @SYS.CAT.TRAVEL | category | - | cy | travel_food | 55 | 30
+SYS.CAT.TRAVEL.TICKETS | 门票 | Tickets | @SYS.CAT.TRAVEL | category | - | mp | tickets | 55 | 40
+SYS.CAT.TRAVEL.VISA | 签证 | Visa | @SYS.CAT.TRAVEL | category | - | qz | visa | 40 | 50
+SYS.CAT.TRAVEL.GENERAL | 旅行·未细分 | Travel General | @SYS.CAT.TRAVEL | category | - | trav_gen | trav_gen | 50 | 99
+
+# 费用 · 人情社交
+SYS.CAT.SOCIAL | 人情社交 | Social | @SYS.ACC.EXPENSE | category | - | - | - | 70 | 100
+SYS.CAT.SOCIAL.RED_PACKET | 红包 | Red Packet | @SYS.CAT.SOCIAL | category | - | hb | red_packet | 60 | 10
+SYS.CAT.SOCIAL.GIFT | 礼物 | Social Gift | @SYS.CAT.SOCIAL | category | - | lw | social_gift | 55 | 20
+SYS.CAT.SOCIAL.TREAT | 请客 | Treat | @SYS.CAT.SOCIAL | category | - | qk | treat | 55 | 30
+SYS.CAT.SOCIAL.WEDDING | 婚丧嫁娶 | Wedding | @SYS.CAT.SOCIAL | category | - | hs | wedding | 50 | 40
+SYS.CAT.SOCIAL.DONATION | 捐赠 | Donation | @SYS.CAT.SOCIAL | category | - | jz | donation | 40 | 50
+SYS.CAT.SOCIAL.GENERAL | 人情社交·未细分 | Social General | @SYS.CAT.SOCIAL | category | - | soc_gen | soc_gen | 50 | 99
+
+# 费用 · 家庭
+SYS.CAT.FAMILY | 家庭 | Family | @SYS.ACC.EXPENSE | category | - | - | - | 80 | 110
+SYS.CAT.FAMILY.CHILDCARE | 育儿 | Childcare | @SYS.CAT.FAMILY | category | - | ye | childcare | 60 | 10
+SYS.CAT.FAMILY.DIAPERS | 奶粉尿布 | Diapers | @SYS.CAT.FAMILY | category | - | nn | diapers | 60 | 20
+SYS.CAT.FAMILY.PRESCHOOL | 幼儿园托育 | Preschool | @SYS.CAT.FAMILY | category | - | yey | preschool | 55 | 30
+SYS.CAT.FAMILY.ELDER_CARE | 赡养老人 | Elder Care | @SYS.CAT.FAMILY | category | - | sy | elder_care | 55 | 40
+SYS.CAT.FAMILY.PET_FOOD | 宠物食品 | Pet Food | @SYS.CAT.FAMILY | category | - | cw | pet_food | 45 | 50
+SYS.CAT.FAMILY.PET_VET | 宠物医疗 | Pet Vet | @SYS.CAT.FAMILY | category | - | cwyy | pet_vet | 40 | 60
+SYS.CAT.FAMILY.GENERAL | 家庭·未细分 | Family General | @SYS.CAT.FAMILY | category | - | fam_gen | fam_gen | 50 | 99
+
+# 费用 · 保险
+SYS.CAT.INSURANCE | 保险 | Insurance | @SYS.ACC.EXPENSE | category | - | - | - | 75 | 120
+SYS.CAT.INSURANCE.LIFE | 寿险 | Life Insurance | @SYS.CAT.INSURANCE | category | - | sx | life | 55 | 10
+SYS.CAT.INSURANCE.MEDICAL | 医疗险 | Medical Insurance | @SYS.CAT.INSURANCE | category | - | ylx | medical | 55 | 20
+SYS.CAT.INSURANCE.ACCIDENT | 意外险 | Accident Insurance | @SYS.CAT.INSURANCE | category | - | ywx | accident | 50 | 30
+SYS.CAT.INSURANCE.CAR | 车险 | Car Insurance | @SYS.CAT.INSURANCE | category | - | cx | car | 50 | 40
+SYS.CAT.INSURANCE.TRAVEL | 旅行险 | Travel Insurance | @SYS.CAT.INSURANCE | category | - | lxx | travel | 40 | 50
+SYS.CAT.INSURANCE.GENERAL | 保险·未细分 | Insurance General | @SYS.CAT.INSURANCE | category | - | ins_gen | ins_gen | 50 | 99
+
+# 费用 · 税费金融
+SYS.CAT.TAX_FINANCE | 税费金融 | Tax & Finance | @SYS.ACC.EXPENSE | category | - | - | - | 70 | 130
+SYS.CAT.TAX_FINANCE.INCOME_TAX | 个人所得税 | Income Tax | @SYS.CAT.TAX_FINANCE | category | - | gs | income_tax | 55 | 10
+SYS.CAT.TAX_FINANCE.VAT | 增值税 | VAT | @SYS.CAT.TAX_FINANCE | category | - | zzs | vat | 50 | 20
+SYS.CAT.TAX_FINANCE.PROPERTY_TAX | 房产税 | Property Tax | @SYS.CAT.TAX_FINANCE | category | - | fcs | property_tax | 40 | 30
+SYS.CAT.TAX_FINANCE.BANK_FEE | 银行手续费 | Bank Fee | @SYS.CAT.TAX_FINANCE | category | - | sxf | bank_fee | 60 | 40
+SYS.CAT.TAX_FINANCE.INTEREST | 利息支出 | Interest Expense | @SYS.CAT.TAX_FINANCE | category | - | lx | interest | 55 | 50
+SYS.CAT.TAX_FINANCE.LOAN_INTEREST | 贷款利息 | Loan Interest | @SYS.CAT.TAX_FINANCE | category | - | dk | loan_interest | 55 | 60
+SYS.CAT.TAX_FINANCE.INVESTMENT_LOSS | 投资亏损 | Investment Loss | @SYS.CAT.TAX_FINANCE | category | - | tz | investment_loss | 40 | 70
+SYS.CAT.TAX_FINANCE.GENERAL | 税费金融·未细分 | Tax Finance General | @SYS.CAT.TAX_FINANCE | category | - | tax_gen | tax_gen | 50 | 99
+
+# 费用 · 工作公司
+SYS.CAT.WORK | 工作公司 | Work | @SYS.ACC.EXPENSE | category | - | - | - | 70 | 140
+SYS.CAT.WORK.OFFICE_RENT | 办公租金 | Office Rent | @SYS.CAT.WORK | category | - | bgzj | office_rent | 55 | 10
+SYS.CAT.WORK.OFFICE_UTILITIES | 办公水电 | Office Utilities | @SYS.CAT.WORK | category | - | bgsd | office_utilities | 50 | 20
+SYS.CAT.WORK.OFFICE_SUPPLIES | 办公用品 | Office Supplies | @SYS.CAT.WORK | category | - | bgyp | office_supplies | 50 | 30
+SYS.CAT.WORK.EQUIPMENT | 办公设备 | Equipment | @SYS.CAT.WORK | category | - | sb | equipment | 45 | 40
+SYS.CAT.WORK.SOFTWARE | 企业软件 | Work Software | @SYS.CAT.WORK | category | - | qyrj | work_software | 50 | 50
+SYS.CAT.WORK.TRAVEL | 差旅 | Work Travel | @SYS.CAT.WORK | category | - | cl | work_travel | 55 | 60
+SYS.CAT.WORK.BUSINESS_MEAL | 业务招待 | Business Meal | @SYS.CAT.WORK | category | - | zd | business_meal | 50 | 70
+SYS.CAT.WORK.MARKETING | 市场推广 | Marketing | @SYS.CAT.WORK | category | - | tg | marketing | 45 | 80
+SYS.CAT.WORK.RND | 研发 | R&D | @SYS.CAT.WORK | category | - | yf | rnd | 45 | 90
+SYS.CAT.WORK.OUTSOURCING | 外包 | Outsourcing | @SYS.CAT.WORK | category | - | wb | outsourcing | 40 | 100
+SYS.CAT.WORK.LEGAL | 法务 | Legal | @SYS.CAT.WORK | category | - | fw | legal | 40 | 110
+SYS.CAT.WORK.PAYROLL | 员工薪酬 | Payroll | @SYS.CAT.WORK | category | - | xc | payroll | 55 | 120
+SYS.CAT.WORK.SOCIAL_INSURANCE | 社保公积金 | Social Insurance | @SYS.CAT.WORK | category | - | sbyj | social_insurance | 50 | 130
+SYS.CAT.WORK.LOGISTICS | 快递物流 | Logistics | @SYS.CAT.WORK | category | - | wl | logistics | 45 | 140
+SYS.CAT.WORK.GENERAL | 工作公司·未细分 | Work General | @SYS.CAT.WORK | category | - | work_gen | work_gen | 50 | 199
+
+# 费用 · 其他
+SYS.CAT.MISC | 其他支出 | Misc | @SYS.ACC.EXPENSE | category | - | - | - | 40 | 150
+SYS.CAT.MISC.SERVICE_FEE | 服务费 | Service Fee | @SYS.CAT.MISC | category | - | fwf | service_fee | 35 | 10
+SYS.CAT.MISC.LOSS | 损失 | Loss | @SYS.CAT.MISC | category | - | ss | loss | 30 | 20
+SYS.CAT.MISC.GENERAL | 其他支出·未细分 | Misc General | @SYS.CAT.MISC | category | - | misc_gen | misc_gen | 30 | 99
+
+# 成本
+SYS.CAT.COST | 成本项目 | Cost Items | @SYS.ACC.COST | category | - | - | - | 80 | 10
+SYS.CAT.COST.MATERIAL | 原材料 | Material | @SYS.CAT.COST | category | - | yl | material | 60 | 10
+SYS.CAT.COST.INVENTORY | 库存商品 | Inventory | @SYS.CAT.COST | category | - | kc | inventory | 55 | 20
+SYS.CAT.COST.PACKAGING | 包装 | Packaging | @SYS.CAT.COST | category | - | bz | packaging | 50 | 30
+SYS.CAT.COST.LABOR | 生产人工 | Labor | @SYS.CAT.COST | category | - | rg | labor | 55 | 40
+SYS.CAT.COST.OVERHEAD | 制造费用 | Overhead | @SYS.CAT.COST | category | - | zzfy | overhead | 50 | 50
+SYS.CAT.COST.FACTORY_RENT | 厂房租金 | Factory Rent | @SYS.CAT.COST | category | - | cfzj | factory_rent | 50 | 60
+SYS.CAT.COST.UTILITIES | 厂房水电 | Factory Utilities | @SYS.CAT.COST | category | - | cfsd | factory_utilities | 45 | 70
+SYS.CAT.COST.QUALITY | 质检 | Quality Control | @SYS.CAT.COST | category | - | zj | quality | 40 | 80
+SYS.CAT.COST.WASTE | 损耗 | Waste | @SYS.CAT.COST | category | - | sh | waste | 40 | 90
+SYS.CAT.COST.GENERAL | 成本项目·未细分 | Cost Items General | @SYS.CAT.COST | category | - | cost_item_gen | cost_item_gen | 50 | 99
+
+# 资产
+SYS.CAT.CASH | 现金 | Cash | @SYS.ACC.ASSET | category | - | - | - | 80 | 10
+SYS.CAT.CASH.WALLET | 钱包现金 | Wallet Cash | @SYS.CAT.CASH | category | - | xj | wallet | 60 | 10
+SYS.CAT.CASH.WECHAT | 微信零钱 | WeChat Wallet | @SYS.CAT.CASH | category | - | wx | wechat | 80 | 20
+SYS.CAT.CASH.ALIPAY | 支付宝余额 | Alipay Balance | @SYS.CAT.CASH | category | - | zfb | alipay | 80 | 30
+SYS.CAT.CASH.PREPAID | 储值卡饭卡 | Prepaid Card | @SYS.CAT.CASH | category | - | czk | prepaid | 55 | 40
+SYS.CAT.CASH.GENERAL | 现金·未细分 | Cash General | @SYS.CAT.CASH | category | - | cash_gen | cash_gen | 50 | 99
+SYS.CAT.BANK | 银行存款 | Bank | @SYS.ACC.ASSET | category | - | - | - | 80 | 20
+SYS.CAT.BANK.DEBIT | 储蓄卡 | Debit Card | @SYS.CAT.BANK | category | - | cxk | debit | 80 | 10
+SYS.CAT.BANK.CURRENT | 对公账户 | Current Account | @SYS.CAT.BANK | category | - | dg | current | 60 | 20
+SYS.CAT.BANK.GENERAL | 银行存款·未细分 | Bank General | @SYS.CAT.BANK | category | - | bank_gen | bank_gen | 50 | 99
+SYS.CAT.RECEIVABLE | 应收款 | Receivable | @SYS.ACC.ASSET | category | - | - | - | 60 | 30
+SYS.CAT.RECEIVABLE.REIMBURSEMENT | 报销垫付 | Reimbursement | @SYS.CAT.RECEIVABLE | category | - | bx | reimbursement | 55 | 10
+SYS.CAT.RECEIVABLE.ADVANCE | 代付借出 | Advance | @SYS.CAT.RECEIVABLE | category | - | df | advance | 50 | 20
+SYS.CAT.RECEIVABLE.GENERAL | 应收款·未细分 | Receivable General | @SYS.CAT.RECEIVABLE | category | - | recv_gen | recv_gen | 50 | 99
+SYS.CAT.INVESTMENT | 投资 | Investment | @SYS.ACC.ASSET | category | - | - | - | 60 | 40
+SYS.CAT.INVESTMENT.BROKERAGE | 证券账户 | Brokerage | @SYS.CAT.INVESTMENT | category | - | zq | brokerage | 55 | 10
+SYS.CAT.INVESTMENT.GENERAL | 投资·未细分 | Investment General | @SYS.CAT.INVESTMENT | category | - | inv_gen | inv_gen | 50 | 99
+SYS.CAT.FIXED_ASSET | 固定资产 | Fixed Asset | @SYS.ACC.ASSET | category | - | - | - | 60 | 50
+SYS.CAT.FIXED_ASSET.EQUIPMENT | 设备 | Fixed Equipment | @SYS.CAT.FIXED_ASSET | category | - | gdsb | fixed_equipment | 50 | 10
+SYS.CAT.FIXED_ASSET.VEHICLE | 车辆 | Vehicle | @SYS.CAT.FIXED_ASSET | category | - | cheliang | vehicle | 50 | 20
+SYS.CAT.FIXED_ASSET.GENERAL | 固定资产·未细分 | Fixed Asset General | @SYS.CAT.FIXED_ASSET | category | - | fixed_gen | fixed_gen | 50 | 99
+SYS.CAT.PREPAYMENT | 预付款 | Prepayment | @SYS.ACC.ASSET | category | - | yfk | prepayment | 45 | 60
+SYS.CAT.SOCIAL_SECURITY | 社保账户 | Social Security | @SYS.ACC.ASSET | category | - | sby | social_security | 45 | 70
+SYS.CAT.HOUSING_FUND | 公积金 | Housing Fund | @SYS.ACC.ASSET | category | - | gjj | housing_fund | 45 | 80
+
+# 负债
+SYS.CAT.CREDIT_CARD | 信用卡 | Credit Card | @SYS.ACC.LIABILITY | category | - | xyk | credit_card | 80 | 10
+SYS.CAT.HUABEI | 花呗白条 | Huabei | @SYS.ACC.LIABILITY | category | - | huabei | huabei | 60 | 20
+SYS.CAT.MORTGAGE | 房贷 | Mortgage | @SYS.ACC.LIABILITY | category | - | fangdai | mortgage | 60 | 30
+SYS.CAT.CAR_LOAN | 车贷 | Car Loan | @SYS.ACC.LIABILITY | category | - | cd | car_loan | 50 | 40
+SYS.CAT.CONSUMER_LOAN | 消费贷 | Consumer Loan | @SYS.ACC.LIABILITY | category | - | xfd | consumer_loan | 50 | 50
+SYS.CAT.PAYABLE | 应付款 | Payable | @SYS.ACC.LIABILITY | category | - | yingfu | payable | 50 | 60
+SYS.CAT.PERSONAL_LOAN | 亲友借款 | Personal Loan | @SYS.ACC.LIABILITY | category | - | jk | personal_loan | 40 | 70
+SYS.CAT.TAX_PAYABLE | 应交税费 | Tax Payable | @SYS.ACC.LIABILITY | category | - | yjsf | tax_payable | 45 | 80
+SYS.CAT.SALARY_PAYABLE | 应付薪酬 | Salary Payable | @SYS.ACC.LIABILITY | category | - | yfx | salary_payable | 45 | 90
+
+# 收入
+SYS.CAT.SALARY | 工资 | Salary | @SYS.ACC.INCOME | category | - | gz | salary | 80 | 10
+SYS.CAT.BONUS | 奖金年终奖 | Bonus | @SYS.ACC.INCOME | category | - | jiangjin | bonus | 60 | 20
+SYS.CAT.PART_TIME | 兼职 | Part Time | @SYS.ACC.INCOME | category | - | jianzhi | part_time | 50 | 30
+SYS.CAT.BUSINESS_REVENUE | 经营收入 | Business Revenue | @SYS.ACC.INCOME | category | - | jingying | business_revenue | 60 | 40
+SYS.CAT.INTEREST_INCOME | 利息收入 | Interest Income | @SYS.ACC.INCOME | category | - | lxs | interest_income | 45 | 50
+SYS.CAT.DIVIDEND | 股息分红 | Dividend | @SYS.ACC.INCOME | category | - | gx | dividend | 45 | 60
+SYS.CAT.REFUND | 退款 | Refund | @SYS.ACC.INCOME | category | - | tk | refund | 40 | 70
+SYS.CAT.SUBSIDY | 补贴 | Subsidy | @SYS.ACC.INCOME | category | - | bt | subsidy | 40 | 80
+SYS.CAT.INSURANCE_CLAIM | 保险理赔 | Insurance Claim | @SYS.ACC.INCOME | category | - | lipei | claim | 35 | 90
+
+# 权益
+SYS.CAT.OPENING_EQUITY | 期初权益 | Opening Equity | @SYS.ACC.EQUITY | category | - | qcqy | opening | 50 | 10
+SYS.CAT.RETAINED_EARNINGS | 留存收益 | Retained Earnings | @SYS.ACC.EQUITY | category | - | lc | retained | 40 | 20
+SYS.CAT.CAPITAL | 实收资本 | Paid-in Capital | @SYS.ACC.EQUITY | category | - | ssz | capital | 45 | 30
+SYS.CAT.INCOME_SUMMARY | 收入汇总 | Income Summary | @SYS.ACC.EQUITY | category | - | srz | income_summary | 40 | 40
+
+[Alias]
+ID | lang | 别名
+SYS.CAT.DINING | zh | 吃饭
+SYS.CAT.DINING | en | dining
+SYS.CAT.TRANSPORT | zh | 出行
+SYS.CAT.TRANSPORT | en | transport
+SYS.CAT.HOUSING | zh | 住房
+SYS.CAT.HOUSING | en | housing
+SYS.CAT.SHOPPING | zh | 买东西
+SYS.CAT.SHOPPING | en | shopping
+SYS.CAT.COMMUNICATION | zh | 通信
+SYS.CAT.COMMUNICATION | en | communication
+SYS.CAT.HEALTH | zh | 医疗
+SYS.CAT.HEALTH | en | health
+SYS.CAT.EDUCATION | zh | 学习
+SYS.CAT.EDUCATION | en | education
+SYS.CAT.ENTERTAINMENT | zh | 休闲
+SYS.CAT.ENTERTAINMENT | en | entertainment
+SYS.CAT.TRAVEL | zh | 旅游
+SYS.CAT.TRAVEL | en | travel
+SYS.CAT.SOCIAL | zh | 人情
+SYS.CAT.SOCIAL | en | social
+SYS.CAT.FAMILY | zh | 家用
+SYS.CAT.FAMILY | en | family
+SYS.CAT.INSURANCE | zh | 保费
+SYS.CAT.INSURANCE | en | insurance
+SYS.CAT.TAX_FINANCE | zh | 税费
+SYS.CAT.TAX_FINANCE | en | tax
+SYS.CAT.WORK | zh | 公司
+SYS.CAT.WORK | en | work
+SYS.CAT.MISC | zh | 杂项
+SYS.CAT.MISC | en | misc
+SYS.CAT.COST | zh | 生产
+SYS.CAT.COST | en | cost
+SYS.CAT.CASH | zh | 现金
+SYS.CAT.CASH | en | cash
+SYS.CAT.BANK | zh | 银行
+SYS.CAT.BANK | en | bank
+SYS.CAT.RECEIVABLE | zh | 应收
+SYS.CAT.RECEIVABLE | en | receivable
+SYS.CAT.INVESTMENT | zh | 投资
+SYS.CAT.INVESTMENT | en | investment
+SYS.CAT.FIXED_ASSET | zh | 固定资产
+SYS.CAT.FIXED_ASSET | en | fixed_asset
+SYS.CAT.DINING.COFFEE | zh | 咖啡
+SYS.CAT.DINING.COFFEE | zh | 奶茶
+SYS.CAT.DINING.COFFEE | en | latte
+SYS.CAT.DINING.TAKEOUT | zh | 外卖
+SYS.CAT.DINING.TAKEOUT | en | delivery
+SYS.CAT.TRANSPORT.RIDE_HAILING | zh | 滴滴
+SYS.CAT.TRANSPORT.RIDE_HAILING | zh | 出租车
+SYS.CAT.TRANSPORT.RIDE_HAILING | en | taxi
+SYS.CAT.TRANSPORT.PUBLIC_TRANSIT | zh | 公交
+SYS.CAT.TRANSPORT.PUBLIC_TRANSIT | zh | 地铁
+SYS.CAT.TRANSPORT.PUBLIC_TRANSIT | en | metro
+SYS.CAT.TRANSPORT.FUEL | zh | 油费
+SYS.CAT.TRANSPORT.FUEL | en | gas
+SYS.CAT.HOUSING.RENT | zh | 租金
+SYS.CAT.HOUSING.RENT | zh | 租房
+SYS.CAT.HOUSING.UTILITIES | zh | 水费
+SYS.CAT.HOUSING.UTILITIES | zh | 电费
+SYS.CAT.HOUSING.UTILITIES | zh | 燃气费
+SYS.CAT.HOUSING.UTILITIES | en | water
+SYS.CAT.HOUSING.UTILITIES | en | electricity
+SYS.CAT.SHOPPING.SUPERMARKET | zh | 买菜
+SYS.CAT.SHOPPING.SUPERMARKET | en | groceries
+SYS.CAT.COMMUNICATION.MOBILE | zh | 话费
+SYS.CAT.COMMUNICATION.MOBILE | en | phone
+SYS.CAT.HEALTH.CLINIC | zh | 看病
+SYS.CAT.HEALTH.CLINIC | zh | 挂号
+SYS.CAT.EDUCATION.TUITION | zh | 学校
+SYS.CAT.ENTERTAINMENT.MOVIE | zh | 看电影
+SYS.CAT.TRAVEL.ACCOMMODATION | zh | 酒店
+SYS.CAT.TRAVEL.ACCOMMODATION | zh | 民宿
+SYS.CAT.SOCIAL.RED_PACKET | zh | 压岁钱
+SYS.CAT.FAMILY.DIAPERS | zh | 尿布
+SYS.CAT.TAX_FINANCE.INCOME_TAX | zh | 个税
+SYS.CAT.TAX_FINANCE.BANK_FEE | zh | 手续费
+SYS.CAT.WORK.TRAVEL | zh | 出差
+SYS.CAT.WORK.LOGISTICS | zh | 快递
+SYS.CAT.CASH.WECHAT | zh | 微信
+SYS.CAT.CASH.ALIPAY | zh | 支付宝
+SYS.CAT.BANK.DEBIT | zh | 银行卡
+SYS.CAT.CREDIT_CARD | zh | 贷记卡
+SYS.CAT.CASH.PREPAID | zh | 饭卡
+SYS.CAT.CASH.PREPAID | zh | 储值卡
+SYS.CAT.CASH.PREPAID | en | prepaid_card
+SYS.CAT.CAPITAL | zh | 实收资本
+SYS.CAT.CAPITAL | en | paid_in_capital
+SYS.CAT.INCOME_SUMMARY | zh | 收入汇总
+SYS.CAT.INCOME_SUMMARY | zh | 结转
+SYS.CAT.INCOME_SUMMARY | en | income_summary
+SYS.CAT.DINING.GENERAL | zh | 快餐
+SYS.CAT.DINING.GENERAL | zh | 零食
+SYS.CAT.DINING.GENERAL | zh | 糕点
+SYS.CAT.SHOPPING.BEAUTY | zh | 理发
+SYS.CAT.MISC.SERVICE_FEE | zh | 快递费
+SYS.CAT.ENTERTAINMENT.GENERAL | zh | 彩票
+SYS.CAT.TRANSPORT.GENERAL | zh | 汽车
+SYS.CAT.PART_TIME | zh | 临工
+SYS.CAT.MORTGAGE | zh | 按揭
+SYS.CAT.SALARY | zh | 薪水
+SYS.CAT.COST.MATERIAL | zh | 原料
+SYS.CAT.COST.INVENTORY | zh | 存货
+
+[Merchant]
+ID | 中文名 | 英文名 | default_category | 中文推荐码 | 英文推荐码 | 权重
+SYS.MERCHANT.STARBUCKS | 星巴克 | Starbucks | SYS.CAT.DINING.COFFEE | sbk | starbucks | 80
+SYS.MERCHANT.LUCKIN | 瑞幸 | Luckin | SYS.CAT.DINING.COFFEE | lk | luckin | 75
+SYS.MERCHANT.MEITUAN | 美团 | Meituan | SYS.CAT.DINING.TAKEOUT | mt | meituan | 80
+SYS.MERCHANT.ELEME | 饿了么 | Eleme | SYS.CAT.DINING.TAKEOUT | elm | eleme | 75
+SYS.MERCHANT.MCDONALDS | 麦当劳 | McDonalds | SYS.CAT.DINING.GENERAL | mcd | mcdonalds | 60
+SYS.MERCHANT.KFC | 肯德基 | KFC | SYS.CAT.DINING.GENERAL | kfc | kfc | 60
+SYS.MERCHANT.DIDI | 滴滴 | Didi | SYS.CAT.TRANSPORT.RIDE_HAILING | dd | didi | 75
+SYS.MERCHANT.JD | 京东 | JD | SYS.CAT.SHOPPING.GENERAL | jd | jd | 70
+SYS.MERCHANT.TAOBAO | 淘宝 | Taobao | SYS.CAT.SHOPPING.GENERAL | tb | taobao | 70
+SYS.MERCHANT.PDD | 拼多多 | Pinduoduo | SYS.CAT.SHOPPING.GENERAL | pdd | pdd | 60
+SYS.MERCHANT.HEMA | 盒马 | Hema | SYS.CAT.SHOPPING.SUPERMARKET | hm | hema | 65
+SYS.MERCHANT.SAM | 山姆 | Sam's Club | SYS.CAT.SHOPPING.SUPERMARKET | sam | sams | 60
+SYS.MERCHANT.CHINA_MOBILE | 中国移动 | China Mobile | SYS.CAT.COMMUNICATION.MOBILE | yd | chinamobile | 60
+SYS.MERCHANT.CHINA_UNICOM | 中国联通 | China Unicom | SYS.CAT.COMMUNICATION.MOBILE | lt | chinaunicom | 55
+SYS.MERCHANT.CHINA_TELECOM | 中国电信 | China Telecom | SYS.CAT.COMMUNICATION.MOBILE | dx | chinatelecom | 55
+SYS.MERCHANT.STATE_GRID | 国家电网 | State Grid | SYS.CAT.HOUSING.UTILITIES | gw | stategrid | 55
+SYS.MERCHANT.PROPERTY | 物业公司 | Property Management | SYS.CAT.HOUSING.PROPERTY_FEE | wuye | property | 55
+SYS.MERCHANT.SF | 顺丰 | SF Express | SYS.CAT.WORK.LOGISTICS | sf | sf | 55
+SYS.MERCHANT.CAINIAO | 菜鸟 | Cainiao | SYS.CAT.WORK.LOGISTICS | cn | cainiao | 50
+SYS.MERCHANT.CTRIP | 携程 | Ctrip | SYS.CAT.TRAVEL.ACCOMMODATION | ctrip | ctrip | 55
+SYS.MERCHANT.FLIGGY | 飞猪 | Fliggy | SYS.CAT.TRAVEL.ACCOMMODATION | feizhu | fliggy | 50
+SYS.MERCHANT.RAIL12306 | 12306 | Rail 12306 | SYS.CAT.TRAVEL.TRANSPORT | 12306 | rail12306 | 55
+SYS.MERCHANT.HOSPITAL | 医院 | Hospital | SYS.CAT.HEALTH.HOSPITAL | yy | hosp | 50
+SYS.MERCHANT.PHARMACY | 药店 | Pharmacy | SYS.CAT.HEALTH.PHARMACY | yaodian | pharm | 50
+SYS.MERCHANT.SCHOOL | 学校 | School | SYS.CAT.EDUCATION.TUITION | xx | school | 50
+SYS.MERCHANT.GYM | 健身房 | Gym | SYS.CAT.HEALTH.FITNESS | gym | gym | 45
+SYS.MERCHANT.NETFLIX | Netflix | Netflix | SYS.CAT.ENTERTAINMENT.SUBSCRIPTION | nf | netflix | 45
+SYS.MERCHANT.TENCENT_VIDEO | 腾讯视频 | Tencent Video | SYS.CAT.ENTERTAINMENT.SUBSCRIPTION | tx | txvideo | 45
+SYS.MERCHANT.IQIYI | 爱奇艺 | iQIYI | SYS.CAT.ENTERTAINMENT.SUBSCRIPTION | aqy | iqiyi | 40
+SYS.MERCHANT.SPOTIFY | Spotify | Spotify | SYS.CAT.ENTERTAINMENT.SUBSCRIPTION | sp | spotify | 40
+
+[Bank]
+# ID | 中文名 | 英文名 | 储蓄分类 | 借贷分类 | 权重
+# 银行是独立 facet：不是锚点目标；储蓄/借贷两列分别指向计数树叶子。
+SYS.BANK.ICBC | 中国工商银行 | Industrial and Commercial Bank of China | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 100
+SYS.BANK.ABC | 中国农业银行 | Agricultural Bank of China | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 100
+SYS.BANK.BOC | 中国银行 | Bank of China | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 100
+SYS.BANK.CCB | 中国建设银行 | China Construction Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 100
+SYS.BANK.BOCOM | 交通银行 | Bank of Communications | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 95
+SYS.BANK.PSBC | 中国邮政储蓄银行 | Postal Savings Bank of China | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 95
+SYS.BANK.CMB | 招商银行 | China Merchants Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 95
+SYS.BANK.SPDB | 浦发银行 | Shanghai Pudong Development Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 90
+SYS.BANK.CITIC | 中信银行 | China CITIC Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 90
+SYS.BANK.CEB | 中国光大银行 | China Everbright Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 85
+SYS.BANK.HXB | 华夏银行 | Huaxia Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 80
+SYS.BANK.CMBC | 中国民生银行 | China Minsheng Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 85
+SYS.BANK.CGB | 广发银行 | China Guangfa Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 85
+SYS.BANK.CIB | 兴业银行 | Industrial Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 85
+SYS.BANK.PAB | 平安银行 | Ping An Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 85
+SYS.BANK.CZB | 浙商银行 | China Zheshang Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 75
+SYS.BANK.BOB | 渤海银行 | China Bohai Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 70
+SYS.BANK.HFB | 恒丰银行 | Hengfeng Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 70
+SYS.BANK.CDB | 国家开发银行 | China Development Bank | SYS.CAT.BANK.DEBIT | - | 60
+SYS.BANK.EXIM | 中国进出口银行 | Export-Import Bank of China | SYS.CAT.BANK.DEBIT | - | 55
+SYS.BANK.ADBC | 中国农业发展银行 | Agricultural Development Bank of China | SYS.CAT.BANK.DEBIT | - | 55
+SYS.BANK.BOBJ | 北京银行 | Bank of Beijing | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 70
+SYS.BANK.BOS | 上海银行 | Bank of Shanghai | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 70
+SYS.BANK.JSB | 江苏银行 | Bank of Jiangsu | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 65
+SYS.BANK.NJB | 南京银行 | Bank of Nanjing | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 60
+SYS.BANK.HZB | 杭州银行 | Bank of Hangzhou | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 60
+SYS.BANK.NBB | 宁波银行 | Bank of Ningbo | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 60
+SYS.BANK.HSB | 徽商银行 | Huishang Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 55
+SYS.BANK.CSB | 长沙银行 | Bank of Changsha | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 55
+SYS.BANK.CHENGDU | 成都银行 | Bank of Chengdu | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 55
+SYS.BANK.CQB | 重庆银行 | Bank of Chongqing | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 55
+SYS.BANK.QDB | 青岛银行 | Bank of Qingdao | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 55
+SYS.BANK.SZB | 苏州银行 | Bank of Suzhou | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 50
+SYS.BANK.ZZB | 郑州银行 | Bank of Zhengzhou | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 50
+SYS.BANK.XAB | 西安银行 | Bank of Xi'an | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 50
+SYS.BANK.SJB | 盛京银行 | Shengjing Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 50
+SYS.BANK.HRB | 哈尔滨银行 | Harbin Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 45
+SYS.BANK.GYB | 贵阳银行 | Bank of Guiyang | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 45
+SYS.BANK.QLB | 齐鲁银行 | Qilu Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 45
+SYS.BANK.XMB | 厦门银行 | Xiamen Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 45
+SYS.BANK.WZB | 温州银行 | Bank of Wenzhou | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 40
+SYS.BANK.TZB | 台州银行 | Bank of Taizhou | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 40
+SYS.BANK.HKB | 汉口银行 | Hankou Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 40
+SYS.BANK.DGB | 东莞银行 | Bank of Dongguan | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 40
+SYS.BANK.GZB | 广州银行 | Bank of Guangzhou | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 45
+SYS.BANK.GLB | 桂林银行 | Bank of Guilin | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 35
+SYS.BANK.FDB | 富滇银行 | Fudian Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 35
+SYS.BANK.LZB | 兰州银行 | Bank of Lanzhou | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 35
+SYS.BANK.HSBC | 汇丰银行 | HSBC | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 60
+SYS.BANK.SCB | 渣打银行 | Standard Chartered | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 50
+SYS.BANK.CITI | 花旗银行 | Citibank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 45
+SYS.BANK.BOA | 美国银行 | Bank of America | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 40
+SYS.BANK.MUFG | 三菱日联银行 | MUFG Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 35
+SYS.BANK.RURAL | 农村商业银行 | Rural Commercial Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 50
+SYS.BANK.CREDIT_UNION | 农村信用社 | Rural Credit Union | SYS.CAT.BANK.DEBIT | - | 50
+SYS.BANK.OTHER | 其他银行 | Other Bank | SYS.CAT.BANK.DEBIT | SYS.CAT.CREDIT_CARD | 10
+
+[Alias]
+SYS.BANK.ICBC | zh | 工行
+SYS.BANK.ICBC | zh | 工商银行
+SYS.BANK.ABC | zh | 农行
+SYS.BANK.ABC | zh | 农业银行
+SYS.BANK.BOC | zh | 中行
+SYS.BANK.CCB | zh | 建行
+SYS.BANK.CCB | zh | 建设银行
+SYS.BANK.BOCOM | zh | 交行
+SYS.BANK.PSBC | zh | 邮储
+SYS.BANK.PSBC | zh | 邮政储蓄银行
+SYS.BANK.CEB | zh | 光大银行
+SYS.BANK.HXB | zh | 华夏银行
+SYS.BANK.CMBC | zh | 民生银行
+SYS.BANK.CDB | zh | 开发银行
+SYS.BANK.EXIM | zh | 进出口银行
+SYS.BANK.ADBC | zh | 农业发展银行
+SYS.BANK.CMB | zh | 招行
+SYS.BANK.SPDB | zh | 浦发
+SYS.BANK.CITIC | zh | 中信
+SYS.BANK.CEB | zh | 光大
+SYS.BANK.HXB | zh | 华夏
+SYS.BANK.CMBC | zh | 民生
+SYS.BANK.CGB | zh | 广发
+SYS.BANK.CIB | zh | 兴业
+SYS.BANK.PAB | zh | 平安
+SYS.BANK.CZB | zh | 浙商
+SYS.BANK.BOB | zh | 渤海
+SYS.BANK.HFB | zh | 恒丰
+SYS.BANK.CDB | zh | 国开行
+SYS.BANK.EXIM | zh | 进出口行
+SYS.BANK.ADBC | zh | 农发行
+SYS.BANK.BOBJ | zh | 北京银行
+SYS.BANK.BOS | zh | 上海银行
+SYS.BANK.JSB | zh | 江苏银行
+SYS.BANK.NJB | zh | 南京银行
+SYS.BANK.HZB | zh | 杭州银行
+SYS.BANK.NBB | zh | 宁波银行
+SYS.BANK.HSB | zh | 徽商银行
+SYS.BANK.CSB | zh | 长沙银行
+SYS.BANK.CHENGDU | zh | 成都银行
+SYS.BANK.CQB | zh | 重庆银行
+SYS.BANK.QDB | zh | 青岛银行
+SYS.BANK.SZB | zh | 苏州银行
+SYS.BANK.ZZB | zh | 郑州银行
+SYS.BANK.XAB | zh | 西安银行
+SYS.BANK.SJB | zh | 盛京银行
+SYS.BANK.HRB | zh | 哈尔滨银行
+SYS.BANK.GYB | zh | 贵阳银行
+SYS.BANK.QLB | zh | 齐鲁银行
+SYS.BANK.XMB | zh | 厦门银行
+SYS.BANK.WZB | zh | 温州银行
+SYS.BANK.TZB | zh | 台州银行
+SYS.BANK.HKB | zh | 汉口银行
+SYS.BANK.DGB | zh | 东莞银行
+SYS.BANK.GZB | zh | 广州银行
+SYS.BANK.GLB | zh | 桂林银行
+SYS.BANK.FDB | zh | 富滇银行
+SYS.BANK.LZB | zh | 兰州银行
+SYS.BANK.HSBC | zh | 汇丰
+SYS.BANK.SCB | zh | 渣打
+SYS.BANK.CITI | zh | 花旗
+SYS.BANK.BOA | zh | 美国银行
+SYS.BANK.MUFG | zh | 三菱日联
+SYS.BANK.RURAL | zh | 农商行
+SYS.BANK.CREDIT_UNION | zh | 信用社
+SYS.BANK.CREDIT_UNION | zh | 信用储
+SYS.BANK.OTHER | zh | 其他银行
+
+[Tag]
+# P0 预留：标签 facet，暂不接。
+
+[Behavior]
+# P0 预留：行为 facet，暂不接。

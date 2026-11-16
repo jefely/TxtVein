@@ -12,7 +12,7 @@
 
   const VAULT_KEY = 'txtvein:v2:vault';
   const HINT_KEY = 'txtvein:v2:hint';
-  const PAYLOAD_VERSION = 2;
+  const PAYLOAD_VERSION = 3;
 
   let key = null;
   let expectedCipher = '';
@@ -63,15 +63,25 @@
 
   function normalizePayload(p) {
     const o = p && typeof p === 'object' ? p : {};
-    return {
+    const hinted = Number(o.version) || ((o.dictSourceP != null || o.dictSourceC != null) ? 3 : 2);
+    const version = hinted >= 3 ? 3 : 2;
+    const out = {
       format: 'txtvein-vault',
-      version: PAYLOAD_VERSION,
-      ledger: String(o.ledger == null ? '' : o.ledger),
-      dict: String(o.dict == null ? '' : o.dict),
+      version,
+      vaultId: String(o.vaultId == null ? '' : o.vaultId),
       ledgerSource: String(o.ledgerSource == null ? '' : o.ledgerSource),
-      dictSource: String(o.dictSource == null ? '' : o.dictSource),
       updatedAt: String(o.updatedAt || ''),
     };
+    if (version >= 3) {
+      out.dictSourceP = String(o.dictSourceP == null ? '' : o.dictSourceP);
+      out.dictSourceC = String(o.dictSourceC == null ? '' : o.dictSourceC);
+      out.systemVersion = String(o.systemVersion == null ? '' : o.systemVersion);
+    } else {
+      out.ledger = String(o.ledger == null ? '' : o.ledger);
+      out.dict = String(o.dict == null ? '' : o.dict);
+      out.dictSource = String(o.dictSource == null ? '' : o.dictSource);
+    }
+    return out;
   }
 
   function encodePayload(p) {
