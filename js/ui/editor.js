@@ -151,8 +151,25 @@
     }
 
     /* 手机软键盘没有可靠的 Space keydown；从 CodeMirror 的 changes 兜底。 */
-    function bindSoftSpaceFallback(cm) {
-      let run = 0;
+    /* 源码里也可以先用 -1/-2；一旦日期 token 后出现空格，就固化成 YYMMDD。 */
+    function bindRelativeDateFix(cm) {
+      let syncing = false;
+      cm.on('changes', (cmx) => {
+        if (syncing) return;
+        const cur = cmx.getCursor();
+        const line = cmx.getLine(cur.line);
+        const m = line.match(/^(\s*)((?:[PFCH]\s+)?)([\u2212\u2013\u2014\uFF0D+\-]?[0-9\uFF10-\uFF19]{1,3})(?=\s)/i);
+        if (!m) return;
+        const d = TV.date.resolveDateToken(m[3], new Date());
+        if (!d.ok || !d.relative) return;
+        const start = m[1].length + m[2].length;
+        syncing = true;
+        cmx.replaceRange(d.stamp, { line: cur.line, ch: start }, { line: cur.line, ch: start + m[3].length });
+        syncing = false;
+      });
+    }
+
+    function bindSoftSpaceFallback(cm) {      let run = 0;
       let last = 0;
       let timer = 0;
       let justOp = false;
@@ -252,6 +269,7 @@
       if (window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 760) {
         bindSoftSpaceFallback(cm);
       }
+      if (file === 'ledger') bindRelativeDateFix(cm);
       cm.on('change', () => {
         if (suspended) return;
         dirty[file] = true;

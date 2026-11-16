@@ -3187,6 +3187,12 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       String.fromCharCode(ch.charCodeAt(0) - 0xfee0));
   }
 
+  /* 手机输入法有时把负号写成 − / – / －；只归一化开头的符号。 */
+  function normalizeSign(s) {
+    return String(s == null ? '' : s).replace(/^[\u2212\u2013\u2014\uFF0D]/, '-')
+      .replace(/^\uFF0B/, '+');
+  }
+
   /* 全角运算符/标点 → 半角。只用于「输入层」，不用于展示层。 */
   function normalizeOperators(s) {
     return String(s == null ? '' : s)
@@ -3277,6 +3283,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     trim,
     tokens,
     toHalfWidthDigits,
+    normalizeSign,
     normalizeOperators,
     charWidth,
     textWidth,
@@ -3579,7 +3586,10 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   /** 相对日期语法糖。offset 单位：天。 */
   function resolveDateToken(raw, now) {
     let s = String(raw == null ? '' : raw).trim();
-    if (text) s = text.toHalfWidthDigits(s);
+    if (text) {
+      s = text.toHalfWidthDigits(s);
+      s = text.normalizeSign(s);
+    }
     if (/^[+-]?\d{1,3}$/.test(s)) {
       const offset = parseInt(s, 10);
       if (Math.abs(offset) > 366) return fail('相对日期最多前后 366 天');
@@ -4686,7 +4696,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     return /^[+-]\d{1,3}$/.test(s);
   }
 
-  function looksLikeDateToken(s) {
+  function looksLikeDateToken(raw) {
+    let s = text ? text.normalizeSign(String(raw == null ? '' : raw)) : String(raw == null ? '' : raw);
+    if (text) s = text.toHalfWidthDigits(s);
     if (/^\d{6}$/.test(s) || /^\d{8}$/.test(s)) return true;
     if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(s)) return true;
     if (s === '0' || s === '1') return true;
@@ -5732,7 +5744,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     else if ((m = src.match(/^([PFCH])\s*:\s+/i))) { domain = m[1].toUpperCase(); src = src.slice(m[0].length); }
     else if ((m = src.match(/^([PFCH])\s+/i))) { domain = m[1].toUpperCase(); src = src.slice(m[0].length); }
     let stamp = dateMod.todayStamp(now);
-    const first = src.split(/\s+/)[0] || '';
+    let first = src.split(/\s+/)[0] || '';
+    if (TV.text && TV.text.normalizeSign) first = TV.text.normalizeSign(first);
+    if (TV.text && TV.text.toHalfWidthDigits) first = TV.text.toHalfWidthDigits(first);
     if (/^\d{6}$/.test(first) || /^\d{8}$/.test(first) || /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(first) || /^[+-]?\d{1,3}$/.test(first)) {
       const d = dateMod.resolveDateToken(first, now);
       if (!d.ok) { invalidNote(S(raw).trim(), d.error, domain, stamp); return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors }; }
@@ -9296,8 +9310,25 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     }
 
     /* 手机软键盘没有可靠的 Space keydown；从 CodeMirror 的 changes 兜底。 */
-    function bindSoftSpaceFallback(cm) {
-      let run = 0;
+    /* 源码里也可以先用 -1/-2；一旦日期 token 后出现空格，就固化成 YYMMDD。 */
+    function bindRelativeDateFix(cm) {
+      let syncing = false;
+      cm.on('changes', (cmx) => {
+        if (syncing) return;
+        const cur = cmx.getCursor();
+        const line = cmx.getLine(cur.line);
+        const m = line.match(/^(\s*)((?:[PFCH]\s+)?)([\u2212\u2013\u2014\uFF0D+\-]?[0-9\uFF10-\uFF19]{1,3})(?=\s)/i);
+        if (!m) return;
+        const d = TV.date.resolveDateToken(m[3], new Date());
+        if (!d.ok || !d.relative) return;
+        const start = m[1].length + m[2].length;
+        syncing = true;
+        cmx.replaceRange(d.stamp, { line: cur.line, ch: start }, { line: cur.line, ch: start + m[3].length });
+        syncing = false;
+      });
+    }
+
+    function bindSoftSpaceFallback(cm) {      let run = 0;
       let last = 0;
       let timer = 0;
       let justOp = false;
@@ -9397,6 +9428,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       if (window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 760) {
         bindSoftSpaceFallback(cm);
       }
+      if (file === 'ledger') bindRelativeDateFix(cm);
       cm.on('change', () => {
         if (suspended) return;
         dirty[file] = true;
@@ -13279,7 +13311,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 
   function normalizeInputLine(raw) {
     const now = new Date();
-    let line = String(raw == null ? '' : raw).trim();
+    let line = TV.text.toHalfWidthDigits(TV.text.normalize(raw)).trim();
     if (!line) return line;
     let domain = S.domain || 'P';
     let rest = line;
@@ -13288,6 +13320,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       domain = (dm[1] || dm[2]).toUpperCase();
       rest = line.slice(dm[0].length).trim();
     }
+    rest = rest.replace(/^[\u2212\u2013\u2014\uFF0D]/, '-').replace(/^\uFF0B/, '+');
     let date = '';
     const rel = rest.match(/^(0|[+-][1-9]\d?)(?=\s)/);
     if (rel) {

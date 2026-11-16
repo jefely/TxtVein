@@ -44,6 +44,12 @@
       String.fromCharCode(ch.charCodeAt(0) - 0xfee0));
   }
 
+  /* 手机输入法有时把负号写成 − / – / －；只归一化开头的符号。 */
+  function normalizeSign(s) {
+    return String(s == null ? '' : s).replace(/^[\u2212\u2013\u2014\uFF0D]/, '-')
+      .replace(/^\uFF0B/, '+');
+  }
+
   /* 全角运算符/标点 → 半角。只用于「输入层」，不用于展示层。 */
   function normalizeOperators(s) {
     return String(s == null ? '' : s)
@@ -134,6 +140,7 @@
     trim,
     tokens,
     toHalfWidthDigits,
+    normalizeSign,
     normalizeOperators,
     charWidth,
     textWidth,

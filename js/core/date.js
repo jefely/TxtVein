@@ -77,7 +77,10 @@
   /** 相对日期语法糖。offset 单位：天。 */
   function resolveDateToken(raw, now) {
     let s = String(raw == null ? '' : raw).trim();
-    if (text) s = text.toHalfWidthDigits(s);
+    if (text) {
+      s = text.toHalfWidthDigits(s);
+      s = text.normalizeSign(s);
+    }
     if (/^[+-]?\d{1,3}$/.test(s)) {
       const offset = parseInt(s, 10);
       if (Math.abs(offset) > 366) return fail('相对日期最多前后 366 天');

@@ -597,7 +597,9 @@
     else if ((m = src.match(/^([PFCH])\s*:\s+/i))) { domain = m[1].toUpperCase(); src = src.slice(m[0].length); }
     else if ((m = src.match(/^([PFCH])\s+/i))) { domain = m[1].toUpperCase(); src = src.slice(m[0].length); }
     let stamp = dateMod.todayStamp(now);
-    const first = src.split(/\s+/)[0] || '';
+    let first = src.split(/\s+/)[0] || '';
+    if (TV.text && TV.text.normalizeSign) first = TV.text.normalizeSign(first);
+    if (TV.text && TV.text.toHalfWidthDigits) first = TV.text.toHalfWidthDigits(first);
     if (/^\d{6}$/.test(first) || /^\d{8}$/.test(first) || /^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(first) || /^[+-]?\d{1,3}$/.test(first)) {
       const d = dateMod.resolveDateToken(first, now);
       if (!d.ok) { invalidNote(S(raw).trim(), d.error, domain, stamp); return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors }; }

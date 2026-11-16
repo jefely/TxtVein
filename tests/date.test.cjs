@@ -27,6 +27,8 @@ test('相对日期：0 / -1 / -2 / +1', () => {
   assert.equal(D.resolveDateToken('-2', NOW).stamp, '261113');
   assert.equal(D.resolveDateToken('+1', NOW).stamp, '261116');
   assert.equal(D.resolveDateToken('1', NOW).stamp, '261116');
+  assert.equal(D.resolveDateToken('\u22121', NOW).stamp, '261114');
+  assert.equal(D.resolveDateToken('\uFF0D\uFF12', NOW).stamp, '261113');
   assert.equal(D.resolveDateToken('-1', NOW).relative, true);
 });
 

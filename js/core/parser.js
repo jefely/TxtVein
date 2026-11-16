@@ -24,7 +24,9 @@
     return /^[+-]\d{1,3}$/.test(s);
   }
 
-  function looksLikeDateToken(s) {
+  function looksLikeDateToken(raw) {
+    let s = text ? text.normalizeSign(String(raw == null ? '' : raw)) : String(raw == null ? '' : raw);
+    if (text) s = text.toHalfWidthDigits(s);
     if (/^\d{6}$/.test(s) || /^\d{8}$/.test(s)) return true;
     if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(s)) return true;
     if (s === '0' || s === '1') return true;

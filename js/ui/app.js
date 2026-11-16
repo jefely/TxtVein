@@ -1859,7 +1859,7 @@
 
   function normalizeInputLine(raw) {
     const now = new Date();
-    let line = String(raw == null ? '' : raw).trim();
+    let line = TV.text.toHalfWidthDigits(TV.text.normalize(raw)).trim();
     if (!line) return line;
     let domain = S.domain || 'P';
     let rest = line;
@@ -1868,6 +1868,7 @@
       domain = (dm[1] || dm[2]).toUpperCase();
       rest = line.slice(dm[0].length).trim();
     }
+    rest = rest.replace(/^[\u2212\u2013\u2014\uFF0D]/, '-').replace(/^\uFF0B/, '+');
     let date = '';
     const rel = rest.match(/^(0|[+-][1-9]\d?)(?=\s)/);
     if (rel) {
