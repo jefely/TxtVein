@@ -433,7 +433,7 @@ li.CodeMirror-hint-active {
   --err: #f14c4c;
   --err-dim: rgba(241, 76, 76, 0.12);
   --sans: "JetBrains Maple Mono", "JetBrains Maple Mono NL", "Fusion JetBrains Maple Mono", "Maple Mono Web", "Maple Mono", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
-  --mono: "JetBrains Maple Mono", "JetBrains Maple Mono NL", "Fusion JetBrains Maple Mono", "Maple Mono Web", "Maple Mono", "Cascadia Mono", Consolas, "Microsoft YaHei", monospace;
+  --mono: "JetBrains Maple Mono", "JetBrains Maple Mono NL", "Fusion JetBrains Maple Mono", "Maple Mono Web", "Maple Mono", "Microsoft YaHei", monospace;
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
 }
 
