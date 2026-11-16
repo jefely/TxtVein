@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.2.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.2.1-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-green.svg" alt="License">
   <img src="https://img.shields.io/badge/data-100%25%20Local-black.svg" alt="Local First">
 </p>

@@ -527,11 +527,22 @@
         placeholder: '点一个生成按钮，文本框就显示那个文件的文本；点「复制」带走。',
       });
       const note = el('div', { class: 'import-note' });
+      const cache = new Map();
+
+      // 一次导出只生成一份快照：流水和字典必须来自同一次 buildTexts。
+      // 否则 buildTexts 会更新 meta.updatedAt，两个文件各自生成会导致 LINK 指纹不匹配。
+      async function pack(mode) {
+        if (cache.has(mode)) return cache.get(mode);
+        const r = await app.exportText(mode);
+        if (!r.ok) { toast(r.error || '导出失败', 'error'); return null; }
+        cache.set(mode, r);
+        return r;
+      }
 
       async function gen(mode, part) {
         try {
-          const r = await app.exportText(mode);
-          if (!r.ok) { toast(r.error || '导出失败', 'error'); return; }
+          const r = await pack(mode);
+          if (!r) return;
           const f = mode === 'single' ? { text: r.text, name: '明文单文件' }
             : (part === 'dict' ? r.files[1] : r.files[0]);
           out.value = f.text;
@@ -545,12 +556,12 @@
 
       async function dl(mode, part) {
         try {
+          const r = await pack(mode);
+          if (!r) return;
           if (mode === 'single') {
-            const r = await app.exportMode('single');
-            if (!r.ok) { toast(r.error || '下载失败', 'error'); return; }
+            const f = r.files[0] || { name: 'txtvein-export.txt', text: r.text };
+            TV.files.downloadText(f.name, f.text, 'text/plain');
           } else {
-            const r = await app.exportText(mode);
-            if (!r.ok) { toast(r.error || '下载失败', 'error'); return; }
             const f = part === 'dict' ? r.files[1] : r.files[0];
             TV.files.downloadText(f.name, f.text);
           }

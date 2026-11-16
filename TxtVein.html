@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-ve.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="TxtVein">
-<meta name="app-version" content="2.2.0">
+<meta name="app-version" content="2.2.1">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -3367,7 +3367,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   'use strict';
 
   const TV = (root.TxtVein = root.TxtVein || {});
-  const APP_VER = 'txtvein-v2.2.0';
+  const APP_VER = 'txtvein-v2.2.1';
 
   function parseVer(v) {
     const m = String(v || '').match(/v?(\d+)\.(\d+)\.(\d+)/);
@@ -17710,11 +17710,22 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
         placeholder: '点一个生成按钮，文本框就显示那个文件的文本；点「复制」带走。',
       });
       const note = el('div', { class: 'import-note' });
+      const cache = new Map();
+
+      // 一次导出只生成一份快照：流水和字典必须来自同一次 buildTexts。
+      // 否则 buildTexts 会更新 meta.updatedAt，两个文件各自生成会导致 LINK 指纹不匹配。
+      async function pack(mode) {
+        if (cache.has(mode)) return cache.get(mode);
+        const r = await app.exportText(mode);
+        if (!r.ok) { toast(r.error || '导出失败', 'error'); return null; }
+        cache.set(mode, r);
+        return r;
+      }
 
       async function gen(mode, part) {
         try {
-          const r = await app.exportText(mode);
-          if (!r.ok) { toast(r.error || '导出失败', 'error'); return; }
+          const r = await pack(mode);
+          if (!r) return;
           const f = mode === 'single' ? { text: r.text, name: '明文单文件' }
             : (part === 'dict' ? r.files[1] : r.files[0]);
           out.value = f.text;
@@ -17728,12 +17739,12 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 
       async function dl(mode, part) {
         try {
+          const r = await pack(mode);
+          if (!r) return;
           if (mode === 'single') {
-            const r = await app.exportMode('single');
-            if (!r.ok) { toast(r.error || '下载失败', 'error'); return; }
+            const f = r.files[0] || { name: 'txtvein-export.txt', text: r.text };
+            TV.files.downloadText(f.name, f.text, 'text/plain');
           } else {
-            const r = await app.exportText(mode);
-            if (!r.ok) { toast(r.error || '下载失败', 'error'); return; }
             const f = part === 'dict' ? r.files[1] : r.files[0];
             TV.files.downloadText(f.name, f.text);
           }

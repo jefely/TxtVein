@@ -209,6 +209,18 @@ def main():
 
     bundle = j(sid, "(async()=>{const r=await window.__txtvein.exportText('deep'); window.__deep=r.files; return r.ok && r.files.length===2;})()", b)
     ok("export deep bundle", bundle is True)
+
+    j(sid, "document.querySelector('#btn-export').click()", b)
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent==='生成深度流水密文';}).click()", b)
+    wait(b, sid, "document.querySelector('.export-output').value.length > 100", 8)
+    j(sid, "window.__ledText=document.querySelector('.export-output').value", b)
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent==='生成深度字典密文';}).click()", b)
+    wait(b, sid, "document.querySelector('.export-output').value !== window.__ledText", 8)
+    j(sid, "window.__dictText=document.querySelector('.export-output').value", b)
+    j(sid, "document.querySelector('#modal-close').click()", b)
+    pair_import = j(sid, "(async()=>await window.__txtvein.importFiles([{name:'ledger.enc',text:window.__ledText},{name:'dict.enc',text:window.__dictText}],{password:'test1234'}))()", b)
+    ok("deep snapshot pair import", pair_import.get("ok") is True, json.dumps(pair_import, ensure_ascii=False)[:200])
+
     deep_import = j(sid, "(async()=>await window.__txtvein.importFiles(window.__deep,{password:'test1234'}))()", b)
     ok("deep files import", deep_import.get("ok") is True, json.dumps(deep_import, ensure_ascii=False)[:200])
     j(sid, "document.querySelector('#btn-import').click()", b)
