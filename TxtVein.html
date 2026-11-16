@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-ve.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="TxtVein">
-<meta name="app-version" content="2.2.2">
+<meta name="app-version" content="2.2.3">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -3367,7 +3367,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   'use strict';
 
   const TV = (root.TxtVein = root.TxtVein || {});
-  const APP_VER = 'txtvein-v2.2.2';
+  const APP_VER = 'txtvein-v2.2.3';
 
   function parseVer(v) {
     const m = String(v || '').match(/v?(\d+)\.(\d+)\.(\d+)/);
@@ -17925,25 +17925,37 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       top.addEventListener('input', refresh);
       bottom.addEventListener('input', refresh);
 
-      const openBtn = button('打开两个密文文件', '', async () => {
-        const picked = await TV.files.pickFiles(true);
-        const arr = Array.from(picked || []);
-        if (!arr.length) return;
-        const read = await TV.files.readFiles(arr);
-        read.forEach((f) => {
-          let kind = TV.files.classify(f.name, f.text);
-          if (kind === 'secure') {
-            try { kind = TV.envelope.extractSecure(f.text).kind || kind; } catch (e) { /* 保持 */ }
-          }
-          const isDict = kind === 'dict' || /dict|vault|字典/i.test(f.name);
-          const isLedger = kind === 'ledger' || /ledger|shadow|流水/i.test(f.name);
-          if (isDict) bottom.value = f.text;
-          else if (isLedger) top.value = f.text;
-          else if (!top.value) top.value = f.text;
-          else bottom.value = f.text;
-        });
+      async function pickInto(target, tag) {
+        const picked = await TV.files.pickFiles(false);
+        const file = Array.from(picked || [])[0];
+        if (!file) return;
+        const read = await TV.files.readFiles([file]);
+        const f = read[0];
+        if (!f) return;
+        let kind = TV.files.classify(f.name, f.text);
+        if (kind === 'secure') {
+          try { kind = TV.envelope.extractSecure(f.text).kind || kind; } catch (e) { /* 保持 */ }
+        }
+        const isDict = kind === 'dict' || /dict|vault|字典/i.test(f.name);
+        const isLedger = kind === 'ledger' || /ledger|shadow|流水/i.test(f.name);
+        if (target === top && isDict) {
+          note.className = 'import-note is-bad';
+          note.textContent = '这是字典密文，请点「选字典密文」。';
+          return;
+        }
+        if (target === bottom && isLedger) {
+          note.className = 'import-note is-bad';
+          note.textContent = '这是流水密文，请点「选流水密文」。';
+          return;
+        }
+        target.value = f.text;
+        note.className = 'import-note';
+        note.textContent = '已选' + tag + '：' + (f.name || '文件') + '，共 ' + f.text.length + ' 个字符。';
         refresh();
-      });
+      }
+
+      const openLedger = button('选流水密文', '', () => pickInto(top, '流水密文'));
+      const openDict = button('选字典密文', '', () => pickInto(bottom, '字典密文'));
 
       async function runImport(btn) {
         const t = top.value.trim();
@@ -18006,7 +18018,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       open('导入', [
         el('div', { class: 'panel-section import-area' }, [
           el('h3', {}, ['文件导入']),
-          el('div', { class: 'row-gap' }, [openBtn]),
+          el('div', { class: 'row-gap' }, [openLedger, openDict]),
+          el('div', { class: 'help-text' }, ['手机不能一次选两个文件时，分两次点：先选流水，再选字典。']),
           el('div', { class: 'form-row', style: 'margin-top:8px' }, [field('密文密码', password), el('div', {}, [])]),
           forceWrap,
           el('div', { class: 'row-gap import-dictbar' }, [fileSubmit]),

@@ -202,6 +202,8 @@ def main():
 
     j(sid, "document.querySelector('#btn-import').click()", b)
     ok("import textarea", j(sid, "!!document.querySelector('.import-textarea')", b) is True)
+    ok("two-step file pickers", all(x in j(sid, "document.querySelector('#modal-body').innerText", b)
+       for x in ["选流水密文", "选字典密文", "导入文件"]))
     j(sid, "var ta=document.querySelector('.import-textarea'); ta.value=window.__txtvein.singleText(); ta.dispatchEvent(new Event('input',{bubbles:true}));", b)
     ok("import recognizes single", "TxtVein 单 TXT" in j(sid, "document.querySelector('.import-note').innerText", b))
     j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent.indexOf('导入粘贴')>=0;}).click()", b)
