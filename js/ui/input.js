@@ -28,6 +28,8 @@
     let spaceRun = 0;
     let lastSpace = 0;
     let spaceTimer = 0;
+    let rawSpaceTimer = 0;
+    let rawSpaceCount = 0;
     let editing = false;
     let ghost = null;
     let errorTimer = 0;
@@ -201,15 +203,30 @@
       query(true);
     }
 
+    /* 手机软键盘不一定发可 preventDefault 的 Space keydown；
+       从 input 事件里识别连续空格，延迟 320ms 等第三击。 */
+    function commitRawSpaces(count) {
+      const pos = caret();
+      const before = input.value.slice(0, pos);
+      const m = before.match(/ +$/);
+      if (!m) return;
+      const start = pos - m[0].length;
+      input.value = input.value.slice(0, start) + input.value.slice(pos);
+      setCaret(start);
+      insertSpaceOperator((count >= 3 || m[0].length >= 3) ? '<' : '>');
+    }
+
     input.addEventListener('keydown', (ev) => {
       if (ev.isComposing) return;
 
       if (ev.key !== ' ') {
         if (spaceTimer) { clearTimeout(spaceTimer); spaceTimer = 0; }
+        if (rawSpaceTimer) { clearTimeout(rawSpaceTimer); rawSpaceTimer = 0; rawSpaceCount = 0; }
         spaceRun = 0;
       }
 
       if (ev.key === ' ') {
+        if (rawSpaceTimer) { clearTimeout(rawSpaceTimer); rawSpaceTimer = 0; rawSpaceCount = 0; }
         const now = Date.now();
         spaceRun = (now - lastSpace < 360) ? spaceRun + 1 : 1;
         lastSpace = now;
@@ -328,8 +345,32 @@
       }
     });
 
-    input.addEventListener('input', () => {
+    input.addEventListener('input', (ev) => {
       clearError();
+      const type = ev.inputType || '';
+      if (!ev.isComposing && type.indexOf('Composition') < 0 && type.indexOf('Paste') < 0) {
+        const pos = caret();
+        const before = input.value.slice(0, pos);
+        const m = before.match(/ +$/);
+        const n = m ? m[0].length : 0;
+        if (n >= 2) {
+          if (rawSpaceTimer) clearTimeout(rawSpaceTimer);
+          rawSpaceCount = n;
+          if (n >= 3) {
+            rawSpaceTimer = 0;
+            commitRawSpaces(3);
+          } else {
+            rawSpaceTimer = setTimeout(() => {
+              rawSpaceTimer = 0;
+              commitRawSpaces(rawSpaceCount);
+            }, 320);
+          }
+        } else if (n === 0 && rawSpaceTimer) {
+          clearTimeout(rawSpaceTimer);
+          rawSpaceTimer = 0;
+          rawSpaceCount = 0;
+        }
+      }
       query(true);
     });
 
