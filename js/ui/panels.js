@@ -747,16 +747,16 @@
         refresh();
       });
 
-      const submit = button('导入并替换当前账本', 'btn-primary', async () => {
+      async function runImport(btn) {
         const t = top.value.trim();
         const d = bottom.value.trim();
         if (!t && !d) {
           note.className = 'import-note is-bad';
-          note.textContent = '先粘贴单文本，或粘贴两份密文。';
+          note.textContent = '先选择文件，或粘贴单文本 / 两份密文。';
           return;
         }
-        submit.disabled = true;
-        submit.textContent = '导入中…';
+        const label = btn ? btn.textContent : '导入';
+        if (btn) { btn.disabled = true; btn.textContent = '导入中…'; }
         try {
           let r;
           if (d) {
@@ -798,15 +798,20 @@
           note.className = 'import-note is-bad';
           note.textContent = e.message || '导入失败';
         } finally {
-          submit.disabled = false;
-          submit.textContent = '导入并替换当前账本';
+          if (btn) { btn.disabled = false; btn.textContent = label; }
         }
-      });
+      }
+
+      const fileSubmit = button('导入文件', 'btn-primary', () => runImport(fileSubmit));
+      const pasteSubmit = button('导入粘贴', 'btn-primary', () => runImport(pasteSubmit));
 
       open('导入', [
         el('div', { class: 'panel-section import-area' }, [
           el('h3', {}, ['文件导入']),
           el('div', { class: 'row-gap' }, [openBtn]),
+          el('div', { class: 'form-row', style: 'margin-top:8px' }, [field('密文密码', password), el('div', {}, [])]),
+          forceWrap,
+          el('div', { class: 'row-gap import-dictbar' }, [fileSubmit]),
         ]),
         el('div', { class: 'panel-section import-area' }, [
           el('h3', {}, ['粘贴导入']),
@@ -818,13 +823,11 @@
           note,
           el('div', { class: 'row-gap import-dictbar' }, [
             button('粘贴字典密文', '', () => pasteTo(bottom, '下面的框')),
-            submit,
+            pasteSubmit,
           ]),
           bottom,
           cipherNote,
-          el('div', { class: 'form-row', style: 'margin-top:10px' }, [field('密码', password), el('div', {}, [])]),
-          forceWrap,
-          el('div', { class: 'help-text' }, ['两个框：单文本只填上面；密文上面放流水、下面放字典。导入会替换当前账本，先备份。']),
+          el('div', { class: 'help-text' }, ['两个框：单文本只填上面；密文上面放流水、下面放字典。密文密码用文件导入区的密码框；导入会替换当前账本，先备份。']),
         ]),
       ], closeFoot());
       forceWrap.hidden = true;

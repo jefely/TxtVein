@@ -204,20 +204,26 @@ def main():
     ok("import textarea", j(sid, "!!document.querySelector('.import-textarea')", b) is True)
     j(sid, "var ta=document.querySelector('.import-textarea'); ta.value=window.__txtvein.singleText(); ta.dispatchEvent(new Event('input',{bubbles:true}));", b)
     ok("import recognizes single", "TxtVein 单 TXT" in j(sid, "document.querySelector('.import-note').innerText", b))
-    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent.indexOf('导入并替换')>=0;}).click()", b)
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent.indexOf('导入粘贴')>=0;}).click()", b)
     ok("import single via paste", wait(b, sid, "document.querySelector('#modal').hidden", 8))
 
     bundle = j(sid, "(async()=>{const r=await window.__txtvein.exportText('deep'); window.__deep=r.files; return r.ok && r.files.length===2;})()", b)
     ok("export deep bundle", bundle is True)
+    deep_import = j(sid, "(async()=>await window.__txtvein.importFiles(window.__deep,{password:'test1234'}))()", b)
+    ok("deep files import", deep_import.get("ok") is True, json.dumps(deep_import, ensure_ascii=False)[:200])
+    j(sid, "document.querySelector('#btn-import').click()", b)
+    j(sid, "document.querySelector('.cipher-import-ledger').value=window.__deep[0].text; document.querySelector('.cipher-import-dict').value=window.__deep[1].text; document.querySelector('.cipher-import-ledger').dispatchEvent(new Event('input',{bubbles:true})); document.querySelector('#modal-body input[type=password]').value='test1234';", b)
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent.indexOf('导入文件')>=0;}).click()", b)
+    ok("deep files import via file button", wait(b, sid, "document.querySelector('#modal').hidden", 12))
     j(sid, "document.querySelector('#btn-import').click()", b)
     j(sid, "document.querySelector('.cipher-import-ledger').value=window.__deep[0].text; document.querySelector('.cipher-import-ledger').dispatchEvent(new Event('input',{bubbles:true}));", b)
-    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent.indexOf('导入并替换')>=0;}).click()", b)
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent.indexOf('导入粘贴')>=0;}).click()", b)
     time.sleep(0.4)
     ok("cipher needs both boxes", j(sid, "!document.querySelector('#modal').hidden", b) is True
        and "两个框" in j(sid, "document.querySelector('#modal-body').innerText", b))
     j(sid, "document.querySelector('.cipher-import-dict').value=window.__deep[1].text; document.querySelector('.cipher-import-dict').dispatchEvent(new Event('input',{bubbles:true})); document.querySelector('#modal-body input[type=password]').value='test1234';", b)
     ok("import recognizes cipher", "两份都齐" in j(sid, "document.querySelector('.cipher-note').innerText", b))
-    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent.indexOf('导入并替换')>=0;}).click()", b)
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent.indexOf('导入粘贴')>=0;}).click()", b)
     ok("import bundle via paste", wait(b, sid, "document.querySelector('#modal').hidden", 12))
 
     print("== report / tree edit ==")
@@ -283,4 +289,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
