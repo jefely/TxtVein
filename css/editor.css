@@ -1436,3 +1436,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .editor-pane .CodeMirror-linebackground.tv-line-selected-bg {
   background: rgba(255, 255, 255, 0.055);
 }
+
+/* 移动端：行号栏整列可轻点；上下拖动仍可滚动 */
+.editor-pane .CodeMirror-gutters { touch-action: pan-y; }
+.editor-pane .CodeMirror-linenumber { touch-action: pan-y; -webkit-user-select: none; user-select: none; }

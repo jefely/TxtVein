@@ -482,7 +482,42 @@
     }
 
     function bindLineMenu(cm, file) {
-      cm.getWrapperElement().addEventListener('click', (ev) => {
+      const wrap = cm.getWrapperElement();
+      let tap = null;
+      let suppressClickUntil = 0;
+      const lineAtEvent = (ev) => {
+        if (ev.target && ev.target.closest && ev.target.closest('.CodeMirror-gutters')) {
+          const pos = cm.coordsChar({ left: ev.clientX, top: ev.clientY }, 'window');
+          return pos ? pos.line + 1 : 0;
+        }
+        const t = ev.target && ev.target.closest ? ev.target.closest('.CodeMirror-linenumber') : null;
+        if (!t) return 0;
+        return Number(String(t.textContent || '').replace(/\u2007/g, '').trim()) || 0;
+      };
+      /* 触摸：轻点行号栏就开菜单；拖动超过阈值则当滚动，不拦截 */
+      wrap.addEventListener('pointerdown', (ev) => {
+        const n = lineAtEvent(ev);
+        if (!n) return;
+        tap = { x: ev.clientX, y: ev.clientY, n, at: Date.now(), id: ev.pointerId };
+      }, true);
+      wrap.addEventListener('pointerup', (ev) => {
+        if (!tap || ev.pointerId !== tap.id) return;
+        const t = tap;
+        tap = null;
+        const moved = Math.hypot(ev.clientX - t.x, ev.clientY - t.y);
+        if (moved > 12 || Date.now() - t.at > 800) {
+          suppressClickUntil = Date.now() + 500;
+          return;
+        }
+        suppressClickUntil = Date.now() + 500;
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+        openLineMenu(cm, file, t.n - 1, ev.clientX, ev.clientY);
+      }, true);
+      wrap.addEventListener('pointercancel', () => { tap = null; suppressClickUntil = Date.now() + 500; }, true);
+      wrap.addEventListener('click', (ev) => {
+        if (Date.now() < suppressClickUntil) return;
         const t = ev.target;
         if (!t || !t.classList || !t.classList.contains('CodeMirror-linenumber')) return;
         const n = Number(String(t.textContent || '').replace(/\u2007/g, '').trim());
