@@ -136,6 +136,7 @@
   }
 
   function dictToSource(dict) {
+    if (dict && dict.format === 'v4' && TV.dictV4) return TV.dictV4.emit(dict);
     const codeMap = sourceCodeMap(dict);
     const lines = [];
     lines.push('// TxtVein 字典 · 四段：树 / 会计 / 备注 / 行为');
@@ -312,6 +313,14 @@
   }
 
   function compileDictSource(text, opts) {
+    if (TV.dictV4 && TV.dictV4.detect(text) === 'v4') {
+      const r = TV.dictV4.parse(text, opts);
+      const errors = r.diagnostics.filter((d) => d.severity === 'error').length;
+      return {
+        ok: r.ok, dict: r.dict, diagnostics: r.diagnostics, errors,
+        tokens: r.tokens, categories: r.categories, stats: r.stats, format: 'v4',
+      };
+    }
     const o = opts || {};
     const now = o.now instanceof Date ? o.now : new Date();
     const diagnostics = [];
@@ -715,7 +724,7 @@
     dict.tags[id] = {
       zh_name: t, en_name: t, zh_code: code, en_code: code,
       domain: ctx.domain || 'P', parent_id: ctx.parentId || '',
-      weight: 10, kind: dictMod.tagKindOf(t), created_at: new Date().toISOString(),
+      weight: 10, kind: dictMod.tagKindOf(t), created_at: new Date().toISOString(), auto: true,
     };
     dictMod.addAlias(dict, code, id);
     dictMod.addAlias(dict, t, id);
@@ -759,7 +768,7 @@
     usedIds.add(id);
     dict.behaviors[id] = {
       zh_name: name, en_name: name, zh_code: unique, en_code: unique,
-      domain, parent_id: '', weight: 10, sort: 100, created_at: new Date().toISOString(),
+      domain, parent_id: '', weight: 10, sort: 100, created_at: new Date().toISOString(), auto: true,
     };
     dictMod.addAlias(dict, unique, id);
     dictMod.addAlias(dict, name, id);
@@ -798,6 +807,7 @@
     const autoBehaviors = [];
     const usedIds = ctxState.usedIds;
     const lineNo = ctxState.lineNo;
+    const autoCreateBehaviors = o.autoCreateBehaviors !== false;
     function invalidNote(rawText, message, domain, stamp) {
       const id = ids.newTextId((x) => usedIds.has(x));
       usedIds.add(id);
@@ -889,10 +899,17 @@
     const toks = flow.split(/[\s\u3000]+/).filter(Boolean);
     const nodeToks = [];
     const amountToks = [];
+    const fromToks = [];
+    const toToks = [];
+    let gtCount = 0;
+    let afterGt = false;
     let period = '';
     for (let i = 0; i < toks.length; i += 1) {
       const t = toks[i];
-      if (t === '>') continue;
+      if (t === '>') { gtCount += 1; afterGt = true; continue; }
+      if (t === '*') { amountToks.push('*'); continue; }
+      if (/^\d+(?:\.\d+)?\*$/.test(t)) { amountToks.push(t); continue; }
+      if (/^\d+(?:\.\d+)?\/$/.test(t)) { amountToks.push(t); continue; }
       if (/^\*[dmy]$/i.test(t)) { period = t.slice(1).toLowerCase(); continue; }
       const sp = amount.splitPeriod(t);
       if (sp.period) period = sp.period;
@@ -901,7 +918,9 @@
       const forceNode = /^[NH]:/i.test(t);
       const probe = forceNode ? t.replace(/^[NH]:/i, '') : sp.token;
       const exactNode = dictMod.collectMatches(dict, probe, domain);
-      const nodePos = forceNode || nodeToks.length === 0 || toks[i - 1] === '>' || toks[i + 1] === '>';
+      const nodePos = forceNode || !afterGt
+        || (!amountToks.length && exactNode.length > 0)
+        || toks[i - 1] === '>' || toks[i + 1] === '>';
       const q = exactNode.length && nodePos ? { ok: false } : amount.parseQuantity(sp.token);
       if (q.ok) { amountToks.push(sp.token); continue; }
       if (amountToks.length) {
@@ -909,18 +928,169 @@
         return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
       }
       nodeToks.push(t);
-    }
-    if (nodeToks.length < 2) {
-      invalidNote(S(raw).trim(), '至少需要两个节点', domain, stamp);
-      return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+      (afterGt ? toToks : fromToks).push(t);
     }
     const segments = nodeToks.length - 1;
-    if (amountToks.length !== 1 && amountToks.length !== segments) {
-      invalidNote(S(raw).trim(), '金额数量必须为 1 或等于段数（' + segments + '）', domain, stamp);
-      return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+    const batchMode = gtCount === 1 && (fromToks.length > 1 || toToks.length > 1);
+    if (!batchMode) {
+      if (nodeToks.length < 2) {
+        invalidNote(S(raw).trim(), '至少需要两个节点', domain, stamp);
+        return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+      }
+      if (amountToks.length !== 1 && amountToks.length !== segments) {
+        invalidNote(S(raw).trim(), '金额数量必须为 1 或等于段数（' + segments + '）', domain, stamp);
+        return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+      }
     }
     const resolved = nodeToks.map((t) => resolveToken(dict, t, { domain }));
-    /* 行为项自动建：当一段另一端已经是行为项时，把这一端补成行为项 */
+    const tagIds = parseTagBlocks(tagPart, dict, { domain }, autoTags, usedIds);
+
+    /* 批量：一行多个转出/转入，落到多条事件；单行单段/链式仍走下面的逻辑 */
+    if (batchMode) {
+      if (!fromToks.length || !toToks.length) {
+        invalidNote(S(raw).trim(), '批量录入需要 > 两边都有节点', domain, stamp);
+        return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+      }
+      let pairs = [];
+      if (fromToks.length === 1) pairs = toToks.map((t) => [fromToks[0], t]);
+      else if (toToks.length === 1) pairs = fromToks.map((f) => [f, toToks[0]]);
+      else if (fromToks.length === toToks.length) pairs = fromToks.map((f, i) => [f, toToks[i]]);
+      else {
+        invalidNote(S(raw).trim(), '多个转出/转入数量必须相等（或一端只有一个）', domain, stamp);
+        return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+      }
+      if (amountToks.length !== 1 && amountToks.length !== pairs.length) {
+        /* 下面的金额解析会处理 1 个金额、逐笔金额、`*` 循环和 `100/` 均摊 */
+      }
+      let per = [];
+      const rawAmts = amountToks.slice();
+      if (!rawAmts.length) {
+        invalidNote(S(raw).trim(), '批量录入缺金额', domain, stamp);
+        return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+      }
+      const fillIdx = rawAmts.findIndex((x) => /^\d+(?:\.\d+)?\*$/.test(x));
+      const splitIdx = rawAmts.findIndex((x) => /^\d+(?:\.\d+)?\/$/.test(x));
+      if (fillIdx >= 0 && splitIdx >= 0) {
+        invalidNote(S(raw).trim(), '填充 * 和均摊 / 不能混用', domain, stamp);
+        return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+      } else if (fillIdx >= 0) {
+        if (fillIdx !== rawAmts.length - 1) {
+          invalidNote(S(raw).trim(), '填充金额只能在最后写一个，如 1 2*', domain, stamp);
+          return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+        }
+        const head = rawAmts.slice(0, -1);
+        if (head.some((x) => x.endsWith('/') || x.endsWith('*'))) {
+          invalidNote(S(raw).trim(), '填充金额不能和 / 或 * 循环混用', domain, stamp);
+          return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+        }
+        const fill = rawAmts[fillIdx].slice(0, -1);
+        per = Array.from({ length: pairs.length }, (_, i) => (i < head.length ? head[i] : fill));
+      } else if (splitIdx >= 0) {
+        if (splitIdx !== rawAmts.length - 1) {
+          invalidNote(S(raw).trim(), '均摊金额只能写在最后，如 1 9/', domain, stamp);
+          return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+        }
+        const head = rawAmts.slice(0, -1);
+        if (head.some((x) => x.endsWith('/') || x.endsWith('*'))) {
+          invalidNote(S(raw).trim(), '均摊金额不能和填充/循环混用', domain, stamp);
+          return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+        }
+        const remaining = pairs.length - head.length;
+        if (remaining <= 0) {
+          invalidNote(S(raw).trim(), '均摊金额前面已经填满，没有剩余行可均摊', domain, stamp);
+          return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+        }
+        const total = amount.parseQuantity(rawAmts[splitIdx].slice(0, -1));
+        if (!total.ok || total.unit !== 'money' || total.cents <= 0) {
+          invalidNote(S(raw).trim(), '均摊金额必须是正数：' + rawAmts[splitIdx], domain, stamp);
+          return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+        }
+        const base = Math.floor(total.cents / remaining);
+        const rem = total.cents % remaining;
+        const tail = Array.from({ length: remaining }, (_, i) => formatYuanExact(base + (i < rem ? 1 : 0)));
+        per = head.concat(tail);
+      } else {
+        const star = rawAmts.indexOf('*');
+        if (star >= 0) {
+          if (star !== rawAmts.length - 1 || star === 0) {
+            invalidNote(S(raw).trim(), '循环金额只能在最后写一个 *，例如 1 2 *', domain, stamp);
+            return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+          }
+          const base = rawAmts.slice(0, -1);
+          if (base.some((x) => x.endsWith('/') || x.endsWith('*'))) {
+            invalidNote(S(raw).trim(), '循环金额里不能再混用 / 均摊或填充', domain, stamp);
+            return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+          }
+          per = Array.from({ length: pairs.length }, (_, i) => base[i % base.length]);
+        } else {
+          if (rawAmts.length !== 1 && rawAmts.length !== pairs.length) {
+            invalidNote(S(raw).trim(), '批量金额数量必须为 1、等于笔数、或使用 * / 100/', domain, stamp);
+            return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+          }
+          per = rawAmts.length === 1
+            ? Array.from({ length: pairs.length }, () => rawAmts[0])
+            : rawAmts.slice();
+        }
+      }
+      let batchError = false;
+      pairs.forEach(([fTok, tTok], i) => {
+        const a = resolveToken(dict, fTok, { domain });
+        const b = resolveToken(dict, tTok, { domain });
+        if (!a.ok || !b.ok) {
+          const bad = !a.ok ? fTok : tTok;
+          diagnostics.push(diag(lineNo, '无法解析：' + bad));
+          batchError = true;
+          return;
+        }
+        const canA = !!a.account && !!b.account;
+        const canB = !!a.behavior && !!b.behavior;
+        let layer = '';
+        if (canA && !canB) layer = 'account';
+        else if (canB && !canA) layer = 'behavior';
+        else if (canA && canB) {
+          if (a.force === 'N' || b.force === 'N') layer = 'account';
+          else if (a.force === 'H' || b.force === 'H') layer = 'behavior';
+        }
+        if (!layer) {
+          diagnostics.push(diag(lineNo, '层不匹配：' + fTok + ' > ' + tTok));
+          batchError = true;
+          return;
+        }
+        const rawSeg = fTok + ' > ' + tTok + ' ' + per[i];
+        if (layer === 'account') {
+          const q = amount.parseQuantity(per[i]);
+          if (!q.ok) { diagnostics.push(diag(lineNo, q.error)); batchError = true; return; }
+          if (q.unit === 'money' && q.cents <= 0) { diagnostics.push(diag(lineNo, '金额必须大于 0')); batchError = true; return; }
+          const id = ids.newEventId((x) => usedIds.has(x)); usedIds.add(id);
+          events.push({
+            id, kind: 'account', domain, date: stamp,
+            from: a.account, to: b.account,
+            amountCents: q.unit === 'money' ? q.cents : 0,
+            minutes: q.unit === 'time' ? q.minutes : 0,
+            tagIds: tagIds.slice(), chainId: '', sourceLine: lineNo, raw: rawSeg,
+            crossDomain: !!(dict.nodes[a.account] && dict.nodes[b.account]
+              && dict.nodes[a.account].domain !== dict.nodes[b.account].domain),
+          });
+        } else {
+          if (!/^\d+$/.test(per[i]) || Number(per[i]) <= 0) {
+            diagnostics.push(diag(lineNo, '行为强度必须是正整数：' + per[i]));
+            batchError = true;
+            return;
+          }
+          const id = ids.newBehaviorEventId((x) => usedIds.has(x)); usedIds.add(id);
+          behaviors.push({
+            id, kind: 'behavior', domain, date: stamp,
+            from: a.behavior, to: b.behavior, weight: Number(per[i]),
+            tagIds: tagIds.slice(), chainId: '', sourceLine: lineNo, raw: rawSeg,
+          });
+        }
+      });
+      if (batchError) { events.length = 0; behaviors.length = 0; }
+      return { events, behaviors, notes, diagnostics, autoTags, autoBehaviors };
+    }
+
+    /* 行为项自动建：仅 v3 / 显式允许时；v4 由用户显式建行为项 */
+    if (autoCreateBehaviors) {
     for (let i = 0; i < segments; i += 1) {
       const a = resolved[i];
       const b = resolved[i + 1];
@@ -948,6 +1118,7 @@
         a.account = null;
       }
     }
+    }
     resolved.forEach((r, i) => {
       if (r.ok) return;
       if (r.crossDomain) {
@@ -956,7 +1127,6 @@
       }
       diagnostics.push(diag(lineNo, r.error || ('无法解析：' + nodeToks[i])));
     });
-    const tagIds = parseTagBlocks(tagPart, dict, { domain }, autoTags, usedIds);
     const layers = [];
     const segRi = [];
     for (let i = 0; i < segments; i += 1) {
@@ -1041,6 +1211,9 @@
     const notes = [];
     const autoTags = [];
     const autoBehaviors = [];
+    const autoCreateBehaviors = o.autoCreateBehaviors !== undefined
+      ? !!o.autoCreateBehaviors
+      : (!dict || dict.format !== 'v4');
     const work = JSON.parse(JSON.stringify(dict || {}));
     if (!work.behaviors) work.behaviors = {};
     const usedIds = new Set(Object.keys(work.nodes || {}).concat(Object.keys(work.tags || {}), Object.keys(work.behaviors || {})));
@@ -1053,7 +1226,7 @@
         diagnostics.push(diag(lineNo, 'PLAN/RULES 暂由规则面板管理', 'warning'));
         return;
       }
-      const r = parseLedgerLine(raw, work, { now, domain: o.domain || 'P' }, { lineNo, usedIds });
+      const r = parseLedgerLine(raw, work, { now, domain: o.domain || 'P', autoCreateBehaviors }, { lineNo, usedIds });
       r.events.forEach((e) => events.push(e));
       r.behaviors.forEach((b) => behaviors.push(b));
       r.notes.forEach((n) => notes.push(n));
@@ -1080,6 +1253,7 @@
       diagnostics: d.diagnostics.concat(l.diagnostics),
       dictDiagnostics: d.diagnostics,
       ledgerDiagnostics: l.diagnostics,
+      dictTokens: d.tokens || [],
       errors: d.errors + l.errors,
     };
   }

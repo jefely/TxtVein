@@ -13,37 +13,77 @@
   function defineModes() {
     if (!CM || CM.modes && CM.modes['txtvein-ledger'] && CM.modes['txtvein-dict']) return;
     CM.defineMode('txtvein-ledger', function () {
+      let role = 'date';
+      let toNode = false;
       return {
         token(stream) {
+          if (stream.sol()) { role = 'date'; toNode = false; }
+          if (stream.eatSpace()) return null;
           if (stream.match(/^\/\//)) { stream.skipToEnd(); return 'comment'; }
           if (stream.match(/^\[[PFCH]\]/i)) return 'atom';
           if (stream.sol() && stream.match(/^[PFCH](?=\s)/i)) return 'atom';
-          if (stream.match(/^\d{6}/)) return 'number';
-          if (stream.match(/^[+-]?\d{1,3}(?=\s)/)) return 'number';
-          if (stream.match(/^(?:>|<)/)) return 'operator';
+          if (role === 'date' && stream.match(/^\d{6}/)) { role = 'from'; return 'date'; }
+          if (stream.match(/^(?:>|<)/)) {
+            const op = stream.current();
+            role = op === '>' ? 'to' : 'note';
+            if (role === 'to') toNode = false;
+            return 'operator';
+          }
+          if (role === 'note') {
+            stream.match(/^#[^\s<>]+/) || stream.match(/^[^\s<>]+/);
+            return 'note';
+          }
+          /* 节点位置优先：58D 这类「数字开头 + d」是简码，不是 58 天 */
+          if ((role === 'date' || role === 'from' || (role === 'to' && !toNode))
+            && stream.match(/^[A-Za-z0-9_\u4e00-\u9fff.:-]+/)) {
+            if (role === 'to') toNode = true;
+            role = role === 'to' ? 'to' : 'from';
+            return 'node';
+          }
           if (stream.match(/^\*[dmy]\b/i)) return 'keyword';
-          if (stream.match(/^\d+(?:\.\d+)?(?:k|min|[dhm′])+/i)) return 'number';
-          if (stream.match(/^#[^\s<>]+/)) return 'tag';
-          if (stream.match(/^[A-Za-z0-9_\u4e00-\u9fff.:-]+/)) return 'variable';
+          if (stream.match(/^-?\d+(?:\.\d+)?(?:k|min|[dhm′])+/i)) {
+            if (role === 'to' || role === 'amount') { role = 'amount'; return 'amount'; }
+            return 'number';
+          }
+          if (stream.match(/^-?\d+(?:\.\d+)?/)) {
+            if (role === 'to' || role === 'amount') { role = 'amount'; return 'amount'; }
+            return 'number';
+          }
+          if (stream.match(/^#[^\s<>]+/)) return 'note';
+          if (stream.match(/^[A-Za-z0-9_\u4e00-\u9fff.:-]+/)) {
+            if (role === 'to') return 'node';
+            return 'variable';
+          }
           stream.next();
           return null;
         },
       };
     });
     CM.defineMode('txtvein-dict', function () {
+      let header = false;
+      let enTail = false;
       return {
         token(stream) {
+          if (stream.sol()) {
+            header = false;
+            enTail = false;
+          }
           if (stream.match(/^\/\//)) { stream.skipToEnd(); return 'comment'; }
           if (stream.match(/^(?:node|tag|item|alias)\b/i)) return 'keyword';
+          if (stream.match(/^\[(?:资产|费用|成本|负债|收入|权益)\]/)) { header = true; return 'type'; }
           if (stream.match(/^\[(?:ACCOUNT|NOTE|BEHAVIOR|会计|备注|行为)\]$/i)) return 'atom';
           if (stream.match(/^\[[PFCH]\]/i)) return 'atom';
           if (stream.sol() && stream.match(/^[PFCH](?=\s)/i)) return 'atom';
+          if (stream.match(/^[，,]/)) {
+            if (/^\s*[A-Za-z]/.test(stream.string.slice(stream.pos))) enTail = true;
+            return 'dict-en';
+          }
+          if ((header || enTail) && stream.match(/^[A-Za-z][A-Za-z -]*/)) return 'dict-en';
           if (stream.match(/^(?:资产|费用|成本|负债|收入|权益)\b/)) return 'type';
           if (stream.match(/^(?:fluid|ice|steam|outside|plain|gain|suppress|time)\b/i)) return 'atom';
           if (stream.match(/^(?:N:|T:)/)) return 'meta';
           if (stream.match(/^->/)) return 'operator';
           if (stream.match(/^\|/)) return 'operator';
-          if (stream.match(/^\d+(?:\.\d+)?/)) return 'number';
           if (stream.match(/^[A-Za-z0-9_\u4e00-\u9fff-]+/)) return 'variable';
           stream.next();
           return null;
@@ -72,10 +112,16 @@
     const annotations = { ledger: [], dict: [] };
     const rawDiags = { ledger: [], dict: [] };
     const invalidLines = { ledger: [], dict: [] };
+    const semMarks = { ledger: [], dict: [] };
+    const semTokens = { ledger: [], dict: [] };
     const dirty = { ledger: false, dict: false };
     const errorCount = { ledger: 0, dict: 0 };
     let active = 'ledger';
     let suspended = false;
+    let lineMenu = null;
+    let lineClip = '';
+    let lineMenuCm = null;
+    let lineMenuLine = -1;
 
     function tab(file, label, icon) {
       const errors = el('span', { class: 'file-errors', hidden: true });
@@ -137,8 +183,28 @@
       cm.setCursor({ line: cur.line, ch: next.length });
     }
 
+    function insertEditorDate(cm) {
+      if (active !== 'ledger') return false;
+      const cur = cm.getCursor();
+      const line = cm.getLine(cur.line) || '';
+      if (line.trim() || cm.somethingSelected()) return false;
+      const stamp = TV.date && TV.date.todayStamp ? TV.date.todayStamp(new Date()) : '';
+      if (!stamp) return false;
+      cm.replaceRange(stamp + ' ', { line: cur.line, ch: 0 }, { line: cur.line, ch: line.length });
+      cm.setCursor({ line: cur.line, ch: stamp.length + 1 });
+      cm._spaceRun = 0;
+      cm._lastSpace = Date.now();
+      setTimeout(() => {
+        if (!cm.state.completionActive) {
+          cm.showHint({ hint: makeHint('ledger'), completeSingle: false });
+        }
+      }, 0);
+      return true;
+    }
+
     function handleEditorSpace(cm) {
       cm._spaceKeyAt = Date.now();
+      if (insertEditorDate(cm)) return;
       const now = Date.now();
       cm._spaceRun = (cm._lastSpace && now - cm._lastSpace < 360) ? (cm._spaceRun || 0) + 1 : 1;
       cm._lastSpace = now;
@@ -169,6 +235,45 @@
       });
     }
 
+    /* 母树候选在 CM 里先用占位符插入，change 时采纳并换成私有简码。 */
+    function bindMotherHintPick(cm) {
+      let syncing = false;
+      cm.on('change', (cmx) => {
+        if (syncing) return;
+        const text = cmx.getValue();
+        const m = text.match(/@@((?:[PFCH]:)?)(SYS[A-Z0-9_.]+)@@/i);
+        if (!m) return;
+        syncing = true;
+        const prefix = m[1] || '';
+        const id = m[2];
+        const dom = prefix ? prefix.slice(0, -1).toUpperCase() : '';
+        const r = h.onAdoptMother ? h.onAdoptMother(id, dom) : { ok: false, error: '当前不能采纳母树' };
+        if (!r.ok) {
+          syncing = false;
+          const t2 = cmx.getValue();
+          const idx0 = t2.indexOf(m[0]);
+          if (idx0 >= 0) cmx.replaceRange('', cmx.posFromIndex(idx0), cmx.posFromIndex(idx0 + m[0].length));
+          if (h.toast) h.toast(r.error || '采纳失败', 'error');
+          return;
+        }
+        /* adopt 可能触发编译/重设文本，占位符的位置要重新找 */
+        const text2 = cmx.getValue();
+        const idx = text2.indexOf(m[0]);
+        if (idx < 0) {
+          syncing = false;
+          return;
+        }
+        const from = cmx.posFromIndex(idx);
+        const to = cmx.posFromIndex(idx + m[0].length);
+        const repl = prefix + r.code;
+        cmx.replaceRange(repl, from, to);
+        cmx.setCursor(cmx.posFromIndex(idx + repl.length));
+        if (cmx.closeHint) cmx.closeHint();
+        syncing = false;
+        if (h.toast) h.toast('已建节点「' + (r.name || r.code) + '」[' + r.code + ']', 'ok');
+      });
+    }
+
     function bindSoftSpaceFallback(cm) {      let run = 0;
       let last = 0;
       let timer = 0;
@@ -176,6 +281,7 @@
       let syncing = false;
 
       function commit(n) {
+        if (insertEditorDate(cm)) return;
         const cur = cm.getCursor();
         const start = Math.max(0, cur.ch - n);
         syncing = true;
@@ -229,6 +335,181 @@
       });
     }
 
+    function hintPick(n) {
+      return function (cm, handle) {
+        if (!handle || !handle.data || !handle.data.list) return;
+        if (n > handle.data.list.length) return;
+        handle.setFocus(n - 1);
+        handle.pick();
+      };
+    }
+
+    function clearLineSelection() {
+      if (lineMenuCm && lineMenuLine >= 0) {
+        try {
+          lineMenuCm.removeLineClass(lineMenuLine, 'gutter', 'tv-line-selected');
+          lineMenuCm.removeLineClass(lineMenuLine, 'background', 'tv-line-selected-bg');
+        } catch (e) { /* ignore */ }
+      }
+      lineMenuCm = null;
+      lineMenuLine = -1;
+    }
+
+    function closeLineMenu() {
+      clearLineSelection();
+      if (lineMenu) {
+        lineMenu.remove();
+        lineMenu = null;
+      }
+      document.removeEventListener('mousedown', onLineMenuOutside, true);
+      document.removeEventListener('keydown', onLineMenuKey, true);
+    }
+
+    function onLineMenuOutside(ev) {
+      if (lineMenu && !lineMenu.contains(ev.target)) closeLineMenu();
+    }
+
+    function onLineMenuKey(ev) {
+      if (ev.key === 'Escape') closeLineMenu();
+    }
+
+    function removeEditorLine(cm, line) {
+      const savedTop = cm.getScrollInfo().top;
+      const last = cm.lineCount() - 1;
+      if (last <= 0) {
+        cm.replaceRange('', { line: 0, ch: 0 }, { line: 0, ch: cm.getLine(0).length });
+      } else if (line >= last) {
+        const prev = cm.getLine(last - 1).length;
+        cm.replaceRange('', { line: last - 1, ch: prev }, { line: last, ch: cm.getLine(last).length });
+      } else {
+        cm.replaceRange('', { line, ch: 0 }, { line: line + 1, ch: 0 });
+      }
+      restoreScrollSoon(cm, savedTop);
+    }
+
+    function restoreScrollSoon(cm, top) {
+      const restore = () => {
+        const info = cm.getScrollInfo();
+        cm.scrollTo(null, Math.min(top, Math.max(0, info.height - info.clientHeight)));
+      };
+      restore();
+      requestAnimationFrame(restore);
+      setTimeout(restore, 60);
+      setTimeout(restore, 150);
+      setTimeout(restore, 320);
+    }
+
+    function copyEditorLine(cm, line) {
+      lineClip = cm.getLine(line) || '';
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(lineClip).catch(() => {});
+      }
+    }
+
+    function openLineMenu(cm, file, line, x, y) {
+      closeLineMenu();
+      const menu = el('div', { class: 'cm-line-menu' });
+      const add = (label, fn, disabled) => {
+        const b = el('button', { type: 'button' }, [label]);
+        if (disabled) b.disabled = true;
+        else b.addEventListener('click', () => { closeLineMenu(); fn(); cm.focus(); });
+        menu.appendChild(b);
+      };
+      add('删除', () => removeEditorLine(cm, line));
+      add('剪切', () => { copyEditorLine(cm, line); removeEditorLine(cm, line); });
+      add('复制', () => copyEditorLine(cm, line));
+      const readClip = (cb) => {
+        if (navigator.clipboard && navigator.clipboard.readText
+          && navigator.permissions && navigator.permissions.query) {
+          navigator.permissions.query({ name: 'clipboard-read' }).then((st) => {
+            if (st && st.state === 'granted') {
+              navigator.clipboard.readText().then(cb).catch(() => { if (lineClip) cb(lineClip); });
+            } else if (lineClip) {
+              cb(lineClip);
+            }
+          }).catch(() => { if (lineClip) cb(lineClip); });
+        } else if (lineClip) {
+          cb(lineClip);
+        }
+      };
+      add('粘贴', () => {
+        readClip((t) => {
+          if (t == null || t === '') return;
+          /* 粘贴 = 用复制内容替换选中行，不追加到行尾 */
+          const text = String(t).replace(/\n$/, '');
+          cm.replaceRange(text, { line, ch: 0 }, { line, ch: cm.getLine(line).length });
+          cm.focus();
+        });
+      });
+      add('插入', () => {
+        readClip((t) => {
+          if (t == null || t === '') return;
+          /* 插入 = 在选中行的上一行插入复制内容 */
+          const text = String(t).replace(/\n$/, '');
+          cm.replaceRange(text + '\n', { line, ch: 0 });
+          cm.focus();
+        });
+      });
+      add('上移', () => {
+        if (line <= 0) return;
+        const a = cm.getLine(line - 1);
+        const b = cm.getLine(line);
+        /* 只替换 A\nB 这两行，不吞掉 B 后面的换行，保证是交换而不是拼接 */
+        cm.replaceRange(b + '\n' + a, { line: line - 1, ch: 0 }, { line, ch: b.length });
+      }, line <= 0);
+      document.body.appendChild(menu);
+      const r = menu.getBoundingClientRect();
+      const wrap = cm.getWrapperElement();
+      const gutter = wrap.querySelector('.CodeMirror-gutters');
+      const gr = gutter ? gutter.getBoundingClientRect() : null;
+      const coords = cm.charCoords({ line, ch: 0 }, 'window');
+      /* 横向菜单放到行号栏右侧，并落在选中行的上方/下方，绝不压住该行行号 */
+      let left = Math.max((gr ? gr.right : 0) + 8, x + 12);
+      let top = coords.bottom + 6;
+      if (top + r.height > window.innerHeight - 8) top = Math.max(8, coords.top - r.height - 6);
+      left = Math.max(8, Math.min(left, window.innerWidth - r.width - 8));
+      menu.style.left = left + 'px';
+      menu.style.top = top + 'px';
+      lineMenu = menu;
+      lineMenuCm = cm;
+      lineMenuLine = line;
+      cm.addLineClass(line, 'gutter', 'tv-line-selected');
+      cm.addLineClass(line, 'background', 'tv-line-selected-bg');
+      setTimeout(() => {
+        document.addEventListener('mousedown', onLineMenuOutside, true);
+        document.addEventListener('keydown', onLineMenuKey, true);
+      }, 0);
+    }
+
+    function bindLineMenu(cm, file) {
+      cm.getWrapperElement().addEventListener('click', (ev) => {
+        const t = ev.target;
+        if (!t || !t.classList || !t.classList.contains('CodeMirror-linenumber')) return;
+        const n = Number(String(t.textContent || '').replace(/\u2007/g, '').trim());
+        if (!n) return;
+        ev.preventDefault();
+        openLineMenu(cm, file, n - 1, ev.clientX, ev.clientY);
+      });
+    }
+
+    /* 末尾 30 行滚动留白：不是正文行，不占行号 */
+    function syncTailPad(cm) {
+      if (!cm || !cm.lineCount) return;
+      const h = Math.max(12, cm.defaultTextHeight() || 18) * 30;
+      if (cm._tailPad) {
+        try { cm.removeLineWidget(cm._tailPad); } catch (e) { /* ignore */ }
+        cm._tailPad = null;
+      }
+      const pad = el('div', { class: 'cm-tail-pad', 'aria-hidden': 'true' });
+      pad.style.height = h + 'px';
+      cm._tailPad = cm.addLineWidget(Math.max(0, cm.lineCount() - 1), pad, { above: false });
+    }
+
+    function scheduleTailPad(cm) {
+      clearTimeout(cm._tailTimer);
+      cm._tailTimer = setTimeout(() => syncTailPad(cm), 60);
+    }
+
     function makePane(file, mode) {
       const pane = el('div', { class: 'editor-pane' + (file === active ? ' is-active' : ''), dataset: { file } });
       main.appendChild(pane);
@@ -245,7 +526,8 @@
         tabSize: 2,
         smartIndent: false,
         viewportMargin: 12,
-        gutters: ['CodeMirror-lint-markers'],
+        lineNumberFormatter: (n) => String(n).padStart(5, '\u2007'),
+        hintOptions: {},
         lint: {
           delay: 350,
           getAnnotations: () => annotations[file] || [],
@@ -253,6 +535,12 @@
         extraKeys: {
           'Ctrl-Space': (cmx) => cmx.showHint({ hint: makeHint(active), completeSingle: false }),
           'Ctrl-Enter': () => { if (h.onRun) h.onRun(file); },
+          Enter: (cmx) => {
+            /* 组合行优先拆行；不完整时交回补全/默认换行 */
+            if (file === 'ledger' && h.onExpandBatch
+              && h.onExpandBatch(cmx, cmx.getCursor().line)) return;
+            return CM.Pass;
+          },
           Space: (cmx) => handleEditorSpace(cmx),
           Tab: (cmx) => {
             if (cmx.state.completionActive) cmx.execCommand('autocomplete');
@@ -263,15 +551,68 @@
       cm.on('keydown', (cmx, ev) => {
         if (ev.key !== ' ') cm._spaceRun = 0;
       });
+      bindLineMenu(cm, file);
+      /* 捕获阶段先处理回车：即使补全浮层开着，完整组合行也优先拆行 */
+      cm.getWrapperElement().addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Enter' || ev.shiftKey || ev.isComposing || file !== 'ledger') return;
+        const line = cm.getCursor().line;
+        if (h.onExpandBatch && h.onExpandBatch(cm, line)) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+          return;
+        }
+        if (h.onCanonicalLine) h.onCanonicalLine(cm, line);
+      }, true);
+      /* 删除键/退格删行：保持删除前的 scrollTop */
+      cm.getWrapperElement().addEventListener('keydown', (ev) => {
+        if (file !== 'ledger' || (ev.key !== 'Backspace' && ev.key !== 'Delete')) return;
+        const top = cm.getScrollInfo().top;
+        setTimeout(() => restoreScrollSoon(cm, top), 0);
+      }, true);
+      /* 删除末尾空行：保持原 scrollTop，不让 CM 把光标行滚回底部 */
+      cm.getWrapperElement().addEventListener('keydown', (ev) => {
+        if (ev.key !== 'Backspace' || file !== 'ledger') return;
+        if (ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey || cm.somethingSelected()) return;
+        const cur = cm.getCursor();
+        if (cur.line !== cm.lineCount() - 1 || cur.ch !== 0) return;
+        if ((cm.getLine(cur.line) || '').trim() !== '') return;
+        const prev = cm.getLine(cur.line - 1) || '';
+        const savedTop = cm.getScrollInfo().top;
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+        cm.operation(() => {
+          cm.replaceRange('', { line: cur.line - 1, ch: prev.length }, { line: cur.line, ch: 0 });
+          cm.setCursor({ line: cur.line - 1, ch: prev.length });
+        });
+        const restore = () => {
+          const info = cm.getScrollInfo();
+          cm.scrollTo(null, Math.min(savedTop, Math.max(0, info.height - info.clientHeight)));
+        };
+        restore();
+        requestAnimationFrame(restore);
+        setTimeout(restore, 50);
+        setTimeout(restore, 150);
+        setTimeout(restore, 300);
+      }, true);
+      cm.on('copy', () => { const s = cm.getSelection(); if (s) lineClip = s; });
+      cm.on('cut', () => { const s = cm.getSelection(); if (s) lineClip = s; });
+      cm.on('changes', () => scheduleTailPad(cm));
+      syncTailPad(cm);
       const syncWrap = () => cm.setOption('lineWrapping', window.matchMedia('(max-width: 760px)').matches);
       syncWrap();
       window.addEventListener('resize', syncWrap);
       if (window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 760) {
         bindSoftSpaceFallback(cm);
       }
-      if (file === 'ledger') bindRelativeDateFix(cm);
+      if (file === 'ledger') {
+        bindRelativeDateFix(cm);
+        bindMotherHintPick(cm);
+      }
       cm.on('change', () => {
         if (suspended) return;
+        clearSemantic(file);   /* 文本一改，语义层立即失效，等下一次编译 */
         dirty[file] = true;
         updateTab(file);
         if (h.onChange) h.onChange(file, cm.getValue());
@@ -350,13 +691,42 @@
         g.style.display = g.dataset.file === active ? 'inline-flex' : 'none';
       });
       renderStatus();
-      if (editors[active]) setTimeout(() => editors[active].refresh(), 0);
+      if (editors[active]) setTimeout(() => {
+        editors[active].refresh();
+        syncTailPad(editors[active]);
+        if (active === 'ledger') scrollToTail(editors[active]);
+      }, 0);
       if (h.onActive) h.onActive(active);
     }
 
     makePane('ledger', 'txtvein-ledger');
     makePane('dict', 'txtvein-dict');
     setActive('ledger');
+
+    /* 语义层：编译产物里的 tokens 决定「识别状态」的颜色；改字立即清空，等下一次编译 */
+    function clearSemantic(file) {
+      (semMarks[file] || []).forEach((m) => { try { m.clear(); } catch (e) { /* noop */ } });
+      semMarks[file] = [];
+    }
+
+    function setSemantic(file, tokens) {
+      const cm = editors[file];
+      if (!cm) return;
+      clearSemantic(file);
+      semTokens[file] = Array.isArray(tokens) ? tokens : [];
+      semTokens[file].forEach((t) => {
+        const line = Math.max(0, (Number(t.line) || 1) - 1);
+        const text = cm.getLine(line);
+        if (text == null) return;
+        const from = Math.max(0, Math.min(Number(t.from) || 0, text.length));
+        const to = Math.max(from, Math.min(Number(t.to) || 0, text.length));
+        if (from >= to) return;
+        const role = t.role === 'link' ? 'tv-link'
+          : t.role === 'unknown' ? 'tv-unknown'
+            : t.role === 'error' ? 'tv-error' : 'tv-def';
+        semMarks[file].push(cm.markText({ line, ch: from }, { line, ch: to }, { className: 'tv-sem ' + role }));
+      });
+    }
 
     function tokenAt(text, ch) {
       let a = Math.max(0, Math.min(ch, text.length));
@@ -387,7 +757,10 @@
     function syncAnnotations(file) {
       const cm = editors[file];
       if (!cm) return;
-      (invalidLines[file] || []).forEach((n) => cm.removeLineClass(n, 'text', 'cm-invalid-line'));
+      (invalidLines[file] || []).forEach((n) => {
+        cm.removeLineClass(n, 'text', 'cm-invalid-line');
+        cm.removeLineClass(n, 'gutter', 'tv-line-error');
+      });
       invalidLines[file] = [];
       const cursor = file === active ? cm.getCursor() : null;
       annotations[file] = (rawDiags[file] || []).map((d) => {
@@ -403,6 +776,7 @@
         if (d.severity !== 'warning' && !invalidLines[file].includes(line)) {
           invalidLines[file].push(line);
           cm.addLineClass(line, 'text', 'cm-invalid-line');
+          cm.addLineClass(line, 'gutter', 'tv-line-error');
         }
         return {
           from: Pos(line, range.from),
@@ -411,6 +785,33 @@
           severity: d.severity === 'warning' ? 'warning' : 'error',
         };
       });
+      /* 简码重复：把同码的第一行也标成橘红行号（只染行号，不把正文整行变灰） */
+      if (file === 'dict') {
+        const dupCodes = new Set();
+        (rawDiags.dict || []).forEach((d) => {
+          if (d.code !== 'CODE_DUP') return;
+          const m = String(d.message || '').match(/[：:]\s*([^\s，。；;、]+)\s*$/);
+          if (m) dupCodes.add(m[1].toLowerCase());
+        });
+        if (dupCodes.size) {
+          let section = '';
+          for (let i = 0; i < cm.lineCount(); i += 1) {
+            const text = cm.getLine(i) || '';
+            const head = text.trim().match(/^\[([^\]]+)\]/);
+            if (head) { section = head[1]; continue; }
+            if (/母树|归属|Bindings?/i.test(section)) continue;
+            const body = text.trim();
+            if (!body || body.startsWith('//') || (!body.includes('，') && !body.includes(','))) continue;
+            const first = body.split(/[，,]/)[0].trim();
+            const m = first.match(/^(?:[PFCH]:)?([A-Za-z0-9_\u4e00-\u9fff-]+)$/i);
+            if (!m || !dupCodes.has(m[1].toLowerCase())) continue;
+            if (!invalidLines[file].includes(i)) {
+              invalidLines[file].push(i);
+              cm.addLineClass(i, 'gutter', 'tv-line-error');
+            }
+          }
+        }
+      }
       if (cm.performLint) cm.performLint();
     }
 
@@ -446,6 +847,8 @@
       suspended = false;
       dirty.ledger = false;
       dirty.dict = false;
+      clearSemantic('ledger');
+      clearSemantic('dict');
       updateTab('ledger');
       updateTab('dict');
       renderStatus();
@@ -483,8 +886,28 @@
       if (editors[active]) editors[active].focus();
     }
 
+    function scrollToTail(cm) {
+      if (!cm || !cm.lineCount) return;
+      const last = Math.max(0, cm.lineCount() - 1);
+      const info = cm.getScrollInfo();
+      const padH = cm._tailPad && cm._tailPad.node ? cm._tailPad.node.offsetHeight || 0 : 0;
+      /* 正文本身不足一屏：从顶部显示，不为了最后 10 行把开头藏掉 */
+      if (info.height - padH <= info.clientHeight) {
+        cm.scrollTo(null, 0);
+        return;
+      }
+      /* 最后 10 行放到视口顶部，末尾留白留在下方 */
+      const first = Math.max(0, last - 9);
+      const coords = cm.charCoords({ line: first, ch: 0 }, 'local');
+      const maxTop = Math.max(0, info.height - info.clientHeight);
+      cm.scrollTo(null, Math.min(Math.max(0, coords.top), maxTop));
+    }
+
     function refresh() {
-      if (editors[active]) editors[active].refresh();
+      Object.keys(editors).forEach((k) => {
+        editors[k].refresh();
+        syncTailPad(editors[k]);
+      });
     }
 
     setActive('ledger');
@@ -494,6 +917,7 @@
       setActive,
       getActive: () => active,
       setDiagnostics,
+      setSemantic,
       setDirty,
       gotoLine,
       focus,

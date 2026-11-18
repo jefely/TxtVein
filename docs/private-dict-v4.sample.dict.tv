@@ -1,0 +1,226 @@
+// TxtVein 字典 v4 · 会计类型 → 统计分类 → 节点：一行一条，中文逗号分列
+// 节点列：简码，名称，英文简码，英文名；母树绑定固定在文末 [母树]：简码，分支或叶子
+
+[费用]，Expense
+
+日常，Daily
+  S，水
+  ZC，早餐
+  KC，快餐
+  SG，水果
+  LS，零食
+  GD，糕点
+  HF，话费
+  LF，理发
+  RYP，日用品
+  KD，快递费
+  BZ，上班杂费
+
+生活，Living
+  MC，买菜
+  DC，点餐
+  FZ，房租
+  SDF，水电费
+  WXF，维修费
+
+保健，Health
+  YP，药品
+  ZL，治疗
+  JK，健康
+
+通勤，Commute
+  DT，地铁
+  GXC，共享车
+  GJ，公交
+  CZC，出租车
+
+出行，Travel
+  QCAR，汽车
+  HC，火车
+  FJ，飞机
+  JY，加油
+  GLF，过路费
+  TCF，停车费
+
+服饰，Clothing
+  YF，衣服
+  KZ，裤子
+  XZ，鞋子
+  SP，饰品
+
+休闲，Leisure
+  LY，旅游
+  WJ，玩具
+  JS，健身
+  YX，游戏
+  YY，影音
+  CP，彩票
+
+学习，Study
+  SJ，书籍
+  JC，教程
+
+应酬，Social
+  ZK，做客
+  SL，送礼
+  QK，请客
+
+公益，Charity
+  JZ，捐赠
+  BX，保险
+
+损失，Loss
+  PC，赔偿
+  FD，罚单
+  YS，遗失
+  SXF，手续费
+  QZC，其它支出
+
+[收入]，Income
+
+工资，Salary
+  GZ，工资
+
+外快，Side Income
+  LG，临工
+
+[资产]，Asset
+
+储蓄，Savings
+  ZHC，招行储
+  JHC，交行储
+  GHC，工行储
+  NHC，农行储
+  XYC，信用储
+  ZGC，中国储
+
+现金，Cash
+  XJ，现金
+
+网账，Online
+  ZFB，支付宝余额
+  WX，微信钱包
+
+充值，Prepaid
+  FK，饭卡
+
+应收，Receivable
+  QYS，其它应收
+
+[负债]，Liability
+
+信用，Credit
+  ZHX，招行信
+  JHX，交行信
+  GFX，广发信
+  ZXX，中信信
+  JHX2，交行信
+  ZLD，招联贷
+
+网贷，Online Loans
+  DY，抖音月付
+  MT，美团月付
+  HB，花呗
+  JB，借呗
+  58D，58贷
+  YXH，宜享花
+  AYH，安逸花
+
+应付，Payable
+  QYF，其它应付
+
+[权益]，Equity
+
+权益，Equity
+  QC，期初余额
+
+结转，Closing
+  SRZ，收入汇总
+
+投资，Capital
+  SSZ，实收资本
+
+[母树]，Bindings
+DT，公交地铁
+DY，花呗白条
+FK，储值卡饭卡
+GZ，工资
+JZ，捐赠
+LG，兼职
+LY，旅行·未细分
+MC，超市生鲜
+PC，损失
+QC，期初权益
+QCAR，交通·未细分
+QYF，应付款
+QYS，应收款·未细分
+S，水电燃气
+SJ，教材
+SRZ，收入汇总
+SSZ，实收资本
+XJ，钱包现金
+YF，服装鞋帽
+YP，药品
+ZFB，支付宝余额
+ZHC，储蓄卡
+ZHX，信用卡
+ZK，礼物
+BX，保险·未细分
+DC，外卖
+FD，损失
+GXC，交通·未细分
+HC，火车高铁
+JC，在线课程
+JHC，储蓄卡
+JHX，信用卡
+KZ，服装鞋帽
+MT，花呗白条
+SL，礼物
+WJ，爱好玩具
+WX，微信零钱
+ZC，早餐
+ZL，门诊
+FJ，飞机
+FZ，房租
+GFX，信用卡
+GHC，储蓄卡
+GJ，公交地铁
+HB，花呗白条
+JK，医疗健康·未细分
+JS，健身运动
+KC，餐饮·未细分
+QK，请客
+XZ，服装鞋帽
+YS，损失
+CZC，打车网约车
+JB，消费贷
+JY，加油
+NHC，储蓄卡
+SDF，水电燃气
+SG，超市生鲜
+SP，服装鞋帽
+SXF，银行手续费
+YX，游戏
+ZXX，信用卡
+58D，消费贷
+GLF，交通·未细分
+JHX2，信用卡
+LS，餐饮·未细分
+QZC，其他支出·未细分
+WXF，维修
+XYC，储蓄卡
+YY，电影
+CP，娱乐·未细分
+GD，餐饮·未细分
+TCF，停车
+YXH，消费贷
+ZGC，储蓄卡
+ZLD，消费贷
+AYH，消费贷
+HF，手机话费
+LF，美妆个护
+RYP，日用百货
+KD，服务费
+BZ，其他支出·未细分
+
+alias 交行信，JHX，JHX2

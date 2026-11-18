@@ -1,3 +1,14 @@
+:root {
+  --tv-invalid: #B9C2CE;
+  --tv-linenumber: #8f8f8f;
+  --tv-lineerror: #ff7a45;
+  --tv-date: #DCDCAA;
+  --tv-node: #9CDCFE;
+  --tv-operator: #D4D4D4;
+  --tv-amount: #B5CEA8;
+  --tv-note: #6A9955;
+  --tv-editor-font-size: 13px;
+}
 @font-face {
   font-family: "Cascadia Code Web";
   src: url("../assets/cascadia/CascadiaCode.woff2") format("woff2");
@@ -140,7 +151,7 @@
   border-right: 1px solid #2b2b2b;
   min-width: 44px;
 }
-.editor-pane .CodeMirror-linenumber { color: #858585; padding-right: 10px; }
+.editor-pane .CodeMirror-linenumber { color: #858585; padding-right: 6px; }
 .editor-pane .CodeMirror-lines { padding: 8px 0 20px; }
 .editor-pane .CodeMirror pre.CodeMirror-line { padding-left: 10px; }
 .editor-pane .CodeMirror-activeline-background { background: #2a2d2e; }
@@ -165,7 +176,17 @@
 .editor-pane .CodeMirror-lint-line-error { background: transparent !important; }
 .cm-s-txtvein .cm-invalid-line,
 .cm-s-txtvein .cm-invalid-line span {
-  color: #B9C2CE !important; /* 整行失效文字灰白 */
+  color: var(--tv-invalid) !important; /* 整行失效文字灰白 */
+}
+
+/* 语义层：识别成功=亮（像运算符），链接=青，未识别=灰白，坏行=波浪线 */
+.cm-s-txtvein .tv-def { color: #D4D4D4 !important; font-weight: 600; }
+.cm-s-txtvein .tv-link { color: #4EC9B0 !important; }
+.cm-s-txtvein .tv-unknown { color: var(--tv-invalid) !important; }
+.cm-s-txtvein .tv-error {
+  color: var(--tv-invalid) !important;
+  text-decoration: underline wavy var(--tv-lineerror);
+  text-underline-offset: 2px;
 }
 
 /* token 颜色（VS Code dark 近似） */
@@ -178,7 +199,9 @@
 .cm-s-txtvein .cm-variable-2 { color: #4EC9B0; }
 .cm-s-txtvein .cm-tag { color: #4EC9B0; }
 .cm-s-txtvein .cm-string { color: #CE9178; }
-.cm-s-txtvein .cm-type { color: #4EC9B0; }
+.cm-s-txtvein .cm-type { color: #D7BA7D; font-weight: 600; }
+.cm-s-txtvein .cm-dict-en,
+.cm-s-txtvein .cm-dict-en.tv-def { color: #8f8f8f !important; font-weight: 400; }
 .cm-s-txtvein .cm-meta { color: #D7BA7D; }
 .cm-s-txtvein .cm-def { color: #DCDCAA; }
 .cm-s-txtvein .cm-error { color: #F44747; }
@@ -733,7 +756,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .editor-pane .CodeMirror-gutters,
 .fixed-editor .CodeMirror-gutters { background: #050505 !important; border-right-color: #222 !important; }
 .editor-pane .CodeMirror-linenumber,
-.fixed-editor .CodeMirror-linenumber { color: #8f8f8f !important; }
+.fixed-editor .CodeMirror-linenumber { color: var(--tv-linenumber) !important; }
 .editor-pane .CodeMirror-activeline-background { background: #101010 !important; }
 .editor-pane .CodeMirror-selected { background: #123a5a !important; }
 .cm-s-txtvein .cm-comment { color: #7ca668 !important; }
@@ -745,7 +768,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .cm-s-txtvein .cm-variable-2 { color: #7ee787 !important; }
 .cm-s-txtvein .cm-tag { color: #79c0ff !important; }
 .cm-s-txtvein .cm-string { color: #ffa657 !important; }
-.cm-s-txtvein .cm-type { color: #7ee787 !important; }
+.cm-s-txtvein .cm-type { color: #D7BA7D !important; font-weight: 600; }
 .cm-s-txtvein .cm-meta { color: #e3b341 !important; }
 .cm-s-txtvein .cm-def { color: #f2cc60 !important; }
 .cm-s-txtvein .cm-invalid-line,
@@ -1353,3 +1376,63 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 }
 
 
+
+/* ===== 行号：问题行橘红 + 点行号菜单 ===== */
+.editor-pane .tv-line-error .CodeMirror-linenumber {
+  color: var(--tv-lineerror) !important;
+  font-weight: 600;
+}
+.editor-pane .CodeMirror-gutters {
+  border-right: 1px solid #222;
+}
+.cm-line-menu {
+  position: fixed;
+  z-index: 1200;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: calc(100vw - 16px);
+  padding: 4px;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  font: 12px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.cm-line-menu button {
+  display: block;
+  width: auto;
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  text-align: center;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: #d4d4d4;
+  cursor: pointer;
+}
+.cm-line-menu button:hover { background: #2a2a2a; }
+.cm-line-menu button:disabled { color: #5a5a5a; cursor: default; }
+
+/* ===== 可配置 token 颜色 ===== */
+.cm-s-txtvein .cm-date { color: var(--tv-date); }
+.cm-s-txtvein .cm-node { color: var(--tv-node); }
+.cm-s-txtvein .cm-operator { color: var(--tv-operator); }
+.cm-s-txtvein .cm-amount { color: var(--tv-amount); }
+.cm-s-txtvein .cm-note { color: var(--tv-note); }
+.editor-pane .CodeMirror { font-size: var(--tv-editor-font-size); }
+/* 末尾滚动留白：30 行高度，不是正文行，不占行号 */
+.cm-tail-pad { width: 100%; pointer-events: none; }
+
+/* 点行号后的选中标记：行号灰底 + 整行浅灰 */
+.editor-pane .CodeMirror-gutter-wrapper.tv-line-selected .CodeMirror-linenumber {
+  background: #3a3a3a;
+  color: #ffffff !important;
+  border-radius: 2px;
+}
+.editor-pane .CodeMirror-linebackground.tv-line-selected-bg {
+  background: rgba(255, 255, 255, 0.055);
+}

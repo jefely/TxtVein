@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.2.3-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.4.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-green.svg" alt="License">
   <img src="https://img.shields.io/badge/data-100%25%20Local-black.svg" alt="Local First">
 </p>
@@ -119,6 +119,11 @@ wx1 > din 35 < 咖啡 < 拿铁
 | `wx1 > din 35` | 从微信转出 35 到餐饮 |
 | `wx1 > din 35 < 咖啡 < 拿铁` | 加两级标签（`咖啡` 父、`拿铁` 子） |
 | `sav > wx1 > din 1000` | 链式转移，展开为两笔同时间戳流水 |
+| `wx > s sc mc 3 6 12` | 批量：提交后拆成 3 行源码，落成 3 条流水 |
+| `wx > s zc dt 1 2 *` | 金额循环填满：1, 2, 1 |
+| `wx > s zc dt 1 2*` | 首笔 1，其余全部用 2：1, 2, 2 |
+| `wx > s zc dt 100/` | 总额均摊：33.34, 33.33, 33.33 |
+| `wx > dc 3 *m` | 当前笔 + 在固定表加月计划 |
 | `sav > wx1 > din 1000 995` | 多金额链：差额 5 元自动进「损耗」池 |
 | `261110 wx1 > din 12.5` | 指定日期 |
 | `-1 wx1 > din 35` | 昨天（落盘为绝对日期，自动排到昨天） |
@@ -133,10 +138,10 @@ wx1 > din 35 < 咖啡 < 拿铁
 
 - **双击空格** → `>`；**三击空格** → `<`；候选打开时单击空格也可确认当前候选。
 - 编辑器光标处同样支持双击/三击空格；补全弹窗可用鼠标点击。
-- 简码候选支持 `1 2 3` 数字选择、鼠标点击、`↑↓` + `Tab/Enter`；默认日期今日，`P` 域不写前缀。
+- 简码候选支持鼠标点击、`↑↓` + `Tab/Enter`（数字键留给金额，不再用序号选择）；默认日期今日，`P` 域不写前缀。
 - **代码页内** `ledger.tv` / `dict.tv` 两个 CM5 编辑器，行号、语法高亮、单波浪线、补全、运算符工具条。
-- **顶栏菜单**：安全 / 导入 / 导出 / 简码 / 中英 / 帮助，放在 logo 后面；
-- **五个圆角页签**：查询 / 流水 / 字典 / 固定 / 统计；
+- **顶栏菜单**：导入 / 导出 / 设置 / 帮助 / 掩码 / 语言，放在 logo 后面；
+- **六个圆角页签**：查询 / 流水 / 字典 / 母树 / 固定 / 统计；
 - **统计页四页签**：分类 / 节点 / 备注 / 事件（行为）；左侧完整统计表、右侧对应完整列表，左右独立，右侧可拖宽，支持 1–12 月切换。
 - **查询页**：一屏三段独立查询，默认今天 / 本月 / 本年，每段独立日期、转出、转入、金额、备注条件和「清空」。
 - **固定页**：`[PLAN]` 固定收支 + `[RULES]` 自动规则，纯文本编辑；
@@ -144,15 +149,15 @@ wx1 > din 35 < 咖啡 < 拿铁
 - **相对日期**：单输入框和直接文本编辑都支持 `-1` / `-2`；直接编辑在日期 token 后按空格时立即固化成 `YYMMDD`，落盘仍是绝对日期。
 - **手机输入宏**：气泡与主编辑器里，软键盘快速连按两次空格 → `>`，三次 → `<`；不依赖物理键盘 keydown。
 - **手机编辑器**：窄屏自动换行，行号列固定在左侧，不随手指左右拖动。
-- **手机英文工具栏**：品牌与 Security / Import / Export / Code / EN / Help 同一行；锁按钮已移除，改为自动锁定。
+- **手机英文工具栏**：品牌与 Import / Export / Settings / Help / Mask / Language 同一行；锁按钮已移除，改为自动锁定。
 - **字体**：Cascadia Code；内置 `CascadiaCode.woff2`（SIL OFL 1.1），手机与离线环境也能用；高对比深黑，编辑器不做灰底。
 - **输入框上方反馈栏**：有反馈显示反馈，无反馈显示光标、错误数和快捷键提示；蓝色状态条已移除。
 - **VS Code Dark+ 深灰**：15px 基准、14px 编辑器；去掉网格和光晕，字号不再依赖浏览器 110% 缩放。
 - **Ctrl+Space** 补全；**Ctrl+Enter** 编译；`>` / `<` / `*m` / `*d` / `*y` / `d` / `h` / `m` 可点工具条插入。
 - **顶部域栏已移除**：所有流水在同一个列表里；不写域即 `P`，只有显式写 `F` / `C` / `H` 才记录为对应域。
-- 编辑区可切 4 态（简码/明文 × 中文/英文）；错误行原位保留，合法行重投影；跨域自动补 `P:`/`C:` 前缀。
+- 编辑区可切 4 态（掩码/明文 × 中文/英文）；错误行原位保留，合法行重投影；跨域自动补 `P:`/`C:` 前缀。
 - 对话框录入仍保留：成功写源码，失败也先写成 `X_` 纯文本，并把输入框留在「第 N 行待修复」状态；改完回车替换原行，不弹窗、不抢光标。
-- **字典树**：字典源码顶部 `[树]` 段用纯文本缩进列出私人树；改缩进即改父级，字段仍在 `[会计]` 段。
+- **私有字典 v4**：三级——会计类型 → 统计分类（你自己的分组）→ 节点；节点级母树绑定固定在文末 `[母树]`；字典页后的「母树」整页：左私人字典、右母树，点选即绑定。规范见 [`docs/private-dict-v4.md`](docs/private-dict-v4.md)
 - **行为树/备注树节点可点**：重挂父级、合并；合并后行为边/备注/标签引用改指目标，旧 code 保留别名。
 - **字典候选**：未知节点只进「候选」，确认后建会计节点或行为项；一波事务写 ID 图并重编译。
 - **明文单文件导出前校验**：重读并比对流水/行为/节点/标签/行为项/备注/错误行数量，检查段落与 ID 泄露。
@@ -389,12 +394,13 @@ TxtVein/
 │     ├─ panels.js        ← 规则/导入导出/帮助/密码
 │     └─ app.js           ← 唯一状态与编排
 ├─ vendor/codemirror/     ← CM5 + hint/lint/matchbrackets/active-line（MIT）
-├─ tests/                 ← node --test（108 条）
+├─ tests/                 ← node --test（230 条）
 ├─ tools/
 │  ├─ build.cjs           ← 把 index.html 内联成单文件
-│  ├─ check.cjs           ← 工程门禁（121 项）
+│  ├─ check.cjs           ← 工程门禁（176 项）
 │  ├─ cdp.py              ← Chrome DevTools 小助手
-│  ├─ e2e.py              ← 浏览器端到端（56 项断言）
+│  ├─ e2e.py              ← 浏览器端到端（91 项断言）
+│  ├─ e2e_v4.py           ← v4 字典端到端（61 项断言）
 │  ├─ smoke_file.py       ← file:// 单文件冒烟
 │  └─ smoke.py            ← 快速截图/冒烟
 ├─ docs/screens/          ← 截图
@@ -415,17 +421,18 @@ TxtVein/
 ```powershell
 cd D:\myproject\TxtVein
 
-node --test tests/*.test.cjs      # 108 条核心测试
+node --test tests/*.test.cjs      # 230 条核心测试
 node tools/build.cjs              # 生成 TxtVein.html
-node tools/check.cjs              # 121 项工程门禁
+node tools/check.cjs              # 176 项工程门禁
 python serve.py 8899              # 另开一个终端（E2E 用）
-python tools/e2e.py               # 56 项浏览器断言（需先起 8899 服务）
+python tools/e2e.py               # 91 项浏览器断言（需先起 8899 服务）
+python tools/e2e_v4.py            # 61 项 v4 断言（导入/整页母树/点选绑定/采纳/输入流/编辑器/数字快捷键/金额）
 python tools/smoke_file.py        # file:// 单文件冒烟（含设密码 / 刷新解锁）
 ```
 
 > 也可以不服务器直接跑：`$env:TXTVEIN_URL='file:///D:/myproject/TxtVein/index.html'; python tools/e2e.py`。
 
-`e2e.py` 覆盖：设密码、CM5 双编辑器、三段查询、固定页、三栏统计、行为项自动建、行为/备注/错误行、明文单文件导出回导、刷新解锁、错误密码、锁定。
+`e2e.py` 覆盖：设密码、CM5 双编辑器、三段查询、固定页、三栏统计、v3 行为项自动建、行为/备注/错误行、明文单文件导出回导、刷新解锁、错误密码、锁定。
 
 > E2E 使用独立 Chrome profile（`_tmp_cdp_profile/`），不会碰你的日常浏览器。
 
@@ -475,7 +482,7 @@ python tools/smoke_file.py        # file:// 单文件冒烟（含设密码 / 刷
 | §14 验收 | `e2e.py` 逐条覆盖；见 `STATUS.md` |
 | §15 三大铁律 | README/实现均以此为准 |
 
-逐条验收对照见 [`docs/v1.1-acceptance.md`](docs/v1.1-acceptance.md)；分层与不变量见 [`docs/architecture.md`](docs/architecture.md)；公共母树 / 私人子树规范见 [`docs/mother-tree.md`](docs/mother-tree.md)，图论模型见 [`docs/mother-tree-graph.md`](docs/mother-tree-graph.md)，双语与简码见 [`docs/mother-tree-bilingual.md`](docs/mother-tree-bilingual.md)，私有树覆盖检查见 [`docs/private-tree-coverage.md`](docs/private-tree-coverage.md)。
+逐条验收对照见 [`docs/v1.1-acceptance.md`](docs/v1.1-acceptance.md)；分层与不变量见 [`docs/architecture.md`](docs/architecture.md)；公共母树 / 私人子树规范见 [`docs/mother-tree.md`](docs/mother-tree.md)，图论模型见 [`docs/mother-tree-graph.md`](docs/mother-tree-graph.md)，双语与简码见 [`docs/mother-tree-bilingual.md`](docs/mother-tree-bilingual.md)，私有树覆盖检查见 [`docs/private-tree-coverage.md`](docs/private-tree-coverage.md)，私有字典 v4 设计见 [`docs/private-dict-v4.md`](docs/private-dict-v4.md)，多层组合输入设计见 [`docs/multi-input.md`](docs/multi-input.md)，版本记录见 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ---
 

@@ -445,6 +445,23 @@
     return hit ? dict.aliases[hit].slice() : [];
   }
 
+  function langFields(x, lang) {
+    const en = lang === 'en';
+    return {
+      code: S(en ? x.en_code : x.zh_code).toLowerCase(),
+      otherCode: S(en ? x.zh_code : x.en_code).toLowerCase(),
+      name: S(en ? x.en_name : x.zh_name).toLowerCase(),
+      otherName: S(en ? x.zh_name : x.en_name).toLowerCase(),
+    };
+  }
+
+  function aliasLangOk(x, token, lang) {
+    const t = S(token).trim().toLowerCase();
+    const f = langFields(x, lang);
+    if (f.code === t || f.name === t) return true;
+    return f.otherName !== t && f.otherCode !== t;   /* 另一种语言的名称/码不能当本语言别名 */
+  }
+
   function candidateInfo(dict, id, ctx) {
     const node = dict.nodes[id];
     const tag = dict.tags[id];
@@ -504,7 +521,7 @@
     });
   }
 
-  function collectMatches(dict, token, domain) {
+  function collectMatches(dict, token, domain, lang) {
     const t = S(token).trim();
     const low = t.toLowerCase();
     const d = domain ? S(domain).toUpperCase() : '';
@@ -513,13 +530,13 @@
       const n = dict.nodes[id];
       if (n.system) return;
       if (d && S(n.domain).toUpperCase() !== d) return;
-      if (S(n.zh_code).toLowerCase() === low || S(n.en_code).toLowerCase() === low
-        || n.zh_name === t || n.en_name === t) ids.push(id);
+      const f = langFields(n, lang);
+      if (f.code === low || f.name === low) ids.push(id);
     });
     return ids;
   }
 
-  function collectPrefix(dict, token, domain) {
+  function collectPrefix(dict, token, domain, lang) {
     const t = S(token).trim();
     if (!t) return [];
     const low = t.toLowerCase();
@@ -529,8 +546,8 @@
       const n = dict.nodes[id];
       if (n.system) return;
       if (d && S(n.domain).toUpperCase() !== d) return;
-      if (S(n.zh_code).toLowerCase().startsWith(low) || S(n.en_code).toLowerCase().startsWith(low)
-        || S(n.zh_name).startsWith(t) || S(n.en_name).toLowerCase().startsWith(low)) ids.push(id);
+      const f = langFields(n, lang);
+      if (f.code.startsWith(low) || f.name.startsWith(low)) ids.push(id);
     });
     return ids;
   }
@@ -559,7 +576,8 @@
     if (forced) token = token.slice(1).trim();
     if (!token) return { ok: false, code: 'EMPTY', error: '缺节点' };
 
-    const allAlias = aliasIds(dict, token).filter((id) => dict.nodes[id]);
+    const lang = c.lang === 'en' ? 'en' : 'zh';
+    const allAlias = aliasIds(dict, token).filter((id) => dict.nodes[id] && aliasLangOk(dict.nodes[id], token, lang));
     let ids = inDomain(dict, allAlias, domain);
     if (ids.length === 1) return { ok: true, id: ids[0], node: dict.nodes[ids[0]], via: 'alias', forced };
     if (ids.length > 1) {
@@ -568,7 +586,7 @@
       return ambiguous(token, ranked);
     }
 
-    ids = collectMatches(dict, token, domain);
+    ids = collectMatches(dict, token, domain, lang);
     if (ids.length === 1) return { ok: true, id: ids[0], node: dict.nodes[ids[0]], via: 'code', forced };
     if (ids.length > 1) {
       const ranked = rankCandidates(dict, ids, c);
@@ -581,8 +599,8 @@
       const base = m[1];
       const idx = Number(m[2]);
       let pool = inDomain(dict, aliasIds(dict, base).filter((id) => dict.nodes[id]), domain);
-      if (!pool.length) pool = collectMatches(dict, base, domain);
-      if (!pool.length) pool = collectPrefix(dict, base, domain);
+      if (!pool.length) pool = collectMatches(dict, base, domain, lang);
+      if (!pool.length) pool = collectPrefix(dict, base, domain, lang);
       const ranked = rankCandidates(dict, pool, c);
       if (idx >= 1 && idx <= ranked.length) {
         const pick = ranked[idx - 1];
@@ -594,12 +612,12 @@
       }
     }
 
-    ids = collectPrefix(dict, token, domain);
+    ids = collectPrefix(dict, token, domain, lang);
     if (ids.length === 1) return { ok: true, id: ids[0], node: dict.nodes[ids[0]], via: 'prefix', forced };
     const ranked = rankCandidates(dict, ids, c);
     if (ranked.length > 1) return ambiguous(token, ranked);
     const cross = domain
-      ? notInDomain(dict, allAlias.concat(collectMatches(dict, token), collectPrefix(dict, token)), domain)
+      ? notInDomain(dict, allAlias.concat(collectMatches(dict, token, '', lang), collectPrefix(dict, token, '', lang)), domain)
       : [];
     return {
       ok: false, code: 'UNBOUND', token, error: '找不到节点：' + token,
@@ -607,7 +625,7 @@
     };
   }
 
-  function tagMatches(dict, name, domain) {
+  function tagMatches(dict, name, domain, lang) {
     const t = S(name).trim();
     const low = t.toLowerCase();
     const d = domain ? S(domain).toUpperCase() : '';
@@ -615,8 +633,8 @@
     Object.keys(dict.tags || {}).forEach((id) => {
       const x = dict.tags[id];
       if (d && S(x.domain).toUpperCase() !== d) return;
-      if (x.zh_name === t || x.en_name === t
-        || S(x.zh_code).toLowerCase() === low || S(x.en_code).toLowerCase() === low) ids.push(id);
+      const f = langFields(x, lang);
+      if (f.name === low || f.code === low) ids.push(id);
     });
     return ids;
   }
@@ -628,12 +646,12 @@
     if (!t) return { ok: false, code: 'EMPTY', error: '标签为空' };
     const aliasKey = Object.keys(dict.aliases || {}).find((k) => k.toLowerCase() === t.toLowerCase());
     if (aliasKey) {
-      let aliasIds = (dict.aliases[aliasKey] || []).filter((id) => dict.tags[id]);
+      let aliasIds = (dict.aliases[aliasKey] || []).filter((id) => dict.tags[id] && aliasLangOk(dict.tags[id], t, c.lang));
       if (d) aliasIds = aliasIds.filter((id) => S(dict.tags[id].domain).toUpperCase() === d);
       if (aliasIds.length === 1) return { ok: true, id: aliasIds[0], tag: dict.tags[aliasIds[0]], via: 'alias' };
       if (aliasIds.length > 1) return ambiguous(t, rankCandidates(dict, aliasIds, c));
     }
-    const ids = tagMatches(dict, t, c.domain);
+    const ids = tagMatches(dict, t, c.domain, c.lang);
     if (ids.length === 1) return { ok: true, id: ids[0], tag: dict.tags[ids[0]], via: 'exact' };
     if (ids.length > 1) return ambiguous(t, rankCandidates(dict, ids, c));
     return { ok: false, code: 'UNBOUND', token: t, error: '还没有标签：' + t };
@@ -715,8 +733,8 @@
       const n = dict.nodes[id];
       if (n.system) return;
       if (!q) { ids.push(id); return; }
-      if (S(n.zh_code).toLowerCase().includes(low) || S(n.en_code).toLowerCase().includes(low)
-        || S(n.zh_name).includes(q) || S(n.en_name).toLowerCase().includes(low)) ids.push(id);
+      const f = langFields(n, o.lang);
+      if (f.code.includes(low) || f.name.includes(low)) ids.push(id);
     });
     return rankCandidates(dict, ids, { domain: o.domain, lang: o.lang }).slice(0, o.limit || 8);
   }
@@ -728,8 +746,8 @@
     const ids = Object.keys(dict.tags || {}).filter((id) => {
       const t = dict.tags[id];
       if (!q) return true;
-      return S(t.zh_code).toLowerCase().includes(low) || S(t.en_code).toLowerCase().includes(low)
-        || S(t.zh_name).includes(q) || S(t.en_name).toLowerCase().includes(low);
+      const f = langFields(t, o.lang);
+      return f.code.includes(low) || f.name.includes(low);
     });
     return rankCandidates(dict, ids, { domain: o.domain, lang: o.lang }).slice(0, o.limit || 8);
   }

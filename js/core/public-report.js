@@ -60,7 +60,8 @@
         unclassified.rows.push(row);
         return;
       }
-      if (!sysNodes[anchor] || !core || !core.isPostable(sysNodes, anchor)) {
+      /* v4 允许绑到分支或叶子：只要是母树里的分类节点就参与上卷 */
+      if (!sysNodes[anchor] || sysNodes[anchor].kind !== 'category' || !core) {
         addTotals(stale.totals, row);
         stale.rows.push(row);
         return;

@@ -91,7 +91,13 @@
     };
   }
 
+  function isV3Text(src) {
+    const s = S(src);
+    return /^\s*\[(树|会计|TREE|ACCOUNT)\]/mi.test(s) || /^\s*(node|tag|item)\s/mi.test(s);
+  }
+
   function split(source) {
+    if (TV.dictV4 && !isV3Text(source)) return TV.dictV4.splitByDomain(source);
     const lines = S(source).replace(/\r\n?/g, '\n').split('\n');
     const diagnostics = [];
     const common = [];
@@ -347,6 +353,7 @@
   }
 
   function merge(p, c) {
+    if (TV.dictV4 && !isV3Text(p) && !isV3Text(c)) return TV.dictV4.mergeSides(p, c);
     const a = checkSide(p, 'P');
     const b = checkSide(c, 'C');
     const diagnostics = a.diagnostics.concat(b.diagnostics);

@@ -32,8 +32,7 @@
     vaultId: '',
     domain: '',
     mode: 'CODE',
-    lang: 'zh',
-    view: 'ledger',
+    lang: 'zh',    view: 'ledger',
     reportMode: 'private',
     range: '本月',
     query: { text: '', fromDate: '', toDate: '', type: '', domain: '', from: '', to: '', tag: '', min: '', max: '' },
@@ -54,9 +53,9 @@
 
   const LABELS = {
     zh: {
-      security: '安全', import: '导入', export: '导出', help: '帮助', candidates: '候选',
-      query: '查询', ledger: '流水', dict: '字典', fixed: '固定', report: '统计',
-      modeCode: '简码', modePlain: '明文', lock: '锁',
+      security: '安全', import: '导入', export: '导出', settings: '设置', help: '帮助', candidates: '候选',
+      query: '查询', ledger: '流水', dict: '字典', mother: '母树', fixed: '固定', report: '统计',
+      modeCode: '掩码', mask: '掩码', modePlain: '明文', language: '语言', lock: '锁',
       queryTitle: '查询流水', queryText: '关键词 / 名称 / 日期', all: '全部',
       ledgerQuery: '流水查询', clear: '清空', seq: '序', noteSearch: '备注搜索',
       amountShort: '金额', dateShort: '日期', colNote: '备注',
@@ -72,12 +71,12 @@
       statsMonth: '月', statsItems: '项', statsRecords: '条', statsSelect: '左侧选择一项',
       noRows: '没有匹配的流水', fixedTitle: '固定收支与规则',
       fixedHint: '文本编辑，自动保存 · [PLAN] 固定收支 / [RULES] 自动规则',
-      feedbackHint: '双击空格 > · 三击 < · 数字/鼠标选候选 · Ctrl+Enter 编译',
+      feedbackHint: '行首空格补日期 · 双击空格 > · 三击 < · 数字/鼠标选候选 · Ctrl+Enter 编译',
     },
     en: {
-      security: 'Security', import: 'Import', export: 'Export', help: 'Help', candidates: 'Candidates',
-      query: 'Query', ledger: 'Ledger', dict: 'Dictionary', fixed: 'Fixed', report: 'Stats',
-      modeCode: 'Code', modePlain: 'Plain', lock: 'Lock',
+      security: 'Security', import: 'Import', export: 'Export', settings: 'Settings', help: 'Help', candidates: 'Candidates',
+      query: 'Query', ledger: 'Ledger', dict: 'Dictionary', mother: 'Mother', fixed: 'Fixed', report: 'Stats',
+      modeCode: 'Mask', mask: 'Mask', modePlain: 'Plain', language: 'Language', lock: 'Lock',
       queryTitle: 'Query ledger', queryText: 'Keyword / name / date', all: 'All',
       ledgerQuery: 'Ledger query', clear: 'Clear', seq: '#', noteSearch: 'Note search',
       amountShort: 'Amount', dateShort: 'Date', colNote: 'Note',
@@ -93,9 +92,15 @@
       statsMonth: 'month', statsItems: 'items', statsRecords: 'records', statsSelect: 'Select an item on the left',
       noRows: 'No matching entries', fixedTitle: 'Fixed entries & rules',
       fixedHint: 'Text editor, auto-saved · [PLAN] fixed entries / [RULES] auto rules',
-      feedbackHint: 'Double space > · triple < · number/click candidate · Ctrl+Enter compile',
+      feedbackHint: 'Leading space adds date · double space > · triple < · Ctrl+Enter compile',
     },
   };
+
+  try {
+    const d = JSON.parse(localStorage.getItem('txtvein:display') || 'null');
+    if (d && d.mode === 'PLAIN') S.mode = 'PLAIN';
+    if (d && d.lang === 'en') S.lang = 'en';
+  } catch (e) { /* ignore */ }
 
   function t(key) {
     const lang = S.lang === 'en' ? 'en' : 'zh';
@@ -110,7 +115,7 @@
     const cand = dom.btnCandidates;
     if (cand) cand.textContent = t('candidates');
     if (dom.btnMode) dom.btnMode.textContent = S.mode === 'CODE' ? t('modeCode') : t('modePlain');
-    if (dom.btnLang) dom.btnLang.textContent = S.lang === 'zh' ? '中' : 'EN';
+    if (dom.btnLang) dom.btnLang.textContent = t('language');
     renderTabs();
     if (S.view === 'query') renderQuery();
     if (S.view === 'fixed') renderFixedHint();
@@ -125,6 +130,7 @@
     queryView: $('#query-view'),
     fixedView: $('#fixed-view'),
     reportView: $('#report-view'),
+    motherView: $('#mother-view'),
     feedback: $('#feedback'),
     feedbackText: $('#feedback-text'),
     feedbackAction: $('#feedback-action'),
@@ -135,6 +141,7 @@
     prediction: $('#prediction'),
     state: $('#entry-state'),
     hint: $('#entry-hint'),
+    batchHint: $('#composer-batch-hint'),
     error: $('#entry-error'),
     row: $('.entry-row'),
     prompt: $('#entry-prompt'),
@@ -148,9 +155,11 @@
     toastAction: $('#toast-action'),
     btnMode: $('#btn-mode'),
     btnLang: $('#btn-lang'),
+    btnSettings: $('#btn-settings'),
     btnQuery: $('#btn-query'),
     btnLedger: $('#btn-ledger'),
     btnDict: $('#btn-dict'),
+    btnMother: $('#btn-mother'),
     btnFixed: $('#btn-fixed'),
     btnReport: $('#btn-report'),
     btnCandidates: $('#btn-candidates'),
@@ -426,14 +435,14 @@
   }
   function renderTabs() {
     const views = {
-      query: dom.btnQuery, ledger: dom.btnLedger, dict: dom.btnDict,
+      query: dom.btnQuery, ledger: dom.btnLedger, dict: dom.btnDict, mother: dom.btnMother,
       fixed: dom.btnFixed, report: dom.btnReport,
     };
     Object.keys(views).forEach((view) => {
       if (views[view]) views[view].classList.toggle('is-active', S.view === view);
     });
     if (dom.btnMode) dom.btnMode.textContent = S.mode === 'CODE' ? t('modeCode') : t('modePlain');
-    if (dom.btnLang) dom.btnLang.textContent = S.lang === 'zh' ? '中' : 'EN';
+    if (dom.btnLang) dom.btnLang.textContent = t('language');
   }
 
   function paneModel() {
@@ -469,18 +478,33 @@
       onChange: (file, text) => {
         if (file === 'ledger') S.ledgerSource = text;
         else S.dictSource = text;
+        S.projCache = {};
+        S.sourceDirty = true;
         if (file === 'ledger') S.pendingRepair = null;
         if (editorCtl) editorCtl.setDirty(file, true);
         clearTimeout(compileTimer);
-        compileTimer = setTimeout(() => compileSources(), 260);
+        /* 回车后的模式投影不要等 260ms 防抖，立即编译/投影 */
+        compileTimer = setTimeout(() => compileSources(), S.canonicalOnCompile ? 0 : 260);
       },
-      onRun: () => compileSources(),
+      onRun: () => {
+        expandAllBatchLines();
+        compileSources();
+      },
       onActive: (file) => {
         S.view = file === 'dict' ? 'dict' : 'ledger';
         renderTabs();
         renderAll();
       },
       hint: sourceHint,
+      onCursor: (file, line) => { if (file === 'ledger') onLedgerCursor(line); },
+      onExpandBatch: (cm, line) => expandBatchInEditor(cm, line),
+      onCanonicalLine: (cm, line) => markCanonicalOnEnter(cm, line),
+      onAdoptMother: (id, domain) => {
+        const r = adoptMother(id, '', domain);
+        if (r.ok && S.dict.nodes[r.id]) r.name = S.dict.nodes[r.id].zh_name;
+        return r;
+      },
+      toast: (msg, type) => toast(msg, type),
       onStatus: (st) => {
         lastEditorStatus = st;
         if (!feedbackHold) updateFeedback();
@@ -522,9 +546,17 @@
     return domainPrefix(n.domain) + n.date + ' ' + (amt ? amt + ' ' : '') + '< ' + cat + (kws ? ' < ' + kws : '');
   }
 
-  function projectEditorSource() {
-    if (!S.dict || (S.view !== 'ledger' && S.view !== 'dict')) return;
-    if (S.view === 'dict') return;
+  function projectEditorSource(force, presentational) {
+    if (!S.dict) return;
+    if (!force && S.view !== 'ledger' && S.view !== 'dict') return;
+    if (!force && S.view === 'dict') return;
+    const cacheKey = S.mode + '|' + S.lang;
+    if (S.projCache && S.projCache[cacheKey]) {
+      S.ledgerSource = S.projCache[cacheKey];
+      if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
+      if (!presentational) { editorCtl && editorCtl.setDirty('ledger', true); setSaveState('dirty'); }
+      return;
+    }
     const byLine = new Map();
     const add = (line, rec) => {
       if (!line) return;
@@ -588,11 +620,13 @@
       }
     });
     S.ledgerSource = out.join('\n') + '\n';
+    if (!S.projCache) S.projCache = {};
+    S.projCache[cacheKey] = S.ledgerSource;
     if (editorCtl) {
       editorCtl.setTexts(S.ledgerSource, S.dictSource);
-      editorCtl.setDirty('ledger', true);
+      if (!presentational) editorCtl.setDirty('ledger', true);
     }
-    setSaveState('dirty');
+    if (!presentational) setSaveState('dirty');
   }
 
   function sourceHint(file, token, before) {
@@ -603,35 +637,86 @@
       });
       return { list };
     }
-    const low = String(token || '').toLowerCase();
-    if (before.includes('<')) {
-      Object.keys(S.dict.tags || {}).forEach((id) => {
-        const t = S.dict.tags[id];
-        const code = t.zh_code || t.en_code;
-        if (code && code.toLowerCase().startsWith(low)) list.push({ text: code, displayText: code + '  ' + (t.zh_name || '') });
+    if (file === 'ledger') {
+      const res = analyzeInput(String(before || ''), String(before || '').length);
+      const out = [];
+      const seen = new Set();
+      (res.suggestions || []).forEach((s) => {
+        if (s.kind === 'mother') {
+          const prefix = (res.context && res.context.prefix) || '';
+          const text = '@@' + prefix + s.id + '@@';
+          if (!seen.has(text)) {
+            seen.add(text);
+            out.push({
+              text,
+              displayText: (s.codeLabel ? s.codeLabel + '  ' : '') + (s.path || s.label || s.id),
+              className: 'hint-mother',
+            });
+          }
+          return;
+        }
+        const code = s.codeLabel || s.label || s.name;
+        if (!code) return;
+        const prefix = (res.context && res.context.prefix) || '';
+        const text = prefix + code;
+        if (seen.has(text)) return;
+        seen.add(text);
+        out.push({ text, displayText: text + '  ' + (s.name || s.label || '') + (s.type ? '  ' + s.type : '') });
       });
-    } else {
-      Object.keys(S.dict.nodes || {}).forEach((id) => {
-        const n = S.dict.nodes[id];
-        if (n.system) return;
-        const code = n.zh_code || n.en_code;
-        if (code && code.toLowerCase().startsWith(low)) list.push({ text: code, displayText: code + '  ' + (n.zh_name || '') + '  ' + n.polarity });
-      });
-      Object.keys(S.dict.behaviors || {}).forEach((id) => {
-        const h = S.dict.behaviors[id];
-        const code = h.zh_code || h.en_code;
-        if (code && code.toLowerCase().startsWith(low)) list.push({ text: code, displayText: code + '  ' + (h.zh_name || '') + '  H' });
-      });
+      return { list: out.slice(0, 14) };
     }
-    ['>', '<', '*m', '*d', '*y', 'd', 'h', 'm'].forEach((x) => {
-      if (!token) list.push({ text: x, displayText: x });
+  }
+
+  function nextPlanId() {
+    S.dict.meta = S.dict.meta || {};
+    let n = Number(S.dict.meta.nextPlan) || 1;
+    let id;
+    do { id = 'R_' + String(n).padStart(3, '0'); n += 1; } while ((S.plans || []).some((p) => p.id === id));
+    S.dict.meta.nextPlan = n;
+    return id;
+  }
+
+  function refreshFixedSource() {
+    if (!fixedCtl) return;
+    const src = fixedSource();
+    if (fixedCtl.cm.getValue() !== src) {
+      fixedCtl.cm.setValue(src);
+      fixedCtl.cm.clearHistory();
+    }
+  }
+
+  function syncLedgerPlans() {
+    if (!S.dict || !S.events) return false;
+    S.plans = S.plans || [];
+    const lines = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n');
+    let changed = false;
+    lines.forEach((line, idx) => {
+      const pm = String(line).match(/\*([dmy])\b/i);
+      if (!pm) return;
+      const period = pm[1].toLowerCase();
+      S.events.filter((e) => e.sourceLine === idx + 1 && e.kind === 'account' && e.amountCents > 0)
+        .forEach((e) => {
+          const same = S.plans.find((p) => p.status === 'active'
+            && p.from === e.from && p.to === e.to && p.amountCents === e.amountCents
+            && p.period === period && (p.domain || 'P') === (e.domain || 'P'));
+          if (same) return;
+          S.plans.push({
+            id: nextPlanId(), status: 'active', start: e.date, lastRun: e.date,
+            period, domain: e.domain || 'P', from: e.from, to: e.to,
+            amountCents: e.amountCents, tagIds: (e.tagIds || []).slice(),
+            raw: String(line).trim(), createdAt: new Date().toISOString(),
+          });
+          changed = true;
+        });
     });
-    return { list: list.slice(0, 12) };
+    if (changed) refreshFixedSource();
+    return changed;
   }
 
   function compileSources() {
     if (!S.dict || compiling) return;
     compiling = true;
+    S.sourceDirty = false;
     clearTimeout(compileTimer);
     try {
       const r = TV.source.compileAll(S.dictSource, S.ledgerSource, {
@@ -641,14 +726,18 @@
       S.events = r.events || [];
       S.behaviors = r.behaviors || [];
       S.notes = r.notes || [];
+      S.projCache = {};
+      syncLedgerPlans();
       S.sourceDiags = (r.dictDiagnostics || []).map((x) => Object.assign({ file: 'dict' }, x))
         .concat((r.ledgerDiagnostics || []).map((x) => Object.assign({ file: 'ledger' }, x)));
       if (editorCtl) editorCtl.setDiagnostics(S.sourceDiags);
+      if (editorCtl && editorCtl.setSemantic) editorCtl.setSemantic('dict', r.dictTokens || []);
       renderCandidateButton();
       renderAll();
       scheduleSave();
       if (r.autoTags && r.autoTags.length && editorCtl) {
-        /* 备注标签自动建：写回 dict.tv 的 [NOTE] 段，避免下次编译丢失 */
+        if (!isDictV4()) {
+        /* v3：备注标签自动建，写回 dict.tv 的 [NOTE] 段，避免下次编译丢失 */
         let src = S.dictSource;
         const tagLines = r.autoTags.map((t) => {
           const tag = S.dict.tags[t.id];
@@ -662,9 +751,12 @@
           S.dictSource = src;
           editorCtl.setTexts(S.ledgerSource, S.dictSource);
         }
+        }
+        /* v4：自动建的标签只在内存里参与本次编译，不写回字典，避免「未分类」垃圾 */
       }
       if (r.autoBehaviors && r.autoBehaviors.length && editorCtl) {
-        /* 行为项自动建：写回 dict.tv 的 [BEHAVIOR] 段 */
+        if (!isDictV4()) {
+        /* v3：行为项自动建，写回 dict.tv 的 [BEHAVIOR] 段 */
         let src = S.dictSource;
         const itemLines = r.autoBehaviors.map((t) => {
           const h = S.dict.behaviors[t.id];
@@ -677,6 +769,26 @@
           else src += '\n[BEHAVIOR]\n' + itemLines + '\n';
           S.dictSource = src;
           editorCtl.setTexts(S.ledgerSource, S.dictSource);
+        }
+        }
+        /* v4：同上，不写回 */
+      }
+      if (editorCtl && isDictV4() && S.dictSource) {
+        /* 自动标签写回会 setTexts（清空语义层），这里按新文本重新解析 tokens 补上 */
+        const v4 = TV.dictV4.parse(S.dictSource, { system: TV.systemDict, now: new Date() });
+        editorCtl.setSemantic('dict', v4.tokens || []);
+      }
+      if (S.canonicalOnCompile) {
+        S.canonicalOnCompile = false;
+        {
+          const cm = editorCtl && editorCtl.editors ? editorCtl.editors.ledger : null;
+          const saved = cm ? { cur: cm.getCursor(), scroll: cm.getScrollInfo() } : null;
+          S.projCache = {};
+          projectEditorSource(true, true);
+          if (cm) {
+            cm.setCursor({ line: Math.min(saved.cur.line, cm.lineCount() - 1), ch: saved.cur.ch });
+            cm.scrollTo(saved.scroll.left, saved.scroll.top);
+          }
         }
       }
     } catch (e) {
@@ -1766,6 +1878,7 @@
     dom.queryView.hidden = S.view !== 'query';
     dom.fixedView.hidden = S.view !== 'fixed';
     dom.reportView.hidden = S.view !== 'report';
+    dom.motherView.hidden = S.view !== 'mother';
     renderTabs();
     if (isEditor) {
       ensureEditor();
@@ -1782,8 +1895,14 @@
     } else if (S.view === 'report') {
       ensureReport();
       renderReport();
+    } else if (S.view === 'mother') {
+      renderMother();
     }
     updateFeedback();
+  }
+
+  function renderMother() {
+    if (panels && panels.renderMotherPage) panels.renderMotherPage(app, dom.motherView);
   }
 
   function renderAll() {
@@ -1794,6 +1913,7 @@
     if (S.view === 'query') renderQuery();
     else if (S.view === 'fixed') renderFixed();
     else if (S.view === 'report') { ensureReport(); renderReport(); }
+    else if (S.view === 'mother') renderMother();
   }
 
   /* ---------------- 输入分析 / 气泡 ---------------- */
@@ -1813,33 +1933,169 @@
     return { token, start, end };
   }
 
+  function eventsOfBook() {
+    return (S.events || []).filter((e) => !S.domain || !e.domain || e.domain === S.domain);
+  }
+
+  function usageIndex(role) {
+    const idx = {};
+    eventsOfBook().forEach((e) => {
+      const id = role === 'from' ? e.from : e.to;
+      if (id) idx[id] = (idx[id] || 0) + 1;
+    });
+    return idx;
+  }
+
+  function anchorUsage(role) {
+    const idx = {};
+    eventsOfBook().forEach((e) => {
+      const id = role === 'from' ? e.from : e.to;
+      const n = S.dict && S.dict.nodes ? S.dict.nodes[id] : null;
+      if (n && n.anchor_id) idx[n.anchor_id] = (idx[n.anchor_id] || 0) + 1;
+    });
+    return idx;
+  }
+
+  function systemDepth(id) {
+    const nodes = (TV.systemDict && TV.systemDict.nodes) || {};
+    let d = 0;
+    let cur = id;
+    let guard = 0;
+    while (cur && nodes[cur] && nodes[cur].parent_id && guard < 64) {
+      d += 1;
+      cur = nodes[cur].parent_id;
+      guard += 1;
+    }
+    return d;
+  }
+
+  function topOf(id) {
+    const nodes = (TV.systemDict && TV.systemDict.nodes) || {};
+    const chain = [];
+    let cur = id;
+    let guard = 0;
+    while (cur && nodes[cur] && guard < 64) { chain.unshift(cur); cur = nodes[cur].parent_id; guard += 1; }
+    const at = chain.findIndex((x) => nodes[x].kind === 'type');
+    return at >= 0 ? (chain[at + 1] || '') : '';
+  }
+
+  /* 用户习惯的层级：按分支统计“绑到哪一层最多”，没有分支数据就回退全局 */
+  function levelPreference() {
+    const byTop = {};
+    const global = {};
+    const add = (id) => {
+      const n = S.dict && S.dict.nodes ? S.dict.nodes[id] : null;
+      if (!n || !n.anchor_id) return;
+      const d = systemDepth(n.anchor_id);
+      if (!d) return;
+      const top = topOf(n.anchor_id);
+      if (top) {
+        byTop[top] = byTop[top] || {};
+        byTop[top][d] = (byTop[top][d] || 0) + 1;
+      }
+      global[d] = (global[d] || 0) + 1;
+    };
+    eventsOfBook().forEach((e) => { add(e.from); add(e.to); });
+    const preferred = (id) => {
+      const top = topOf(id);
+      const m = (top && byTop[top]) || global;
+      let best = 0;
+      let bestD = 0;
+      Object.keys(m).forEach((d) => {
+        if (m[d] > best) { best = m[d]; bestD = Number(d); }
+      });
+      return bestD;
+    };
+    return { preferred };
+  }
+
+  function motherMatches(query, limit, role) {
+    const q = String(query || '').trim().toLowerCase();
+    if (q.length < 2) return [];
+    const nodes = (TV.systemDict && TV.systemDict.nodes) || {};
+    const aliases = (TV.systemDict && TV.systemDict.aliases) || [];
+    const use = anchorUsage(role);
+    const pref = levelPreference().preferred;
+    const out = [];
+    Object.keys(nodes).forEach((id) => {
+      const n = nodes[id];
+      if (n.kind !== 'category') return;
+      const fields = (S.lang === 'en' ? [n.en_name, n.en_code] : [n.zh_name, n.zh_code])
+        .map((x) => String(x || '').toLowerCase()).filter(Boolean);
+      let score = 0;
+      if (fields.some((x) => x === q)) score = 100;
+      else if (fields.some((x) => x.startsWith(q))) score = 70;
+      else if (fields.some((x) => x.includes(q))) score = 45;
+      if (!score) {
+        const hit = aliases.some((a) => a.id === id && a.lang === S.lang
+          && String(a.alias || '').toLowerCase().startsWith(q));
+        if (hit) score = 60;
+      }
+      if (!score) return;
+      const full = TV.systemDictCore.pathLabel(nodes, id, S.lang);
+      const seg = full.split(' / ').slice(1);
+      const path = seg.slice(-2).join(' / ') || full;
+      out.push({
+        id, kind: 'mother', kindTag: '母树', name: n.zh_name,
+        label: n.zh_name, codeLabel: n.zh_code || n.en_code || '',
+        path,
+        score, sameLevel: systemDepth(id) === pref(id),
+        used: use[id] || 0,
+      });
+    });
+    out.sort((a, b) => (Number(b.sameLevel) - Number(a.sameLevel))
+      || (b.used - a.used) || (b.score - a.score) || a.id.localeCompare(b.id));
+    return out.slice(0, limit || 2);
+  }
+
+  function sortForRole(list, role) {
+    const use = usageIndex(role);
+    return list.slice().sort((a, b) => {
+      if (role === 'from') {
+        const ea = a.type === '费用' ? 1 : 0;
+        const eb = b.type === '费用' ? 1 : 0;
+        if (ea !== eb) return ea - eb;
+      }
+      return (use[b.id] || 0) - (use[a.id] || 0);
+    });
+  }
+
+  function exactNodeId(token, domain, strict) {
+    const low = String(token || '').toLowerCase();
+    if (!low) return '';
+    const nodes = (S.dict && S.dict.nodes) || {};
+    const fields = [];
+    const exact = new Map();
+    Object.keys(nodes).forEach((id) => {
+      const n = nodes[id];
+      if (!n || n.system) return;
+      if (domain && String(n.domain || 'P').toUpperCase() !== String(domain).toUpperCase()) return;
+      [n.zh_code, n.en_code, n.zh_name, n.en_name].forEach((x) => {
+        const v = String(x || '').toLowerCase();
+        if (v) { fields.push(v); exact.set(v, id); }
+      });
+    });
+    Object.keys(S.dict.aliases || {}).forEach((k) => {
+      const targets = (S.dict.aliases[k] || []).filter((id) => {
+        const n = nodes[id];
+        return n && !n.system
+          && (!domain || String(n.domain || 'P').toUpperCase() === String(domain).toUpperCase());
+      });
+      if (!targets.length) return;
+      const lowK = String(k).toLowerCase();
+      fields.push(lowK);
+      if (!exact.has(lowK)) exact.set(lowK, targets[0]);
+    });
+    if (!exact.has(low)) return '';
+    /* 还是更长代码/名称的前缀时，不当作“已经录完” */
+    if (strict !== false && fields.some((x) => x.length > low.length && x.startsWith(low))) return '';
+    return exact.get(low) || '';
+  }
+
   function analyzeInput(value, caret) {
     if (!S.dict) return { suggestions: [], state: 'STATE_FROM', hint: '' };
     const before = value.slice(0, caret);
     const { token, start, end } = currentToken(value, caret);
-    const hasLt = before.includes('<');
-    const gt = before.lastIndexOf('>');
-    let role = 'from';
-    let stateLabel = 'STATE_FROM';
-    let hint = '转出节点 · wx1 / 微信钱包 / C:公司公户';
-    if (hasLt) {
-      role = 'tag';
-      stateLabel = 'STATE_TAG';
-      hint = '标签 · 空格同级，< 父子；#行内标签也可';
-    } else if (gt >= 0) {
-      const seg = before.slice(gt + 1);
-      const toks = seg.trim() ? seg.trim().split(/[\s\u3000]+/) : [];
-      if (toks.length <= 1) {
-        role = 'to';
-        stateLabel = 'STATE_TO';
-        hint = '转入节点 · 支持 C: 前缀跨域';
-      } else {
-        role = 'amount';
-        stateLabel = 'STATE_AMOUNT';
-        hint = '金额 · 35 / 3.5k；时间 90m / 1h30m / 1d；1000*m 挂周期规则';
-      }
-    }
-
     let domCode = activeDomain(value);
     let prefix = '';
     let query = token;
@@ -1849,21 +2105,93 @@
       query = pm[2];
       domCode = pm[1].toUpperCase();
     }
+    const clean = query.replace(/^!/, '');
+    const isAmountToken = (tok) => {
+      const t = String(tok || '').trim();
+      if (!t) return false;
+      if (t === '*' || /^\d+(?:\.\d+)?\*$/.test(t) || /^\d+(?:\.\d+)?\/$/.test(t)) return true;
+      if (exactNodeId(t, domCode, false)) return false;
+      const sp = amount.splitPeriod(t);
+      return amount.parseQuantity(sp.token).ok;
+    };
+
+    const hasLt = before.includes('<');
+    const gt = before.lastIndexOf('>');
+    let role = 'from';
+    let stateLabel = 'STATE_FROM';
+    let hint = '转出节点 · 空格继续下一个，> 进入转入';
+    if (hasLt) {
+      role = 'tag';
+      stateLabel = 'STATE_TAG';
+      hint = '标签 · 空格同级，< 父子；#行内标签也可';
+    } else if (gt >= 0) {
+      const seg = before.slice(gt + 1);
+      const toks = seg.trim() ? seg.trim().split(/[\s\u3000]+/) : [];
+      const amountStarted = toks.some(isAmountToken);
+      if (amountStarted || (clean && isAmountToken(clean))) {
+        role = 'amount';
+        stateLabel = 'STATE_AMOUNT';
+        hint = '金额 · 35 / 3.5k；时间 90m / 1h30m / 1d；1000*m 挂周期规则';
+      } else {
+        role = 'to';
+        stateLabel = 'STATE_TO';
+        hint = '转入节点 · 空格继续下一个，金额开始后停止推荐';
+      }
+    }
 
     let suggestions = [];
+    let exactId = '';
+    let batchHint = '';
+    if (role === 'amount' && gt >= 0 && (before.match(/>/g) || []).length === 1) {
+      const left = before.slice(0, gt).trim();
+      const seg = before.slice(gt + 1);
+      const fromToks = left ? left.split(/[\s\u3000]+/).filter((x) => x && !/^\*[dmy]$/i.test(x)) : [];
+      const all = seg.trim() ? seg.trim().split(/[\s\u3000]+/) : [];
+      const firstAmt = all.findIndex((x) => isAmountToken(x));
+      const toToks = (firstAmt < 0 ? all : all.slice(0, firstAmt)).filter((x) => x && !/^\*[dmy]$/i.test(x));
+      const amtToks = firstAmt < 0 ? [] : all.slice(firstAmt);
+      const fromCount = fromToks.length;
+      const toCount = toToks.length;
+      const total = (fromCount > 1 && toCount > 1)
+        ? (fromCount === toCount ? fromCount : Math.max(fromCount, toCount))
+        : Math.max(fromCount, toCount);
+      if (total > 1 && (fromCount > 1 || toCount > 1)) {
+        const trailing = /\s$/.test(seg);
+        const current = amtToks.length + (trailing ? 1 : 0);
+        const idx = Math.max(1, Math.min(total, current || 1));
+        batchHint = '金额 ' + idx + '/' + total + ' · 可 * 循环 / 100/ 均摊';
+      }
+    }
     if (role === 'from' || role === 'to') {
-      const clean = query.replace(/^!/, '');
       if (clean) {
         const r = D.resolveAlias(S.dict, clean, { domain: domCode, lang: S.lang });
-        if (!r.ok) suggestions = D.searchNodes(S.dict, clean, { domain: domCode, lang: S.lang, limit: 8 });
+        if (r.ok && r.node) exactId = r.id;
+        suggestions = D.searchNodes(S.dict, clean, { domain: domCode, lang: S.lang, limit: 200 });
       } else {
-        suggestions = D.searchNodes(S.dict, '', { domain: domCode, lang: S.lang, limit: 8 });
+        suggestions = D.searchNodes(S.dict, '', { domain: domCode, lang: S.lang, limit: 200 });
+      }
+      suggestions = sortForRole(suggestions, role);
+      if (clean.length >= 2) {
+        /* 母树匹配固定在最后两个名额；已经作为私有节点锚点出现的不重复 */
+        const anchors = new Set();
+        suggestions.forEach((s) => {
+          const n = S.dict.nodes[s.id];
+          if (n && n.anchor_id) anchors.add(n.anchor_id);
+        });
+        const mm = motherMatches(clean, 2, role).filter((m) => !anchors.has(m.id));
+        const keep = Math.max(1, 8 - mm.length);
+        suggestions = suggestions.slice(0, keep).concat(mm);
+      }
+      suggestions = suggestions.slice(0, 8);
+      if (exactId) {
+        const hit = suggestions.find((s) => s.id === exactId);
+        if (hit) suggestions = [hit].concat(suggestions.filter((s) => s.id !== exactId));
       }
     } else if (role === 'tag') {
-      const clean = query.replace(/^#/, '');
-      if (clean) {
-        const r = D.resolveTag(S.dict, clean, { domain: domCode, lang: S.lang });
-        if (!r.ok) suggestions = D.searchTags(S.dict, clean, { domain: domCode, lang: S.lang, limit: 8 });
+      const tq = query.replace(/^#/, '');
+      if (tq) {
+        const r = D.resolveTag(S.dict, tq, { domain: domCode, lang: S.lang });
+        if (!r.ok) suggestions = D.searchTags(S.dict, tq, { domain: domCode, lang: S.lang, limit: 8 });
       } else {
         suggestions = D.searchTags(S.dict, '', { domain: domCode, lang: S.lang, limit: 8 });
       }
@@ -1878,11 +2206,17 @@
       if (hits.length) prediction = { text: hits[0].text, rule: hits[0].rule, count: hits.length };
     }
 
+    const exactNode = !!clean && !!exactNodeId(clean, domCode, false);
     return {
       suggestions,
-      context: { token, start, end, role, prefix, domain: domCode, options: suggestions },
+      context: {
+        token, start, end, role, prefix, domain: domCode, options: suggestions,
+        atNodeBoundary: role === 'to' && exactNode && !/\s$/.test(before),
+        exactNode,
+      },
       state: stateLabel,
       hint,
+      batchHint,
       prediction,
     };
   }
@@ -1891,6 +2225,18 @@
     if (!ctx || !s) return;
     const value = dom.input.value;
     const token = ctx.token || '';
+    if (s.kind === 'mother') {
+      const raw = (ctx.prefix && token.indexOf(ctx.prefix) === 0 ? token.slice(ctx.prefix.length) : token)
+        .replace(/^!/, '');
+      const r = adoptMother(s.id, raw, ctx.domain);
+      if (!r.ok) { toast(r.error, 'error'); return; }
+      const replacement = (ctx.prefix || '') + r.code;
+      TV.inputApi.setValue(value.slice(0, ctx.start) + replacement + value.slice(ctx.end),
+        ctx.start + replacement.length);
+      const nm = S.dict.nodes[r.id] ? S.dict.nodes[r.id].zh_name : raw;
+      toast('已建节点「' + nm + '」[' + r.code + '] · ' + r.category, 'ok');
+      return;
+    }
     const base = token.replace(/^#/, '').replace(ctx.prefix || '', '');
     let replacement;
     let aliasKey = '';
@@ -1907,6 +2253,7 @@
     }
     if (ctx.role === 'tag') replacement = '#' + replacement.replace(/^#/, '');
     else if (ctx.prefix) replacement = ctx.prefix + replacement;
+    if (ctx.role === 'to' && !/\s$/.test(replacement)) replacement += ' ';
     if (ctx.role === 'from' || ctx.role === 'to') {
       if (replacement.startsWith('#')) replacement = replacement.slice(1);
     }
@@ -2028,13 +2375,137 @@
     return m ? m[1] : '';
   }
 
+  function onLedgerCursor(line) {
+    if (!editorCtl || S.view !== 'ledger') return;
+    const err = (S.sourceDiags || []).find((d) => d.file === 'ledger' && d.severity === 'error' && d.line === line);
+    if (!err) {
+      if (TV.inputApi.isEditing() && S.pendingRepair && S.pendingRepair.line !== line) {
+        S.pendingRepair = null;
+        TV.inputApi.setEditing(false);
+        TV.inputApi.clear();
+      }
+      return;
+    }
+    if (S.pendingRepair && S.pendingRepair.line === line && TV.inputApi.isEditing()) return;
+    const lines = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n');
+    const text = lines[line - 1] || '';
+    S.pendingRepair = { line, lineText: text };
+    TV.inputApi.setEditing(true, text, '第 ' + line + ' 行错误 · 改完回车替换');
+  }
+
+  function expandBatchLine(line) {
+    if (!S.dict) return null;
+    if ((String(line).match(/>/g) || []).length !== 1) return null;
+    const parsed = TV.source.compileLedgerSource(line, S.dict, { now: new Date(), domain: S.domain });
+    if (!parsed.ok || !parsed.events || parsed.events.length < 2) return null;
+    const lt = String(line).indexOf('<');
+    const tagPart = lt >= 0 ? String(line).slice(lt).trim() : '';
+    const pm = String(line).match(/\*([dmy])\b/i);
+    return parsed.events.map((e) => {
+      const pre = e.domain && e.domain !== 'P' ? e.domain + ' ' : '';
+      return pre + e.date + ' ' + e.raw
+        + (pm ? ' *' + pm[1].toLowerCase() : '')
+        + (tagPart ? ' ' + tagPart : '');
+    });
+  }
+
+  function markCanonicalOnEnter(cm, line) {
+    const text = cm.getLine(line) || '';
+    if (!text.trim() || text.trim().startsWith('//')) return false;
+    const parsed = TV.source.compileLedgerSource(text, S.dict, { now: new Date(), domain: S.domain });
+    if (!parsed.ok) return false;
+    S.canonicalOnCompile = true;
+    return false;
+  }
+
+  function expandBatchInEditor(cm, line) {
+    const text = cm.getLine(line) || '';
+    const expanded = expandBatchLine(text);
+    if (!expanded || expanded.length < 2) return false;
+    if (cm.closeHint) cm.closeHint();
+    S.canonicalOnCompile = true;
+    cm.replaceRange(expanded.join('\n') + '\n', { line, ch: 0 }, { line, ch: text.length });
+    cm.setCursor({ line: line + expanded.length, ch: 0 });
+    cm.focus();
+    return true;
+  }
+
+  function expandAllBatchLines() {
+    const lines = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n');
+    let changed = false;
+    const out = [];
+    lines.forEach((l) => {
+      if ((l.match(/>/g) || []).length === 1) {
+        const expanded = expandBatchLine(l);
+        if (expanded && expanded.length > 1) {
+          out.push(...expanded);
+          changed = true;
+          return;
+        }
+      }
+      out.push(l);
+    });
+    if (!changed) return false;
+    S.ledgerSource = out.join('\n') + '\n';
+    S.projCache = {};
+    if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
+    return true;
+  }
+
+  function submitExpanded(lines, rawLine, replaceLine) {
+    S.canonicalOnCompile = true;
+    let out = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n')
+      .filter((x, i, arr) => !(arr.length === 1 && x === ''));
+    let at = -1;
+    if (replaceLine && replaceLine > 0) {
+      at = Math.max(0, Math.min(replaceLine - 1, out.length));
+      out.splice(at, 1, ...lines);
+    } else {
+      /* 同一条批量原文之前可能已粘进源码：先去掉，避免再叠一份 */
+      if (rawLine) out = out.filter((x) => String(x).trim() !== String(rawLine).trim());
+      const m = String(rawLine || '').match(/^(?:\[[PFCH]\]|[PFCH]\s+)?(\d{6})\b/i);
+      at = out.length;
+      if (m) {
+        for (let i = 0; i < out.length; i += 1) {
+          const d = out[i].match(/^\s*(?:(?:\[[PFCH]\]|[PFCH])\s*)?(\d{6})\b/i);
+          if (d && d[1] > m[1]) { at = i; break; }
+        }
+      }
+      out.splice(at, 0, ...lines);
+    }
+    S.ledgerSource = out.join('\n') + '\n';
+    const lineNos = lines.map((_, i) => at + i + 1);
+    S.pendingRepair = null;
+    if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
+    S.view = 'ledger';
+    applyView();
+    compileSources();
+    const errors = (S.sourceDiags || []).filter((d) => d.file === 'ledger' && lineNos.includes(d.line) && d.severity === 'error');
+    TV.inputApi.setEditing(false);
+    TV.inputApi.clear();
+    if (errors.length) {
+      const first = errors[0];
+      S.pendingRepair = { line: first.line, lineText: lines[lineNos.indexOf(first.line)] || '' };
+      toast('批量写入有 ' + errors.length + ' 行错误 · 点对应行修正：' + first.message, 'error');
+    } else {
+      TV.inputApi.clearError();
+      toast('已写入 ' + lines.length + ' 行并编译', 'ok');
+    }
+    return { ok: errors.length === 0, lines: lineNos, expanded: lines, errors };
+  }
+
   function submitEntry(raw, opts) {
     if (!S.dict) return { ok: false, error: '账本未加载' };
     const line = normalizeInputLine(raw);
     if (!line) return { ok: false, error: '空输入' };
+    S.canonicalOnCompile = true;
     const sameFrom = !!(S.pendingRepair && fromTokenOfLine(S.pendingRepair.lineText)
       && fromTokenOfLine(S.pendingRepair.lineText) === fromTokenOfLine(line));
     const repairing = !!(S.pendingRepair && TV.inputApi.isEditing() && sameFrom);
+    const expanded = expandBatchLine(line);
+    if (expanded && expanded.length > 1) {
+      return submitExpanded(expanded, line, repairing ? S.pendingRepair.line : 0);
+    }
     let lineNo;
     if (repairing) {
       const lines = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n');
@@ -2057,16 +2528,20 @@
     const errors = (S.sourceDiags || []).filter((d) => d.file === 'ledger' && d.line === lineNo && d.severity === 'error');
     if (errors.length) {
       S.pendingRepair = { line: lineNo, lineText: line };
-      const rawText = String(raw == null ? line : raw).trim();
-      TV.inputApi.setEditing(true, rawText,
-        (repairing ? '第 ' + lineNo + ' 行仍有错误 · 改完回车替换' : '已存为 X_ 第 ' + lineNo + ' 行 · 改完回车替换'));
-      const mm = String(errors[0].message || '').match(/[：:]\s*([^\s，。；;、]+)/);
-      if (mm) {
-        const needle = mm[1].replace(/[「」“”"'()（）]/g, '');
-        const at = needle ? rawText.indexOf(needle) : -1;
-        if (at >= 0) TV.inputApi.select(at, at + needle.length);
+      /* 不自动进修正模式；用户把光标定位到波浪线那一行时才进入 */
+      TV.inputApi.setEditing(false);
+      TV.inputApi.clear();
+      const mm0 = String(errors[0].message || '').match(/[：:]\s*([^\s，。；;、]+)/);
+      const unknownToken = mm0 ? mm0[1].replace(/[「」“”"'()（）]/g, '') : '';
+      const canAdopt = isDictV4() && unknownToken && /未知|UNBOUND|没有|未绑定/.test(String(errors[0].message || ''));
+      if (canAdopt) {
+        toast('已存为待修复文本（X_）：' + errors[0].message, 'error', {
+          label: '从母树建',
+          fn: () => panels.motherPicker(app, unknownToken, () => repairLine(lineNo, line)),
+        });
+      } else {
+        toast('已存为待修复文本（X_ 第 ' + lineNo + ' 行）· 点该行修正：' + errors[0].message, 'error');
       }
-      toast('已保存为待修复文本（X_）：' + errors[0].message, 'error');
     } else {
       S.pendingRepair = null;
       TV.inputApi.setEditing(false);
@@ -2214,6 +2689,8 @@
   function syncDictSourceAndCompile() {
     if (!S.dict) return;
     S.dictSource = TV.source.dictToSource(S.dict);
+    /* 字典是 ID 图的名字层：改完按 ID 重新投影流水，简码/名称变化一起落到源码 */
+    projectEditorSource(true);
     if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
     compileSources();
   }
@@ -2222,13 +2699,51 @@
     return (S.events || []).some((e) => e.from === id || e.to === id);
   }
 
+  function isDictV4() {
+    return !!(S.dict && S.dict.format === 'v4' && TV.dictV4);
+  }
+
+  function pickCategoryFor(type, categoryKey) {
+    const list = (S.dict.categories || []);
+    if (categoryKey) {
+      const hit = list.find((c) => c.key === categoryKey);
+      if (hit) return hit;
+    }
+    const same = list.filter((c) => c.type === type);
+    if (same.length) return same[0];
+    return TV.dictV4.ensureCategory(S.dict, type || '费用', '未分类', {}).cat;
+  }
+
   function addNode(spec) {
     const anchorId = spec && spec.anchor_id != null ? String(spec.anchor_id) : null;
     const clean = Object.assign({}, spec || {});
     delete clean.anchor_id;
+    const catKey = clean.category_key || '';
+    delete clean.category_key;
+    let v4cat = null;
+    if (isDictV4()) {
+      v4cat = pickCategoryFor(clean.type, catKey);
+      clean.type = v4cat.type;
+      clean.category_key = v4cat.key;
+      clean.category = v4cat.name;
+      const tm = D.normalizeType(v4cat.type);
+      if (tm.ok) { clean.polarity = tm.pole; clean.form = tm.form; }
+    }
     const r = D.addNode(S.dict, clean);
     if (!r.ok) return r;
-    if (anchorId != null && anchorId !== '') {
+    if (isDictV4()) {
+      const nd = S.dict.nodes[r.id];
+      nd.category_key = v4cat.key;
+      nd.category = v4cat.name;
+      nd.en_auto = !clean.en_name;
+      nd.en_code_auto = !clean.en_code;
+      if (nd.en_code_auto) nd.en_code = /[A-Za-z]/.test(nd.zh_code) ? nd.zh_code.toLowerCase() : nd.zh_code;
+      TV.dictV4.placeNode(S.dict, r.id, v4cat.key);
+      if (anchorId) {
+        const a = TV.dictV4.setNodeAnchor(S.dict, r.id, anchorId, TV.systemDict);
+        if (!a.ok) { D.removeNode(S.dict, r.id); return a; }
+      }
+    } else if (anchorId != null && anchorId !== '') {
       const a = TV.anchor.set(S.dict, r.id, anchorId, TV.systemDict, { hasHistory: false });
       if (!a.ok) {
         D.removeNode(S.dict, r.id);
@@ -2245,9 +2760,42 @@
     const anchorId = hasAnchor ? String(spec.anchor_id || '') : null;
     const clean = Object.assign({}, spec || {});
     delete clean.anchor_id;
+    const nextCatKey = clean.category_key;
+    delete clean.category_key;
     const r = D.updateNode(S.dict, id, clean);
     if (!r.ok) return r;
-    if (hasAnchor) {
+    if (isDictV4()) {
+      const nd = S.dict.nodes[id];
+      if (Object.prototype.hasOwnProperty.call(clean, 'en_name')) nd.en_auto = !clean.en_name;
+      if (Object.prototype.hasOwnProperty.call(clean, 'en_code')) {
+        nd.en_code_auto = !clean.en_code;
+        if (nd.en_code_auto) nd.en_code = /[A-Za-z]/.test(nd.zh_code) ? nd.zh_code.toLowerCase() : nd.zh_code;
+      }
+      if (nextCatKey) {
+        const p = TV.dictV4.placeNode(S.dict, id, nextCatKey);
+        if (!p.ok) {
+          if (before) { S.dict.nodes[id] = before; D.rebuildAliases(S.dict); }
+          return p;
+        }
+      } else {
+        const node = S.dict.nodes[id];
+        if (!node.category_key) {
+          const cat = pickCategoryFor(node.type, '');
+          node.category_key = cat.key;
+          node.category = cat.name;
+          TV.dictV4.placeNode(S.dict, id, cat.key);
+        } else {
+          TV.dictV4.placeNode(S.dict, id, node.category_key);
+        }
+      }
+      if (hasAnchor) {
+        const a = TV.dictV4.setNodeAnchor(S.dict, id, anchorId, TV.systemDict);
+        if (!a.ok) {
+          if (before) { S.dict.nodes[id] = before; D.rebuildAliases(S.dict); }
+          return a;
+        }
+      }
+    } else if (hasAnchor) {
       const a = TV.anchor.set(S.dict, id, anchorId, TV.systemDict, { hasHistory: nodeHasHistory(id) });
       if (!a.ok) {
         if (before) {
@@ -2266,6 +2814,110 @@
     const r = D.removeNode(S.dict, id);
     if (r.ok) syncDictSourceAndCompile();
     return r;
+  }
+
+  /* ---------------- v4 统计分类 ---------------- */
+
+  function addCategory(spec) {
+    if (!isDictV4()) return { ok: false, error: '当前字典不是 v4' };
+    const inSpec = spec || {};
+    const name = String(inSpec.name || '').trim();
+    if (!name) return { ok: false, error: '统计分类要有名称' };
+    const tm = D.normalizeType(inSpec.type || '费用');
+    if (!tm.ok) return tm;
+    const r = TV.dictV4.ensureCategory(S.dict, tm.type, name, { en_name: inSpec.en_name || '' });
+    if ((inSpec.anchor_ref || '').trim()) {
+      const a = TV.dictV4.setCategoryAnchor(S.dict, r.key, inSpec.anchor_ref.trim(), TV.systemDict);
+      if (!a.ok) return a;
+    }
+    syncDictSourceAndCompile();
+    return { ok: true, key: r.key, cat: r.cat };
+  }
+
+  function updateCategory(key, spec) {
+    if (!isDictV4()) return { ok: false, error: '当前字典不是 v4' };
+    const inSpec = spec || {};
+    let cur = key;
+    const cat = (S.dict.categories || []).find((c) => c.key === cur);
+    if (!cat) return { ok: false, error: '统计分类不存在' };
+    if (inSpec.name != null && String(inSpec.name).trim() && String(inSpec.name).trim() !== cat.name) {
+      const rr = TV.dictV4.renameCategory(S.dict, cur, inSpec.name);
+      if (!rr.ok) return rr;
+      cur = rr.key;
+    }
+    const now = (S.dict.categories || []).find((c) => c.key === cur);
+    if (Object.prototype.hasOwnProperty.call(inSpec, 'en_name')) {
+      now.en_name = String(inSpec.en_name || '').trim();
+      now.en_auto = !now.en_name;
+    }
+    if (Object.prototype.hasOwnProperty.call(inSpec, 'anchor_ref')) {
+      const a = TV.dictV4.setCategoryAnchor(S.dict, cur, inSpec.anchor_ref, TV.systemDict);
+      if (!a.ok) return a;
+    }
+    syncDictSourceAndCompile();
+    return { ok: true, key: cur, cat: now };
+  }
+
+  function deleteCategory(key) {
+    if (!isDictV4()) return { ok: false, error: '当前字典不是 v4' };
+    const r = TV.dictV4.removeCategory(S.dict, key);
+    if (r.ok) syncDictSourceAndCompile();
+    return r;
+  }
+
+  function syncDict() {
+    if (isDictV4()) syncDictSourceAndCompile();
+  }
+
+  /* 采纳母树：选分支或叶子 → 建档到用户分组 + 节点级固定绑定 */
+  function adoptMother(targetId, token, domain) {
+    if (!isDictV4()) return { ok: false, error: '当前字典不是 v4' };
+    const pl = TV.dictV4.placementForTarget(targetId, TV.systemDict);
+    if (!pl.ok) return pl;
+    const target = pl.target;
+    const g = TV.dictV4.ensureCategory(S.dict, pl.type, pl.groupName, {});
+    const cat = g.cat || (S.dict.categories || []).find((c) => c.key === g.key);
+    const tok = String(token || '').trim();
+    const tokLow = tok.toLowerCase();
+    const isCode = !!tok && (tokLow === String(target.zh_code || '').toLowerCase()
+      || tokLow === String(target.en_code || '').toLowerCase());
+    const name = !tok || isCode ? target.zh_name : tok;
+    let code = D.normalizeCode(target.zh_code || target.en_code || '') || D.normalizeCode(name) || 'x';
+    const dom = D.DOMAINS && D.DOMAINS[String(domain || '').toUpperCase()]
+      ? String(domain).toUpperCase()
+      : (S.domain || 'P');
+    const used = new Set(Object.keys(S.dict.nodes)
+      .filter((id) => !S.dict.nodes[id].system && (S.dict.nodes[id].domain || 'P') === dom)
+      .map((id) => S.dict.nodes[id].zh_code));
+    if (used.has(code)) {
+      let i = 2;
+      while (used.has(code + i)) i += 1;
+      code = code + i;
+    }
+    const r = addNode({
+      zh_name: name, zh_code: code,
+      en_name: target.en_name || '', en_code: target.en_code || '',
+      domain: dom, category_key: cat.key, anchor_id: pl.targetId,
+    });
+    if (!r.ok) return r;
+    return { ok: true, id: r.id, code, category: cat.name, anchor: pl.targetId, group: cat.name };
+  }
+
+  /* 把一条 X_ 待修复行替换成修好的文本 */
+  function repairLine(lineNo, text) {
+    const lines = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n');
+    if (lineNo < 1 || lineNo > lines.length) return { ok: false, error: '行号越界' };
+    lines[lineNo - 1] = String(text || '');
+    S.ledgerSource = lines.join('\n') + '\n';
+    S.pendingRepair = null;
+    if (TV.inputApi) {
+      TV.inputApi.setEditing(false);
+      TV.inputApi.clear();
+      TV.inputApi.clearError();
+    }
+    if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
+    compileSources();
+    return { ok: true };
   }
 
   function addTag(spec) {
@@ -2314,27 +2966,79 @@
 
   /* ---------------- 视图切换 ---------------- */
 
+  function renderActivePresentation() {
+    if (S.view === 'query') renderQuery();
+    else if (S.view === 'fixed') renderFixed();
+    else if (S.view === 'report') { ensureReport(); renderReport(); }
+    else if (S.view === 'mother') renderMother();
+    else { renderHUD(); renderTabs(); }
+  }
+
+  function schedulePresentation() {
+    cancelAnimationFrame(S.presentRaf || 0);
+    S.presentRaf = requestAnimationFrame(() => {
+      if (!S.dict) return;
+      /* 刚改过文本但还没编译：先编译，否则会用旧的 events 覆盖新输入 */
+      if (expandAllBatchLines()) {
+        compileSources();
+      } else if (S.sourceDirty) {
+        compileSources();
+      }
+      const saved = {};
+      if (editorCtl) {
+        Object.keys(editorCtl.editors || {}).forEach((k) => {
+          const cm = editorCtl.editors[k];
+          saved[k] = { cur: cm.getCursor(), scroll: cm.getScrollInfo() };
+        });
+      }
+      /* 即使当前在报表页，也把流水源码投影到新语言/模式，回到编辑页才一致 */
+      projectEditorSource(true, true);
+      if (editorCtl) {
+        Object.keys(saved).forEach((k) => {
+          const cm = editorCtl.editors[k];
+          const s = saved[k];
+          if (!cm) return;
+          cm.setCursor({ line: Math.min(s.cur.line, cm.lineCount() - 1), ch: s.cur.ch });
+          cm.scrollTo(s.scroll.left, s.scroll.top);
+        });
+      }
+      if (S.view !== 'ledger' && S.view !== 'dict') renderActivePresentation();
+    });
+  }
+
   function setMode(mode) {
     const hadErrors = (S.sourceDiags || []).some((d) => d.severity === 'error');
     S.mode = mode;
-    if (S.view === 'ledger') { projectEditorSource(); compileSources(); }
-    if (hadErrors) toast('已切到 ' + mode + '；未编译行原样保留', 'ok');
-    renderAll();
+    saveDisplayState();
     applyLang();
+    schedulePresentation();
+    if (hadErrors) toast('已切到 ' + mode + '；未编译行原样保留', 'ok');
   }
 
   function setLang(lang) {
     const hadErrors = (S.sourceDiags || []).some((d) => d.severity === 'error');
     S.lang = lang;
-    if (S.view === 'ledger') { projectEditorSource(); compileSources(); }
-    if (hadErrors) toast('已切到 ' + lang + '；未编译行原样保留', 'ok');
-    renderAll();
+    saveDisplayState();
     applyLang();
+    schedulePresentation();
+    if (hadErrors) toast('已切到 ' + lang + '；未编译行原样保留', 'ok');
   }
 
   function setView(view) {
     S.view = view;
     applyView();
+  }
+
+  function saveDisplayState() {
+    try {
+      localStorage.setItem('txtvein:display', JSON.stringify({ mode: S.mode, lang: S.lang }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function canonicalizeDisplay() {
+    if (!S.dict || !S.ledgerSource) return;
+    S.projCache = {};
+    projectEditorSource(true, true);
   }
 
   /* ---------------- 导入 / 导出 ---------------- */
@@ -2630,6 +3334,7 @@
     dom.gate.hidden = true;
     booted = true;
     if (S.ledgerSource && (S.events || []).some((e) => !e.sourceLine)) compileSources();
+    canonicalizeDisplay();
     renderAll();
     applyView();
     applyLang();
@@ -2885,12 +3590,16 @@
       const w = window.innerWidth || 360;
       const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight || 640;
       const maxBottom = Math.max(8, Math.floor(h / 2) - 44);
-      right = Math.max(8, Math.min(right, w - 48));
+      /* 气泡向左展开：right 必须大到让 inner 的左边不越过屏幕 */
+      const innerW = Math.min(w <= 760 ? 300 : 340, w - (w <= 760 ? 16 : 24));
+      const maxRight = Math.max(8, w - innerW - 8);
+      right = Math.max(8, Math.min(right, maxRight));
       bottom = Math.max(8, Math.min(bottom, maxBottom));
       dom.composer.style.right = right + 'px';
       dom.composer.style.bottom = bottom + 'px';
     };
     applyPos();
+    window.addEventListener('resize', applyPos);
     const setOpen = (open) => {
       dom.composer.classList.toggle('open', !!open);
       if (open) setTimeout(() => dom.input.focus(), 20);
@@ -2942,10 +3651,12 @@
     dom.btnQuery.addEventListener('click', () => setView('query'));
     dom.btnLedger.addEventListener('click', () => setView('ledger'));
     dom.btnDict.addEventListener('click', () => setView('dict'));
+    if (dom.btnMother) dom.btnMother.addEventListener('click', () => setView('mother'));
     dom.btnFixed.addEventListener('click', () => setView('fixed'));
     dom.btnReport.addEventListener('click', () => setView('report'));
     dom.btnCandidates.addEventListener('click', () => showCandidates());
-    dom.btnSecurity.addEventListener('click', () => panels.showPassword(app));
+    if (dom.btnSettings) dom.btnSettings.addEventListener('click', () => panels.showSettings(app));
+    if (dom.btnSecurity) dom.btnSecurity.addEventListener('click', () => panels.showPassword(app));
     dom.btnImport.addEventListener('click', () => panels.showImport(app));
     dom.btnExport.addEventListener('click', () => panels.showExport(app));
     dom.btnHelp.addEventListener('click', () => panels.showHelp(app));
@@ -2966,11 +3677,19 @@
   const app = {
     getState: () => S,
     getCalcAll: () => S.calcAll || calcMod.compute(S.dict, S.events, {}),
+    refreshEditors: () => { if (editorCtl) editorCtl.refresh(); },
+    setView,
     buildTexts,
     afterDataChange,
     addNode,
     updateNode,
     deleteNode,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    syncDict,
+    adoptMother,
+    repairLine,
     addTag,
     updateTag,
     deleteTag,
@@ -2998,6 +3717,7 @@
       prediction: dom.prediction,
       state: dom.state,
       hint: dom.hint,
+      batchHint: dom.batchHint,
       error: dom.error,
       row: dom.row,
       prompt: dom.prompt,

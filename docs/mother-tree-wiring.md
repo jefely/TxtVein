@@ -180,6 +180,11 @@ node P 费用 steam sbk sbk 星巴克 | Starbucks 90 @cof ^SYS.CAT.DINING.COFFEE
 node C 费用 steam off off 办公费 | Office 50 - ^SYS.CAT.WORK.OFFICE_SUPPLIES
 ```
 
+> **行格式与归属层将由 P0.5 收敛**：见 [`private-dict-v4.md`](private-dict-v4.md)。
+> v4 的字典本体是三级私有树：`会计类型 → 统计分类 → 节点`；
+> **归属（`^`）只挂在统计分类上**，节点行只写 `名称 [简码]`；缩进定层级，两层上限。
+> 本文其余部分不变。
+
 - `@父码`：私人父级，语义不变。
 - `^SYS...`：公共锚点，最多一个；只能指向 `[Tree]` 叶子。
 - 兼容读 `@SYS...`（`SYS.` 前缀保留，不可能是私人父码）；新写入统一 `^`。

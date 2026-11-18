@@ -11,6 +11,47 @@
   const dateMod = TV.date;
   const rulesMod = TV.rules;
 
+  const PREFS_KEY = 'txtvein.prefs.v1';
+  const COLOR_DEFS = [
+    ['invalid', '无效/未识别', '--tv-invalid', '#B9C2CE'],
+    ['linenumber', '行号', '--tv-linenumber', '#8f8f8f'],
+    ['lineerror', '问题行号', '--tv-lineerror', '#ff7a45'],
+    ['date', '日期', '--tv-date', '#DCDCAA'],
+    ['node', '节点', '--tv-node', '#9CDCFE'],
+    ['operator', '运算符', '--tv-operator', '#D4D4D4'],
+    ['amount', '金额', '--tv-amount', '#B5CEA8'],
+    ['note', '备注', '--tv-note', '#6A9955'],
+  ];
+  const DEFAULT_PREFS = {
+    colors: COLOR_DEFS.reduce((m, x) => { m[x[0]] = x[3]; return m; }, {}),
+    fontSize: 13,
+  };
+
+  function loadPrefs() {
+    const out = JSON.parse(JSON.stringify(DEFAULT_PREFS));
+    try {
+      const raw = localStorage.getItem(PREFS_KEY);
+      const p = raw ? JSON.parse(raw) : null;
+      if (p && p.colors) Object.keys(out.colors).forEach((k) => { if (p.colors[k]) out.colors[k] = p.colors[k]; });
+      if (p && Number(p.fontSize)) out.fontSize = Math.max(11, Math.min(22, Number(p.fontSize)));
+    } catch (e) { /* ignore */ }
+    return out;
+  }
+
+  function applyPrefs(p) {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    COLOR_DEFS.forEach((x) => root.style.setProperty(x[2], p.colors[x[0]] || x[3]));
+    root.style.setProperty('--tv-editor-font-size', p.fontSize + 'px');
+  }
+
+  function savePrefs(p) {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch (e) { /* ignore */ }
+    applyPrefs(p);
+  }
+
+  applyPrefs(loadPrefs());
+
   function create(ui) {
     const modal = ui.modal;
     const titleEl = ui.title;
@@ -22,6 +63,8 @@
     const toastAction = ui.toastAction;
 
     let toastTimer = 0;
+    let motherSel = '';
+    let motherSelCode = '';
 
     function open(title, body, foot) {
       titleEl.textContent = title;
@@ -214,39 +257,275 @@
       const s = app.getState();
       const q = String(query || '');
       const current = tab || 'nodes';
+      const v4 = !!(s.dict && s.dict.format === 'v4' && TV.dictV4);
       const tabs = el('div', { class: 'panel-tabs' }, [
         tabBtn('节点 · NODES', 'nodes', current),
         tabBtn('标签 · TAGS', 'tags', current),
-      ]);
+        v4 ? tabBtn('统计分类 · CAT', 'cats', current) : null,
+      ].filter(Boolean));
       function tabBtn(label, key, active) {
         const b = el('button', { class: 'panel-tab' + (key === active ? ' is-active' : ''), type: 'button' }, [label]);
         b.addEventListener('click', () => showDict(app, key, q));
         return b;
       }
 
-      const search = input({ class: 'input panel-search', placeholder: current === 'nodes' ? '搜索名字 / 简码' : '搜索标签', value: q });
+      const search = input({ class: 'input panel-search', placeholder: current === 'nodes' ? '搜索名字 / 简码' : current === 'cats' ? '搜索统计分类' : '搜索标签', value: q });
       search.addEventListener('input', () => {
         const val = search.value;
         clearTimeout(search._t);
         search._t = setTimeout(() => showDict(app, current, val), 180);
       });
 
-      const addBtn = button(current === 'nodes' ? '+ 新建节点' : '+ 新建标签', 'btn-primary', () => {
-        if (current === 'nodes') nodeForm(app); else tagForm(app);
+      const addBtn = button(current === 'nodes' ? '+ 新建节点' : current === 'cats' ? '+ 新建统计分类' : '+ 新建标签', 'btn-primary', () => {
+        if (current === 'nodes') nodeForm(app);
+        else if (current === 'cats') categoryForm(app);
+        else tagForm(app);
       });
 
-      const toolbar = el('div', { class: 'panel-toolbar' }, [search, el('span', { class: 'grow' }), addBtn]);
+      const toolbar = el('div', { class: 'panel-toolbar' }, [
+        search, el('span', { class: 'grow' }),
+        v4 ? button('补英文', '', () => {
+          const st = app.getState();
+          const r = TV.dictV4.backfillEnglish(st.dict, TV.systemDict);
+          if (!r.filled) {
+            toast('没有可补：已填写 ' + r.kept + ' 个，未绑定跳过 ' + r.unbound + ' 个', 'ok');
+            return;
+          }
+          app.syncDict();
+          toast('已补英文 ' + r.filled + ' 个节点' + (r.unbound ? '；未绑定跳过 ' + r.unbound + ' 个' : ''), 'ok');
+        }) : null,
+        v4 ? button('校验', '', () => validateDict(app)) : null,
+        v4 ? button('+ 从母树', '', () => motherPicker(app, '')) : null,
+        addBtn,
+      ].filter(Boolean));
 
       let list;
       if (current === 'nodes') list = nodeList(app, q);
+      else if (current === 'cats') list = categoryList(app, q);
       else list = tagList(app, q);
 
-      open('字典 · ' + (current === 'nodes' ? '节点' : '标签'), [tabs, toolbar, list], closeFoot([
-        el('span', { class: 'help-text' }, ['流水只存 ID；改名只改这里，历史不断链。']),
+      open('字典 · ' + (current === 'nodes' ? '节点' : current === 'cats' ? '统计分类' : '标签'), [tabs, toolbar, list], closeFoot([
+        el('span', { class: 'help-text' }, [v4
+          ? '三级：会计类型 → 统计分类 → 节点；归属（母树）只挂在统计分类上。'
+          : '流水只存 ID；改名只改这里，历史不断链。']),
       ]));
     }
 
+    function shortPathOf(id) {
+      const nodes = (TV.systemDict && TV.systemDict.nodes) || {};
+      const chain = [];
+      let cur = id;
+      let guard = 0;
+      while (cur && nodes[cur] && guard < 64) { chain.unshift(cur); cur = nodes[cur].parent_id; guard += 1; }
+      return chain.filter((x) => nodes[x].kind !== 'root' && nodes[x].kind !== 'type').map((x) => nodes[x].zh_name).join(' / ');
+    }
+
+    function motherNodesOf(type) {
+      const nodes = (TV.systemDict && TV.systemDict.nodes) || {};
+      const typeId = Object.keys(nodes).find((id) => nodes[id].kind === 'type' && (nodes[id].type === type || nodes[id].zh_name === type));
+      if (!typeId) return [];
+      const out = [];
+      Object.keys(nodes).forEach((id) => {
+        if (id === typeId) return;
+        let cur = nodes[id].parent_id;
+        let guard = 0;
+        while (cur && guard < 64) {
+          if (cur === typeId) { out.push(id); return; }
+          cur = nodes[cur] && nodes[cur].parent_id;
+          guard += 1;
+        }
+      });
+      return out;
+    }
+
+    function validateDict(app) {
+      const s = app.getState();
+      const issues = TV.dictV4.validateBindings(s.dict, TV.systemDict);
+      if (!issues.length) {
+        toast('绑定检查通过：没有未绑定 / 失效 / 可疑项', 'ok');
+        return;
+      }
+      const counts = issues.reduce((m, x) => { m[x.code] = (m[x.code] || 0) + 1; return m; }, {});
+      const body = el('div', { class: 'dict-list' }, [
+        el('div', { class: 'dict-row is-head' }, [
+          el('span', {}, ['节点']), el('span', {}, ['问题']), el('span', {}, ['操作']),
+        ]),
+      ]);
+      issues.slice(0, 80).forEach((it) => {
+        const n = s.dict.nodes[it.id] || {};
+        body.appendChild(el('div', { class: 'dict-row' }, [
+          el('span', { class: 'dict-name' }, [n.zh_name || it.id]),
+          el('span', { class: 'dict-dim', style: 'grid-column: span 2; white-space: normal' }, [it.message]),
+          el('span', { class: 'dict-actions' }, [mini('编辑', '', () => nodeForm(app, null, it.id))]),
+        ]));
+      });
+      const summary = Object.keys(counts).map((k) => k + ' ' + counts[k]).join(' · ');
+      open('绑定校验 · ' + issues.length + ' 项', [
+        el('p', { class: 'help-text' }, ['只做确定性检查：未绑定、失效、类型不一致、名字更像另一支。母树只是先验框架，最终以你的绑定为准。', ' ', summary]),
+        body,
+      ], closeFoot([button('关闭', '', close)]));
+    }
+
+    function categoryList(app, q) {
+      const s = app.getState();
+      const needle = String(q || '').toLowerCase();
+      const cats = (s.dict.categories || []).slice()
+        .filter((c) => !needle || (c.name + ' ' + (c.en_name || '') + ' ' + c.type).toLowerCase().indexOf(needle) >= 0)
+        .sort((a, b) => String(a.type).localeCompare(String(b.type), 'zh') || (a.order || 0) - (b.order || 0));
+      if (!cats.length) return el('div', { class: 'import-note' }, ['还没有统计分类。点右上角新建。']);
+      const counts = {};
+      const bound = {};
+      Object.keys(s.dict.nodes || {}).forEach((id) => {
+        const n = s.dict.nodes[id];
+        if (n.system) return;
+        const k = n.category_key || '';
+        counts[k] = (counts[k] || 0) + 1;
+        if (n.anchor_id) bound[k] = (bound[k] || 0) + 1;
+      });
+      const list = el('div', { class: 'dict-list' }, [
+        el('div', { class: 'dict-row is-head' }, [
+          el('span', {}, ['统计分类']), el('span', {}, ['会计类型']), el('span', {}, ['节点']),
+          el('span', {}, ['已绑定']), el('span', {}, ['操作']),
+        ]),
+      ]);
+      cats.forEach((c) => {
+        list.appendChild(el('div', { class: 'dict-row' }, [
+          el('span', { class: 'dict-name' }, [c.name, c.en_name && !c.en_auto ? el('i', {}, [c.en_name]) : null]),
+          el('span', { class: 'dict-dim' }, [c.type]),
+          el('span', { class: 'dict-code' }, [String(counts[c.key] || 0)]),
+          el('span', { class: 'dict-dim' }, [String(bound[c.key] || 0)]),
+          el('span', { class: 'dict-actions' }, [
+            mini('编辑', '', () => categoryForm(app, c.key)),
+            mini('删除', 'is-danger', () => {
+              const n = counts[c.key] || 0;
+              confirm(app, '删除统计分类', '删除「' + c.name + '」？它的 ' + n + ' 个节点会变成未分类。', () => {
+                const r = app.deleteCategory(c.key);
+                if (r.ok) { toast('已删除统计分类', 'ok'); showDict(app, 'cats', q); } else toast(r.error, 'error');
+              });
+            }),
+          ]),
+        ]));
+      });
+      return list;
+    }
+
+    function categoryForm(app, key) {
+      const s = app.getState();
+      const cat = key ? (s.dict.categories || []).find((c) => c.key === key) : null;
+      const typeSel = select(dictMod.TYPE_ALL.map((t) => ({ value: t, label: t + ' · ' + dictMod.TYPES[t].pole + ' 极' })), cat ? cat.type : '费用');
+      if (cat) typeSel.disabled = true;
+      const name = input({ value: cat ? cat.name : '', placeholder: '如：餐饮 / 通勤' });
+      const enName = input({ value: cat && !cat.en_auto ? cat.en_name : '', placeholder: '可留空' });
+      const error = el('div', { class: 'form-error' });
+      const submit = button(cat ? '保存修改' : '创建统计分类', 'btn-primary', () => {
+        if (!name.value.trim()) { error.textContent = '统计分类要有名称'; return; }
+        const r = cat
+          ? app.updateCategory(key, { name: name.value.trim(), en_name: enName.value.trim() })
+          : app.addCategory({ name: name.value.trim(), type: typeSel.value, en_name: enName.value.trim() });
+        if (!r.ok) { error.textContent = r.error; return; }
+        toast(cat ? '已保存统计分类' : '已创建统计分类', 'ok');
+        close();
+        showDict(app, 'cats', '');
+      });
+      const actions = [];
+      if (!cat) actions.push(submit);
+      else {
+        actions.push(button('删除', 'is-danger', () => {
+          close();
+          const n = Object.keys(s.dict.nodes || {}).filter((id) => !s.dict.nodes[id].system && s.dict.nodes[id].category_key === key).length;
+          confirm(app, '删除统计分类', '删除「' + cat.name + '」？它的 ' + n + ' 个节点会变成未分类。', () => {
+            const r = app.deleteCategory(key);
+            if (r.ok) { toast('已删除统计分类', 'ok'); showDict(app, 'cats', ''); } else toast(r.error, 'error');
+          });
+        }));
+        actions.push(submit);
+      }
+      open(cat ? '编辑统计分类 · ' + cat.name : '新建统计分类', [
+        el('div', { class: 'form-row' }, [field('名称', name), field('会计类型', typeSel)]),
+        field('英文名（可选）', enName),
+        error,
+        el('p', { class: 'help-text' }, ['统计分类只是你的分组；母树绑定在节点的编辑卡里选，固定在该节点上。']),
+      ], closeFoot(actions));
+    }
+
+    function nodeTreeRow(app, x, depth, calc) {
+      const n = x.n;
+      const stat = calc.byId.get(x.id);
+      const bal = stat ? stat.closing : 0;
+      const row = el('div', { class: 'dict-tree-row', style: 'padding-left:' + (8 + depth * 18) + 'px' }, [
+        el('span', { class: 'dict-tree-name' }, [n.zh_name]),
+        el('span', { class: 'dict-code' }, [n.zh_code || '—']),
+        el('span', { class: 'dict-tree-meta' }, [n.anchor_id ? shortPathOf(n.anchor_id) : '未归类']),
+        el('span', { class: 'dict-code' }, [amount.centsToDisplay(bal)]),
+        el('span', { class: 'dict-actions' }, [
+          mini('编辑', '', () => nodeForm(app, null, x.id)),
+          mini('删除', 'is-danger', () => {
+            const used = app.countNodeRefs(x.id);
+            if (used > 0) { toast('该节点被 ' + used + ' 笔流水引用，不能删；可改名', 'error'); return; }
+            confirm(app, '删除节点', '删除「' + n.zh_name + '」？', () => {
+              const r = app.deleteNode(x.id);
+              if (r.ok) { toast('已删除节点', 'ok'); showDict(app, 'nodes', ''); } else toast(r.error, 'error');
+            });
+          }),
+        ]),
+      ]);
+      return row;
+    }
+
+    function nodeTreeV4(app, q) {
+      const s = app.getState();
+      const calc = app.getCalcAll();
+      const needle = String(q || '').toLowerCase();
+      const all = Object.keys(s.dict.nodes)
+        .map((id) => ({ id, n: s.dict.nodes[id] }))
+        .filter((x) => !x.n.system);
+      const hit = (x) => !needle || (x.n.zh_name + ' ' + x.n.zh_code + ' ' + x.n.en_name + ' ' + (x.n.category || '')).toLowerCase().indexOf(needle) >= 0;
+      const cats = (s.dict.categories || []).slice();
+      const typeOrder = ['费用', '收入', '资产', '负债', '成本', '权益'];
+      const wrap = el('div', { class: 'dict-list' });
+      typeOrder.forEach((type) => {
+        const tNodes = all.filter((x) => x.n.type === type);
+        if (!tNodes.length) return;
+        wrap.appendChild(el('div', { class: 'dict-tree-head' }, [
+          el('span', {}, [type]), el('span', {}, ['简码']), el('span', {}, ['归属']),
+          el('span', {}, ['余额']), el('span', {}, ['操作']),
+        ]));
+        const typeCats = cats.filter((c) => c.type === type).sort((a, b) => (a.order || 0) - (b.order || 0));
+        typeCats.forEach((c) => {
+          const kids = tNodes.filter((x) => x.n.category_key === c.key);
+          const shown = kids.filter(hit);
+          if (!shown.length && needle) return;
+          wrap.appendChild(el('div', { class: 'dict-tree-cat' }, [
+            el('span', { class: 'dict-tree-name' }, ['▾ ' + c.name]),
+            el('span', { class: 'dict-tree-meta' }, ['分类']),
+            el('span', { class: 'dict-tree-meta' }, ['绑定 ' + kids.filter((x) => x.n.anchor_id).length + '/' + kids.length]),
+            el('span', { class: 'dict-tree-count' }, [String(kids.length)]),
+            el('span', { class: 'dict-actions' }, [
+              mini('编辑分类', '', () => categoryForm(app, c.key)),
+            ]),
+          ]));
+          shown.sort((a, b) => a.n.zh_name.localeCompare(b.n.zh_name, 'zh'))
+            .forEach((x) => wrap.appendChild(nodeTreeRow(app, x, 1, calc)));
+        });
+        const orphans = tNodes.filter((x) => !cats.some((c) => c.key === x.n.category_key) && hit(x));
+        if (orphans.length) {
+          wrap.appendChild(el('div', { class: 'dict-tree-cat' }, [
+            el('span', { class: 'dict-tree-name' }, ['▾ 未分类']),
+            el('span', { class: 'dict-tree-meta' }, ['分类']),
+            el('span', { class: 'dict-tree-meta' }, ['没有统计分类']),
+            el('span', { class: 'dict-tree-count' }, [String(orphans.length)]),
+            el('span', {}, ['']),
+          ]));
+          orphans.forEach((x) => wrap.appendChild(nodeTreeRow(app, x, 1, calc)));
+        }
+      });
+      if (!wrap.children.length) return el('div', { class: 'import-note' }, ['没有匹配的节点。']);
+      return wrap;
+    }
+
     function nodeList(app, q) {
+      const s0 = app.getState();
+      if (s0.dict && s0.dict.format === 'v4' && TV.dictV4) return nodeTreeV4(app, q);
       const s = app.getState();
       const calc = app.getCalcAll();
       const rows = Object.keys(s.dict.nodes)
@@ -270,7 +549,9 @@
             el('span', { class: 'pole-badge ' + (n.polarity === 'A' ? 'a' : 'b') }, [n.polarity]),
           ]),
           el('span', { class: 'dict-code' }, [n.zh_code || n.en_code || '—']),
-          el('span', { class: 'dict-dim' }, [n.type + (n.form && n.form !== 'outside' ? ' · ' + (dictMod.FORMS[n.form] || n.form) : '')]),
+          el('span', { class: 'dict-dim' }, [s.dict && s.dict.format === 'v4'
+            ? n.type + ' / ' + (n.category || '未分类')
+            : n.type + (n.form && n.form !== 'outside' ? ' · ' + (dictMod.FORMS[n.form] || n.form) : '')]),
           el('span', { class: 'dict-domain' }, [el('span', { class: 'domain-badge' }, [n.domain])]),
           el('span', { class: 'dict-code' }, [amount.centsToDisplay(bal)]),
           el('span', { class: 'dict-actions' }, [
@@ -325,7 +606,69 @@
       return list;
     }
 
+    function nodeFormV4(app, preset, id, opts) {
+      const o = opts || {};
+      const s = app.getState();
+      const n = id ? s.dict.nodes[id] : null;
+      const p = preset || {};
+      const cats = (s.dict.categories || []).slice();
+      if (!cats.length) {
+        toast('还没有统计分类：先在字典里建一个统计分类', 'error');
+        return;
+      }
+      const fallback = n && n.category_key && cats.some((c) => c.key === n.category_key) ? n.category_key : cats[0].key;
+      const catSel = select(cats.map((c) => ({ value: c.key, label: c.type + ' / ' + c.name })), p.category_key || fallback);
+      const sysNodes = (TV.systemDict && TV.systemDict.nodes) || {};
+      const bindTargets = Object.keys(sysNodes).filter((id) => sysNodes[id].kind === 'category');
+      const bindLabel = (id) => {
+        const eff = TV.systemDictCore ? TV.systemDictCore.effectiveType(sysNodes, id) : null;
+        return (eff ? eff.type + ' / ' : '') + (shortPathOf(id) || id);
+      };
+      const bindSel = select([{ value: '', label: '（不绑定）' }].concat(bindTargets.map((id) => ({
+        value: id, label: bindLabel(id),
+      }))), n ? (n.anchor_id || '') : (p.anchor_id || ''));
+      const zhName = input({ value: n ? n.zh_name : (p.zh_name || ''), placeholder: '如：招行储' });
+      const zhCode = input({ value: n ? n.zh_code : (p.zh_code || ''), placeholder: 'ZHC' });
+      const enName = input({ value: n && !n.en_auto ? n.en_name : '', placeholder: '可留空（英文界面回退中文）' });
+      const enCode = input({ value: n && !n.en_code_auto ? n.en_code : '', placeholder: '可留空（默认中码小写）' });
+      const domain = select(dictMod.DOMAIN_ORDER.map((d) => ({ value: d, label: d + ' · ' + dictMod.DOMAINS[d].zh })), n ? n.domain : (p.domain || s.domain));
+      const error = el('div', { class: 'form-error' });
+      const submit = button(id ? '保存修改' : '创建节点', 'btn-primary', () => {
+        const spec = {
+          zh_name: zhName.value.trim(),
+          en_name: enName.value.trim(),
+          zh_code: zhCode.value.trim(),
+          en_code: enCode.value.trim(),
+          domain: domain.value,
+          category_key: catSel.value,
+          anchor_id: bindSel.value,
+        };
+        if (!spec.zh_name) { error.textContent = '节点要有名称'; return; }
+        if (!spec.zh_code) { error.textContent = '节点要有简码'; return; }
+        const r = id ? app.updateNode(id, spec) : app.addNode(spec);
+        if (!r.ok) { error.textContent = r.error; return; }
+        toast(id ? '已保存节点（ID 不变，历史不断链）' : '已创建节点 ' + r.id, 'ok');
+        close();
+        app.afterDataChange();
+        if (o.reopen === false) {
+          if (TV.inputApi) TV.inputApi.focus();
+        } else {
+          showDict(app, 'nodes', '');
+        }
+      });
+      open(id ? '编辑节点 · ' + n.zh_name : '新建节点', [
+        el('div', { class: 'form-row' }, [field('名称', zhName), field('简码', zhCode)]),
+        el('div', { class: 'form-row' }, [field('英文名（可选）', enName), field('英文简码（可选）', enCode)]),
+        el('div', { class: 'form-row' }, [field('统计分类', catSel), field('域', domain)]),
+        field('母树绑定（固定）', bindSel),
+        error,
+        el('p', { class: 'help-text' }, ['母树只提供先验框架；账本运算与统计以本地分组/类型为准。绑定固定在这个节点上（分支或叶子），只影响公共归属。']),
+      ], closeFoot([submit]));
+    }
+
     function nodeForm(app, preset, id, opts) {
+      const s0 = app.getState();
+      if (s0.dict && s0.dict.format === 'v4' && TV.dictV4) { nodeFormV4(app, preset, id, opts); return; }
       const o = opts || {};
       const s = app.getState();
       const n = id ? s.dict.nodes[id] : null;
@@ -970,8 +1313,326 @@
 
     /* ---------------- 确认框 ---------------- */
 
-    function confirm(app, title, text, onOk, danger) {
-      const ok = button('确认', danger === false ? 'btn-primary' : 'btn-danger', () => {
+    function motherPicker(app, token, onDone) {
+      const s = app.getState();
+      const q = input({ value: token || '', placeholder: '输入词，例如 星巴克 / 早餐 / 地铁' });
+      const results = el('div', { class: 'suggest-box' });
+      const note = el('p', { class: 'help-text' }, [
+        '只列母树叶子。采纳后自动建节点，并挂到该叶子所属的统计分类（顶级分支）。',
+      ]);
+      function search() {
+        clear(results);
+        const t = q.value.trim();
+        if (!t) return;
+        const nodes = (TV.systemDict && TV.systemDict.nodes) || {};
+        const all = Object.keys(nodes).filter((id) => nodes[id].kind === 'category');
+        const low = t.toLowerCase();
+        const byCode = all.filter((id) => {
+          const n = nodes[id];
+          return (n.zh_code && n.zh_code.toLowerCase().indexOf(low) === 0)
+            || (n.en_code && n.en_code.toLowerCase().indexOf(low) === 0);
+        }).slice(0, 6).map((id) => ({ id, path: shortPathOf(id) || id, reason: '推荐码 / 拼音首字母', score: 99 }));
+        const base = (TV.suggester ? TV.suggester.suggestForToken(t, TV.systemDict, { limit: 8, lang: s.lang }) : [])
+          .filter((x) => nodes[x.id] && nodes[x.id].kind === 'category');
+        const seen = new Set();
+        const list = [];
+        byCode.concat(base).forEach((x) => { if (!seen.has(x.id)) { seen.add(x.id); list.push(x); } });
+        list.splice(10);
+        if (list.length) {
+          /* 同支推荐：给第一个命中补上它旁边的分支/叶子 */
+          TV.dictV4.siblingSuggestions(list[0].id, TV.systemDict, 6).forEach((x) => {
+            if (seen.has(x.id)) return;
+            seen.add(x.id);
+            list.push({ id: x.id, path: x.path, reason: '同支推荐', score: 0, token: x.name });
+          });
+        }
+        if (!list.length) {
+          results.appendChild(el('div', { class: 'import-note' }, ['没有匹配的母树叶子；可「新建节点」手动选分类。']));
+          return;
+        }
+        list.forEach((x) => {
+          const b = el('button', { class: 'suggest-item', type: 'button' }, [
+            el('b', {}, [x.path || x.id]),
+            el('span', {}, [x.reason + (x.score ? ' · ' + x.score : '')]),
+          ]);
+          b.addEventListener('click', () => {
+            const token = x.token || t;
+            const r = app.adoptMother(x.id, token);
+            if (!r.ok) { toast(r.error, 'error'); return; }
+            toast('已建节点「' + token + '」[' + r.code + '] · ' + r.category, 'ok');
+            close();
+            if (onDone) onDone(r);
+            else if (app.getState && app.getState().view === 'mother' && app.setView) app.setView('mother');
+            else showDict(app, 'nodes', '');
+          });
+          results.appendChild(b);
+        });
+      }
+      q.addEventListener('input', () => { clearTimeout(q._t); q._t = setTimeout(search, 160); });
+      q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
+      open('从母树建节点', [field('搜索母树叶子', q), results, note], closeFoot([
+        button('取消', '', close),
+      ]));
+      setTimeout(search, 0);
+    }
+
+    /* 整页「母树」：左私人字典，右母树；点母树分支/叶子即绑定 */
+    function renderMotherPage(app, host) {
+      const s = app.getState();
+      clear(host);
+      const page = el('div', { class: 'mother-page' });
+      host.appendChild(page);
+      if (!s.dict || s.dict.format !== 'v4') {
+        page.appendChild(el('div', { class: 'mother-empty' }, [
+          '当前字典不是 v4。先到「字典」页改成 v4（或导入 v4 样本），这里才能做绑定。',
+        ]));
+        return;
+      }
+      const nodes = s.dict.nodes || {};
+      const cats = s.dict.categories || [];
+      const ids = Object.keys(nodes).filter((id) => !nodes[id].system);
+      const keyOf = (n) => ((n.domain && n.domain !== 'P' ? n.domain + ':' : '') + (n.zh_code || '')) || n.zh_name;
+      motherSel = '';
+      if (motherSelCode) {
+        const hit = ids.find((id) => keyOf(nodes[id]) === motherSelCode);
+        if (hit) motherSel = hit;
+        else motherSelCode = '';
+      }
+      const typeOrder = dictMod.TYPE_ALL.slice();
+
+      const qPriv = input({ placeholder: '搜索私人节点 / 简码 / 绑定' });
+      qPriv.className = 'mother-search';
+      const qMom = input({ placeholder: '搜索母树分支 / 叶子 / 推荐码' });
+      qMom.className = 'mother-search';
+
+      const hint = el('div', { class: 'mother-hint' }, ['左：点一个私人节点选中；右：点母树的分支或叶子即绑定。']);
+      const left = el('div', { class: 'mother-tree' });
+      const right = el('div', { class: 'mother-tree' });
+
+      function bindTo(targetId) {
+        if (!motherSel || !nodes[motherSel]) { toast('先在左边点一个节点', 'error'); return; }
+        const name = nodes[motherSel].zh_name;
+        const r = app.updateNode(motherSel, { anchor_id: targetId });
+        if (!r.ok) { toast(r.error, 'error'); return; }
+        toast('已绑定：' + name + ' → ' + shortPathOf(targetId), 'ok');
+        renderMotherPage(app, host);
+      }
+
+      function select(id) {
+        motherSel = id;
+        motherSelCode = keyOf(nodes[id] || {});
+        left.querySelectorAll('.mother-row.is-node').forEach((row) => {
+          row.classList.toggle('is-sel', row.dataset.id === id);
+        });
+        right.querySelectorAll('.mother-row.is-bound').forEach((row) => row.classList.remove('is-bound'));
+        const n = nodes[id];
+        if (n && n.anchor_id) {
+          const hit = right.querySelector('[data-id="' + n.anchor_id + '"]');
+          if (hit) hit.classList.add('is-bound');
+        }
+        hint.textContent = '已选：' + (n ? (n.zh_code || '—') + '，' + n.zh_name : '') + '；点右边母树的分支或叶子即绑定。';
+      }
+
+      function nodeRow(id, depth) {
+        const n = nodes[id];
+        const bin = n.anchor_id ? shortPathOf(n.anchor_id) : '未绑定';
+        const row = el('div', {
+          class: 'mother-row is-node' + (motherSel === id ? ' is-sel' : ''),
+          'data-id': id,
+          style: 'padding-left:' + (10 + depth * 18) + 'px',
+        }, [
+          el('span', { class: 'mother-code' }, [n.zh_code || '—']),
+          el('span', { class: 'mother-name' }, ['，' + n.zh_name]),
+          el('span', { class: 'mother-bind' }, ['→ ' + bin]),
+          el('span', { class: 'mother-actions' }, [
+            mini('编辑', '', () => nodeForm(app, null, id)),
+            mini('删除', '', () => {
+              const r = app.deleteNode(id);
+              if (r.ok) toast('已删除节点', 'ok');
+              else toast(r.error || '删除失败', 'error');
+            }),
+          ]),
+        ]);
+        row.dataset.q = ((n.zh_code || '') + ' ' + n.zh_name + ' ' + bin).toLowerCase();
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('button')) return;
+          select(id);
+        });
+        return row;
+      }
+
+      typeOrder.forEach((type) => {
+        const typeCats = cats.filter((c) => c.type === type);
+        const typeNodes = ids.filter((id) => nodes[id].type === type);
+        if (!typeCats.length && !typeNodes.length) return;
+        left.appendChild(el('div', { class: 'mother-row is-type' }, [
+          el('b', {}, [type]),
+          el('span', { class: 'mother-count' }, [String(typeNodes.length)]),
+        ]));
+        typeCats.forEach((cat) => {
+          const kids = typeNodes.filter((id) => nodes[id].category_key === cat.key);
+          const catRow = el('div', { class: 'mother-row is-cat', style: 'padding-left:10px' }, [
+            el('span', { class: 'mother-name' }, [cat.name + (cat.en_name && !cat.en_auto ? '，' + cat.en_name : '')]),
+            el('span', { class: 'mother-count' }, [String(kids.length)]),
+            el('span', { class: 'mother-actions' }, [
+              mini('改', '', () => categoryForm(app, cat.key)),
+              mini('删', '', () => {
+                confirm(app, '删除统计分类', '删除「' + cat.name + '」？它的 ' + kids.length + ' 个节点会变成未分类；绑定不动。', () => {
+                  const r = app.deleteCategory(cat.key);
+                  if (r.ok) toast('已删除统计分类', 'ok');
+                  else toast(r.error, 'error');
+                });
+              }),
+            ]),
+          ]);
+          catRow.dataset.q = cat.name.toLowerCase();
+          left.appendChild(catRow);
+          kids.forEach((id) => left.appendChild(nodeRow(id, 1)));
+        });
+        const orphans = typeNodes.filter((id) => !cats.some((c) => c.key === nodes[id].category_key));
+        if (orphans.length) {
+          left.appendChild(el('div', { class: 'mother-row is-cat', style: 'padding-left:10px' }, [
+            el('span', { class: 'mother-name' }, ['未分类']),
+            el('span', { class: 'mother-count' }, [String(orphans.length)]),
+          ]));
+          orphans.forEach((id) => left.appendChild(nodeRow(id, 1)));
+        }
+      });
+
+      const sn = (TV.systemDict && TV.systemDict.nodes) || {};
+      const children = {};
+      Object.keys(sn).forEach((id) => {
+        const p = sn[id].parent_id;
+        if (p) (children[p] = children[p] || []).push(id);
+      });
+      function walk(id, depth) {
+        const n = sn[id];
+        if (!n) return;
+        if (n.kind === 'category') {
+          const row = el('div', {
+            class: 'mother-row is-target' + (children[id] && children[id].length ? ' is-branch' : '')
+              + (motherSel && nodes[motherSel] && nodes[motherSel].anchor_id === id ? ' is-bound' : ''),
+            'data-id': id,
+            title: shortPathOf(id) || id,
+            style: 'padding-left:' + (10 + depth * 20) + 'px',
+          }, [
+            el('span', { class: 'mother-name' }, [n.zh_name]),
+            n.zh_code ? el('span', { class: 'mother-code' }, [n.zh_code]) : null,
+            n.en_name ? el('span', { class: 'mother-en' }, [n.en_name]) : null,
+          ]);
+          row.dataset.q = (n.zh_name + ' ' + (n.en_name || '') + ' ' + (n.zh_code || '')).toLowerCase();
+          row.addEventListener('click', () => bindTo(id));
+          right.appendChild(row);
+        }
+        (children[id] || []).forEach((cid) => walk(cid, n.kind === 'type' ? 1 : depth + 1));
+      }
+      typeOrder.forEach((type) => {
+        const typeId = Object.keys(sn).find((id) => sn[id].kind === 'type' && sn[id].zh_name === type);
+        if (!typeId) return;
+        right.appendChild(el('div', { class: 'mother-row is-type' }, [el('b', {}, [type])]));
+        (children[typeId] || []).forEach((cid) => walk(cid, 1));
+      });
+
+      function filterTree(tree, q) {
+        const needle = q.trim().toLowerCase();
+        const rows = Array.from(tree.children);
+        rows.forEach((row) => {
+          if (row.classList.contains('is-type')) return;
+          row.hidden = !!needle && (row.dataset.q || '').indexOf(needle) < 0;
+        });
+        rows.forEach((row, i) => {
+          if (!row.classList.contains('is-type')) return;
+          let any = false;
+          for (let j = i + 1; j < rows.length && !rows[j].classList.contains('is-type'); j += 1) {
+            if (!rows[j].hidden) { any = true; break; }
+          }
+          row.hidden = !!needle && !any;
+        });
+      }
+      qPriv.addEventListener('input', () => filterTree(left, qPriv.value));
+      qMom.addEventListener('input', () => filterTree(right, qMom.value));
+
+      const bar = el('div', { class: 'mother-bar' }, [
+        qPriv, qMom, el('span', { class: 'grow' }),
+        button('补英文', '', () => {
+          const r = TV.dictV4.backfillEnglish(s.dict, TV.systemDict);
+          if (!r.filled) {
+            toast('没有可补：已填写 ' + r.kept + ' 个，未绑定跳过 ' + r.unbound + ' 个', 'ok');
+            return;
+          }
+          app.syncDict();
+          toast('已补英文 ' + r.filled + ' 个节点' + (r.unbound ? '；未绑定跳过 ' + r.unbound + ' 个' : ''), 'ok');
+          renderMotherPage(app, host);
+        }),
+        button('校验', '', () => validateDict(app)),
+        button('+ 分类', '', () => categoryForm(app)),
+        button('+ 节点', '', () => nodeForm(app)),
+        button('+ 从母树', '', () => motherPicker(app, '')),
+      ]);
+
+      page.appendChild(bar);
+      page.appendChild(el('div', { class: 'mother-cols' }, [
+        el('div', { class: 'mother-pane' }, [
+          el('div', { class: 'mother-pane-head' }, [
+            el('b', {}, ['私人字典']),
+            el('span', { class: 'mother-count' }, [ids.length + ' 节点 · ' + cats.length + ' 分组']),
+          ]),
+          left,
+        ]),
+        el('div', { class: 'mother-pane' }, [
+          el('div', { class: 'mother-pane-head' }, [
+            el('b', {}, ['母树']),
+            el('span', { class: 'mother-count' }, ['先选左边节点，再点分支/叶子']),
+          ]),
+          right,
+        ]),
+      ]));
+      page.appendChild(hint);
+      if (motherSel && nodes[motherSel]) select(motherSel);
+    }
+
+    function showSettings(app) {
+      const p = loadPrefs();
+      const font = el('input', { type: 'number', min: '11', max: '22', value: String(p.fontSize) });
+      font.addEventListener('input', () => {
+        p.fontSize = Math.max(11, Math.min(22, Number(font.value) || 13));
+        savePrefs(p);
+        if (app.refreshEditors) app.refreshEditors();
+      });
+      const colorRows = COLOR_DEFS.map((x) => {
+        const swatch = el('input', { type: 'color', value: p.colors[x[0]] || x[3] });
+        swatch.addEventListener('input', () => {
+          p.colors[x[0]] = swatch.value;
+          savePrefs(p);
+        });
+        return el('div', { class: 'settings-row' }, [
+          el('span', {}, [x[1]]),
+          swatch,
+          el('code', {}, [x[3]]),
+        ]);
+      });
+      open('设置', [
+        el('h3', { class: 'settings-h' }, ['修改密码']),
+        el('div', { class: 'form-row' }, [
+          button('修改密码', '', () => { close(); showPassword(app); }),
+        ]),
+        el('h3', { class: 'settings-h' }, ['字号']),
+        el('div', { class: 'settings-row' }, [
+          el('span', {}, ['编辑器字号']), font, el('span', { class: 'help-text' }, ['11–22 px']),
+        ]),
+        el('h3', { class: 'settings-h' }, ['颜色']),
+        ...colorRows,
+        el('p', { class: 'help-text' }, ['颜色与字号只保存在本机浏览器；不写入账本。']),
+        el('div', {}, [button('恢复默认颜色', '', () => {
+          const d = JSON.parse(JSON.stringify(DEFAULT_PREFS));
+          savePrefs(d);
+          close();
+          showSettings(app);
+        })]),
+      ], closeFoot([button('关闭', '', close)]));
+    }
+
+    function confirm(app, title, text, onOk, danger) {      const ok = button('确认', danger === false ? 'btn-primary' : 'btn-danger', () => {
         close();
         onOk && onOk();
       });
@@ -986,12 +1647,15 @@
       toast,
       showRules,
       showDict,
+      renderMotherPage,
       nodeForm,
       tagForm,
+      motherPicker,
       showText,
       showExport,
       showImport,
       showHelp,
+      showSettings,
       showPassword,
       confirm,
     };

@@ -44,6 +44,31 @@ test('公共报表：锚点前推、未归类/失效分桶、对账相等', () =
   assert.equal(p.unclassified.totals.closing, 10000);
 });
 
+test('公共报表：v4 绑到分支也参与上卷，不算失效', () => {
+  const d = D.emptyDict('test', NOW);
+  const cash = D.addNode(d, { zh_name: '现金', zh_code: 'xj', en_name: 'Cash', en_code: 'cash', type: '资产', domain: 'P' }).id;
+  const bus = D.addNode(d, { zh_name: '公交', zh_code: 'gj', en_name: 'Bus', en_code: 'bus', type: '费用', domain: 'P' }).id;
+  d.nodes[bus].anchor_id = 'SYS.CAT.TRANSPORT';   /* 分支，不是叶子 */
+  const events = [
+    { id: 'E_1', domain: 'P', date: '261116', from: cash, to: bus, amountCents: 2000, minutes: 0, tagIds: [] },
+  ];
+  const p = TV.publicReport.build(d, events, TV.systemDict, { range: null });
+  assert.equal(p.stale.totals.count, 0);
+  assert.equal(p.anchored.count, 1);
+  const find = (arr, id) => {
+    for (const x of arr) {
+      if (x.id === id) return x;
+      const hit = find(x.children || [], id);
+      if (hit) return hit;
+    }
+    return null;
+  };
+  const nod = find(p.tree.children, 'SYS.CAT.TRANSPORT');
+  assert.ok(nod, '公共树里应有交通分支');
+  assert.equal(nod.totals.closing, 2000);
+  assert.equal(p.reconcile.ok, true);
+});
+
 test('公共报表：母树树包含锚点祖先，金额不重复加到父子两层总和', () => {
   const f = fixture();
   const p = TV.publicReport.build(f.d, f.events, TV.systemDict, { range: null });

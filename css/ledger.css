@@ -251,14 +251,6 @@
   75% { transform: translateX(2px); }
 }
 
-.entry-prompt {
-  color: var(--accent);
-  font-family: var(--mono);
-  font-size: 16px;
-  line-height: 1;
-  text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
-}
-
 .entry {
   flex: 1 1 auto;
   min-width: 0;
@@ -336,7 +328,7 @@
 
 .bubble {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
@@ -468,9 +460,9 @@
   position: absolute;
   right: 0;
   bottom: 0;
-  width: min(430px, calc(100vw - 20px));
+  width: min(340px, calc(100vw - 24px));
   height: 40px;
-  max-width: none;
+  max-width: calc(100vw - 24px);
   margin: 0;
   padding: 0;
   background: transparent;
@@ -481,7 +473,7 @@
 .composer.open .composer-inner { display: block; }
 .composer .entry-row {
   height: 40px;
-  padding: 0 50px 0 9px;
+  padding: 0 50px 0 10px;
   border: 1px solid rgba(74, 222, 128, 0.6);
   border-radius: 8px;
   background: #050505;
@@ -533,8 +525,27 @@
 }
 .composer.dragging .composer-toggle { cursor: grabbing; }
 @media (max-width: 760px) {
-  .composer { right: 10px; bottom: 72px; }
-  .composer-inner { width: min(390px, calc(100vw - 20px)); }
+  .composer { right: 8px; bottom: 72px; }
+  .composer-inner { width: min(300px, calc(100vw - 16px)); max-width: calc(100vw - 16px); }
   .composer-toggle { width: 40px; height: 40px; }
   .composer.open .composer-toggle { width: 40px; height: 40px; }
+}
+
+/* 批量金额阶段提示：金额 2/3 · * 循环 / 100/ 均摊 */
+.composer-batch-hint {
+  position: absolute;
+  right: 0;
+  bottom: 44px;
+  max-width: calc(100vw - 24px);
+  padding: 3px 7px;
+  background: #0b120d;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 4px;
+  color: #9fe8b5;
+  font: 11px/1.3 var(--mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  z-index: 2;
 }

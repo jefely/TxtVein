@@ -120,12 +120,16 @@ def main():
     ok("hud removed", j(sid, "!document.querySelector('#hud')", b))
     ok("domain bar removed", j(sid, "!document.querySelector('#domains')", b))
     ok("all records one stream", j(sid, "window.__txtvein.state().domain", b) == "")
-    ok("five page tabs", j(sid, "Array.from(document.querySelectorAll('.page-tab')).map(function(x){return x.innerText;}).join('/')", b) == "查询/流水/字典/固定/统计")
+    ok("six page tabs", j(sid, "Array.from(document.querySelectorAll('.page-tab')).map(function(x){return x.innerText;}).join('/')", b) == "查询/流水/字典/母树/固定/统计")
     shot(b, sid, os.path.join(ROOT, "shots", "01-editor.png"))
 
     print("== input macros / mouse / space ==")
     j(sid, "document.querySelector('#composer-toggle').click()", b)
     ok("composer opens", wait(b, sid, "document.querySelector('#composer').classList.contains('open')", 3))
+    ok("no composer prompt", j(sid, "document.querySelector('#entry-prompt') === null", b) is True)
+    ok("composer in viewport",
+       j(sid, """(function(){var r=document.querySelector('.composer-inner').getBoundingClientRect();
+         return r.left >= 0 && r.right <= window.innerWidth + 1;})()""", b) is True)
     j(sid, "document.querySelector('#entry').focus(); window.TxtVein.inputApi.clear();", b)
     type_text(b, sid, "wx1")
     space(b, sid); time.sleep(0.05); space(b, sid); time.sleep(0.15)
@@ -133,17 +137,19 @@ def main():
     space(b, sid); time.sleep(0.15)
     ok("triple space <", j(sid, "document.querySelector('#entry').value", b).endswith("< "))
     j(sid, "window.TxtVein.inputApi.clear()", b)
-    type_text(b, sid, "wx")
+    type_text(b, sid, "w")
     ok("bubbles", wait(b, sid, "document.querySelectorAll('#bubbles .bubble').length >= 2", 3))
     space(b, sid); time.sleep(0.5)
     ok("space confirms", j(sid, "document.querySelector('#entry').value", b) == "wx1")
     j(sid, "window.TxtVein.inputApi.clear()", b)
-    type_text(b, sid, "wx")
+    type_text(b, sid, "w")
     wait(b, sid, "document.querySelectorAll('#bubbles .bubble').length >= 2", 3)
-    key(b, sid, "2", "Digit2", 50)
-    ok("number picks", j(sid, "document.querySelector('#entry').value", b) == "wx2")
+    key(b, sid, "2", "Digit2", 50, "2")
+    time.sleep(0.2)
+    ok("number types instead of picking", j(sid, "document.querySelector('#entry').value", b) == "w2")
+    ok("no bubble numbers", j(sid, "document.querySelectorAll('#bubbles .bubble-idx').length", b) == 0)
     j(sid, "window.TxtVein.inputApi.clear()", b)
-    type_text(b, sid, "wx")
+    type_text(b, sid, "w")
     wait(b, sid, "document.querySelectorAll('#bubbles .bubble').length >= 2", 3)
     box = j(sid, """(function(){var r=document.querySelector('#bubbles .bubble').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()""", b)
     click_at(b, sid, box["x"], box["y"])
@@ -167,15 +173,47 @@ def main():
 
     print("== invalid / 4-state / gray ==")
     bad = j(sid, "window.__txtvein.submit('wx1 > nope 35')", b)
-    ok("invalid kept", bad.get("ok") is False and "nope 35" in j(sid, "document.querySelector('#entry').value", b))
+    ok("invalid kept", bad.get("ok") is False and "nope 35" in j(sid, "window.__txtvein.source().ledger", b)
+       and j(sid, "document.querySelector('#entry').value", b) == "")
     ok("invalid gray", j(sid, "getComputedStyle(document.querySelector('.CodeMirror-lint-mark-error')).color", b) == "rgb(201, 201, 201)")
+    ok("line number orange",
+       j(sid, "getComputedStyle(document.querySelector('.CodeMirror-gutter-wrapper.tv-line-error .CodeMirror-linenumber')).color", b) == "rgb(255, 122, 69)")
+    j(sid, """(function(){var e=document.querySelector('.CodeMirror-gutter-wrapper.tv-line-error .CodeMirror-linenumber');
+      if(!e)return false; e.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:70,clientY:120})); return true;})()""", b)
+    time.sleep(0.3)
+    ok("line number menu", j(sid, "document.querySelectorAll('.cm-line-menu button').length", b) == 6)
+    ok("line number selected",
+       j(sid, "document.querySelectorAll('.CodeMirror-gutter-wrapper.tv-line-selected').length", b) == 1
+       and j(sid, "getComputedStyle(document.querySelector('.CodeMirror-gutter-wrapper.tv-line-selected .CodeMirror-linenumber')).backgroundColor", b) == "rgb(58, 58, 58)")
+    ok("line menu horizontal", j(sid, """(function(){var m=document.querySelector('.cm-line-menu');
+      if(!m)return false; var tops=Array.from(m.querySelectorAll('button')).map(function(x){return Math.round(x.getBoundingClientRect().top);});
+      return getComputedStyle(m).flexDirection==='row' && tops.length===6 && tops.every(function(x){return x===tops[0];});})()""", b) is True)
+    ok("line menu clear of selected", j(sid, """(function(){var m=document.querySelector('.cm-line-menu');
+      var n=document.querySelector('.CodeMirror-gutter-wrapper.tv-line-selected .CodeMirror-linenumber');
+      if(!m||!n)return false; var mr=m.getBoundingClientRect(), nr=n.getBoundingClientRect();
+      return mr.top>=nr.bottom || mr.bottom<=nr.top;})()""", b) is True)
+    j(sid, "document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))", b)
+    ok("line selection cleared",
+       j(sid, "document.querySelectorAll('.CodeMirror-gutter-wrapper.tv-line-selected,.CodeMirror-linebackground.tv-line-selected-bg').length", b) == 0)
+    j(sid, "window.__ev = window.__txtvein.getState().events; true", b)
     j(sid, "document.querySelector('#btn-mode').click()", b)
     ok("plain with error", wait(b, sid, "window.__txtvein.state().mode === 'PLAIN'", 4))
+    ok("mode button plain", j(sid, "document.querySelector('#btn-mode').textContent", b) == "明文")
+    ok("mode switch reuses graph", j(sid, "window.__ev === window.__txtvein.getState().events", b) is True)
+    ok("mode changes ledger text", wait(b, sid, "window.__txtvein.source().ledger.indexOf('微信钱包') >= 0", 4))
     ok("error line kept", "wx1 > nope 35" in j(sid, "window.__txtvein.source().ledger", b))
     j(sid, "document.querySelector('#btn-mode').click()", b)
     ok("code again", wait(b, sid, "window.__txtvein.state().mode === 'CODE'", 4))
+    ok("mode button code", j(sid, "document.querySelector('#btn-mode').textContent", b) == "掩码")
+    ok("code restores ledger text", wait(b, sid, "window.__txtvein.source().ledger.indexOf('微信钱包') < 0", 4))
 
     print("== inline repair ==")
+    j(sid, """(function(){var s=window.__txtvein.getState();
+      var d=(s.sourceDiags||[]).find(function(x){return x.file==='ledger'&&x.severity==='error';});
+      if(!d)return false; var cm=document.querySelectorAll('.CodeMirror')[0].CodeMirror;
+      cm.setCursor({line:d.line-1,ch:0}); cm.focus(); return true;})()""", b)
+    time.sleep(0.4)
+    ok("repair only on error line", j(sid, "window.TxtVein.inputApi.isEditing()", b) is True)
     r = j(sid, "window.__txtvein.submit('wx1 > din 35')", b)
     ok("inline repair ok", r.get("ok") is True)
     ok("repair cleared input", j(sid, "document.querySelector('#entry').value", b) == "")
@@ -260,6 +298,16 @@ def main():
     j(sid, "Array.from(document.querySelectorAll('.stats-left .sd-row')).find(function(r){return !r.classList.contains('is-head');}).click()", b)
     time.sleep(0.3)
     ok("stats right list", j(sid, "document.querySelectorAll('.stats-right .sd-row:not(.is-head)').length", b) >= 1)
+    for _ in range(4):
+        if j(sid, "document.querySelector('#btn-candidates').hidden", b) is True:
+            break
+        j(sid, "document.querySelector('#btn-candidates').click()", b)
+        time.sleep(0.2)
+        j(sid, """(function(){var row=document.querySelector('.candidate-row');
+          if(!row)return false; var bs=Array.from(row.querySelectorAll('button'));
+          var x=bs.find(function(b){return b.textContent.trim()==='忽略';});
+          if(x)x.click(); return !!x;})()""", b)
+        time.sleep(0.3)
     ok("candidate button hidden", j(sid, "document.querySelector('#btn-candidates').hidden", b) is True)
     shot(b, sid, os.path.join(ROOT, "shots", "03-report.png"))
 
@@ -275,10 +323,28 @@ def main():
     ok("fixed editor", wait(b, sid, "!!document.querySelector('.fixed-editor .CodeMirror')", 4))
     fixed_src = j(sid, "document.querySelector('.fixed-editor .CodeMirror').CodeMirror.getValue()", b)
     ok("fixed text source", "[PLAN]" in fixed_src or "[RULES]" in fixed_src, fixed_src[:80])
+    ok("top menu order",
+       j(sid, "Array.from(document.querySelectorAll('.top-menu .menu-btn')).map(function(x){return x.textContent.trim();}).join('/')", b)
+       == "导入/导出/设置/帮助/掩码/语言")
+    j(sid, "document.querySelector('#btn-settings').click()", b)
+    time.sleep(0.3)
+    ok("settings opens", j(sid, "document.querySelector('#modal-title').textContent", b) == "设置")
+    ok("settings colors", j(sid, "document.querySelectorAll('#modal-body input[type=color]').length", b) == 8)
+    j(sid, """(function(){var c=document.querySelector('#modal-body input[type=color]');
+      c.value='#112233'; c.dispatchEvent(new Event('input',{bubbles:true})); return true;})()""", b)
+    time.sleep(0.2)
+    ok("settings applies color",
+       j(sid, "getComputedStyle(document.documentElement).getPropertyValue('--tv-invalid')", b).strip() == "#112233")
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent==='恢复默认颜色';}).click()", b)
+    time.sleep(0.3)
+    ok("settings reset color",
+       j(sid, "getComputedStyle(document.documentElement).getPropertyValue('--tv-invalid')", b).strip() == "#B9C2CE")
+    j(sid, "document.querySelector('#modal-close').click()", b)
     j(sid, "document.querySelector('#btn-lang').click()", b)
     time.sleep(0.5)
-    ok("english tabs", j(sid, "document.querySelector('#page-tabs').innerText", b) == "Query\nLedger\nDictionary\nFixed\nStats")
-    ok("english menu", "Security" in j(sid, "document.querySelector('.top-menu').innerText", b))
+    ok("english tabs", j(sid, "document.querySelector('#page-tabs').innerText", b) == "Query\nLedger\nDictionary\nMother\nFixed\nStats")
+    ok("english menu", "Settings" in j(sid, "document.querySelector('.top-menu').innerText", b)
+       and "Mask" in j(sid, "document.querySelector('.top-menu').innerText", b))
     j(sid, "document.querySelector('#btn-lang').click()", b)
     time.sleep(0.3)
 

@@ -60,6 +60,7 @@ const CORE = [
   'js/core/ids.js',
   'js/core/parser.js',
   'js/core/source.js',
+  'js/core/dict-v4.js',
   'js/core/calc.js',
   'js/core/domain.js',
   'js/core/rules.js',
@@ -150,7 +151,7 @@ console.log('7) 数据文件与测试');
   'tests/system-graph.test.cjs', 'tests/system-dict.test.cjs', 'tests/system-i18n.test.cjs',
   'tests/split-dict.test.cjs', 'tests/tree-view.test.cjs', 'tests/anchor.test.cjs',
   'tests/public-report.test.cjs', 'tests/suggester.test.cjs',
-  'tests/text-bundle.test.cjs', 'tests/nt-bridge.test.cjs'].forEach((f) => ok(f, exists(f)));
+  'tests/text-bundle.test.cjs', 'tests/nt-bridge.test.cjs', 'tests/dict-v4.test.cjs'].forEach((f) => ok(f, exists(f)));
 ok('示例账本存在', exists('js/core/example.js'));
 ['vendor/codemirror/codemirror.min.js', 'vendor/codemirror/codemirror.min.css',
   'vendor/codemirror/addon/hint/show-hint.min.js', 'vendor/codemirror/addon/lint/lint.min.js',

@@ -94,7 +94,14 @@ def launch(port=PORT, profile=PROFILE, width=1600, height=1000):
         "--remote-allow-origins=http://127.0.0.1:%d" % port,
         "about:blank",
     ]
-    subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True)
+    # 沙箱里 DEVNULL/继承句柄可能让 Chrome 起不来；重定向到文件更稳，也便于排错。
+    import tempfile
+    log_path = os.path.join(tempfile.gettempdir(), "txtvein-chrome.log")
+    log = open(log_path, "wb")
+    try:
+        subprocess.Popen(args, stdout=log, stderr=log, close_fds=True)
+    finally:
+        log.close()
     for i in range(40):
         time.sleep(0.5)
         try:

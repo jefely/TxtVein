@@ -17,10 +17,10 @@
     const prediction = dom.prediction;
     const stateEl = dom.state;
     const hintEl = dom.hint;
+    const batchHintEl = dom.batchHint;
     const errorEl = dom.error;
     const row = dom.row;
-    const prompt = dom.prompt;
-
+  
     let suggestions = [];
     let active = 0;
     let context = null;
@@ -54,6 +54,14 @@
       active = 0;
       if (res.state) stateEl.textContent = res.state;
       if (res.hint != null) hintEl.textContent = res.hint;
+      if (batchHintEl) {
+        if (res.batchHint) {
+          batchHintEl.textContent = res.batchHint;
+          batchHintEl.hidden = false;
+        } else {
+          batchHintEl.hidden = true;
+        }
+      }
       renderBubbles(show !== false && !!input.value.trim());
       renderPrediction(!!input.value.trim());
     }
@@ -72,7 +80,6 @@
           dataset: { index: i },
           role: 'option',
         }, [
-          el('span', { class: 'bubble-idx' }, [String(i + 1)]),
           el('span', { class: 'bubble-main' }, [
             el('span', { class: 'bubble-name' }, [
               s.label || s.name,
@@ -165,7 +172,7 @@
     function setEditing(on, text, label) {
       editing = !!on;
       row.classList.toggle('is-editing', editing);
-      prompt.textContent = editing ? 'EDIT' : '>';
+    
       if (editing && text != null) {
         input.value = text;
         setCaret(input.value.length);
@@ -207,6 +214,15 @@
     /* 手机软键盘不一定发可 preventDefault 的 Space keydown；
        从 input 事件里识别连续空格，延迟 320ms 等第三击。 */
     function commitRawSpaces(count) {
+      if (!editing && !input.value.trim()) {
+        const stamp = TV.date && TV.date.todayStamp ? TV.date.todayStamp(new Date()) : '';
+        if (stamp) {
+          input.value = stamp + ' ';
+          setCaret(input.value.length);
+          query(true);
+          return;
+        }
+      }
       const pos = caret();
       const before = input.value.slice(0, pos);
       const m = before.match(/ +$/);
@@ -229,6 +245,20 @@
 
       if (ev.key === ' ') {
         if (rawSpaceTimer) { clearTimeout(rawSpaceTimer); rawSpaceTimer = 0; rawSpaceCount = 0; }
+        /* 新记录开头按空格：先把当前日期插到空格前，再开始推荐转出节点 */
+        if (!editing && !input.value.trim()) {
+          const stamp = TV.date && TV.date.todayStamp ? TV.date.todayStamp(new Date()) : '';
+          if (stamp) {
+            ev.preventDefault();
+            if (spaceTimer) { clearTimeout(spaceTimer); spaceTimer = 0; }
+            input.value = stamp + ' ';
+            setCaret(input.value.length);
+            spaceRun = 0;
+            lastSpace = Date.now();
+            query(true);
+            return;
+          }
+        }
         const now = Date.now();
         spaceRun = (now - lastSpace < 360) ? spaceRun + 1 : 1;
         lastSpace = now;
@@ -239,6 +269,16 @@
           if (spaceTimer) { clearTimeout(spaceTimer); spaceTimer = 0; }
           insertSpaceOperator(spaceRun === 2 ? '>' : '<');
           spaceRun = spaceRun === 2 ? 2 : 0;
+          return;
+        }
+
+        /* 精确节点后的空格只补分隔符，不自动改成候选编号/别名 */
+        if (context && context.exactNode && (context.role === 'from' || context.role === 'to')) {
+          ev.preventDefault();
+          const pos = caret();
+          input.value = input.value.slice(0, pos) + ' ' + input.value.slice(pos);
+          setCaret(pos + 1);
+          query(true);
           return;
         }
 
@@ -263,6 +303,15 @@
 
       if (ev.key === 'Enter') {
         if (suggestions.length && !bubbles.hidden) {
+          const s = suggestions[active];
+          const code = String((s && s.codeLabel) || '').replace(/^#/, '').toLowerCase();
+          const tok = String((context && context.token) || '')
+            .replace(/^#/, '').replace((context && context.prefix) || '', '').toLowerCase();
+          if (s && s.kind !== 'mother' && code && tok === code) {
+            ev.preventDefault();
+            submit();
+            return;
+          }
           ev.preventDefault();
           choose(active);
           return;
@@ -331,12 +380,18 @@
         return;
       }
 
-      const num = /^[1-9]$/.test(ev.key) ? Number(ev.key)
-        : (/^Numpad[1-9]$/.test(ev.code) ? Number(ev.code.slice(-1)) : 0);
-      if (num && suggestions.length && !bubbles.hidden) {
-        ev.preventDefault();
-        choose(num - 1);
-        return;
+      /* 转入节点刚录完、还没打空格：金额的第一个数字自动补一个空格 */
+      if (context && context.atNodeBoundary && /^[0-9]$/.test(ev.key)
+        && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+        const pos = caret();
+        const before = input.value.slice(0, pos);
+        if (before && !/\s$/.test(before)) {
+          ev.preventDefault();
+          input.value = before + ' ' + ev.key + input.value.slice(pos);
+          setCaret(pos + 2);
+          query(true);
+          return;
+        }
       }
 
       if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') {

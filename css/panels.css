@@ -1,4 +1,4 @@
-/* TxtVein · 面板（规则 / 字典 / 文本 / 导入导出 / 帮助） */
+﻿/* TxtVein · 面板（规则 / 字典 / 文本 / 导入导出 / 帮助） */
 
 .panel-toolbar {
   display: flex;
@@ -113,6 +113,25 @@
 .mini-btn.is-accent { color: var(--accent); border-color: rgba(74, 222, 128, 0.3); }
 
 .dict-list { border: 1px solid var(--line); }
+
+/* v4 三级树：会计类型 → 统计分类 → 节点 */
+.dict-tree-head,
+.dict-tree-cat,
+.dict-tree-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr) minmax(0, 1.1fr) 90px 112px;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11.5px;
+}
+.dict-tree-head { color: var(--date); font-size: 8.5px; letter-spacing: 0.06em; }
+.dict-tree-cat { background: rgba(148, 163, 184, 0.05); }
+.dict-tree-row:hover { background: rgba(148, 163, 184, 0.035); }
+.dict-tree-name { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dict-tree-meta { color: var(--date); font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dict-tree-count { color: var(--text-3); }
 .dict-row {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.9fr) 86px 54px 96px 112px;
@@ -407,3 +426,64 @@
   .help-grid { grid-template-columns: 1fr; }
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
 }
+
+/* ===== 整页「母树」：左私人字典 / 右母树 ===== */
+.mother-view { height: 100%; min-height: 0; display: flex; }
+.mother-view[hidden] { display: none; }
+.mother-page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.mother-empty { padding: 32px; color: var(--text-2); line-height: 1.9; }
+.mother-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 14px; border-bottom: 1px solid var(--line);
+}
+.mother-bar .mother-search {
+  width: 230px; padding: 6px 9px; font-size: 12px; color: var(--text);
+  background: rgba(15, 23, 42, 0.5); border: 1px solid var(--line); border-radius: 6px;
+}
+.mother-bar .mother-search:focus { outline: none; border-color: var(--line-strong); }
+.mother-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.mother-pane { min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+.mother-pane:last-child { border-right: 0; }
+.mother-pane-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  padding: 8px 14px; border-bottom: 1px solid var(--line); font-size: 12px;
+}
+.mother-tree { flex: 1; overflow: auto; padding: 6px 0 24px; }
+.mother-row {
+  display: flex; align-items: center; gap: 8px; padding: 3px 12px;
+  font: 12.5px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace;
+  color: var(--text); cursor: pointer; white-space: nowrap;
+}
+.mother-row:hover { background: rgba(148, 163, 184, 0.06); }
+.mother-row.is-type {
+  margin-top: 8px; padding-top: 8px; cursor: default; color: var(--text-2);
+  font-size: 11px; letter-spacing: 0.08em; border-top: 1px solid var(--line);
+}
+.mother-row.is-type:first-child { margin-top: 0; border-top: 0; }
+.mother-row.is-cat { color: var(--text-2); cursor: default; }
+.mother-row.is-target:hover { background: rgba(78, 201, 176, 0.1); }
+.mother-row.is-branch .mother-name { font-weight: 600; }
+.mother-row.is-bound { background: rgba(78, 201, 176, 0.1); box-shadow: inset 2px 0 0 rgba(78, 201, 176, 0.75); }
+.mother-row.is-node.is-sel { background: rgba(78, 201, 176, 0.16); box-shadow: inset 2px 0 0 #4EC9B0; }
+.mother-code { color: #B9C2CE; }
+.mother-name { overflow: hidden; text-overflow: ellipsis; }
+.mother-bind { margin-left: 4px; color: #4EC9B0; font-size: 11px; max-width: 55%; overflow: hidden; text-overflow: ellipsis; }
+.mother-en { color: #7F8A99; font-size: 11px; }
+.mother-count { color: #7F8A99; font-size: 11px; margin-left: 8px; }
+.mother-actions { display: flex; gap: 4px; margin-left: auto; opacity: 0; }
+.mother-row.is-node .mother-actions { margin-left: auto; }
+.mother-row:hover .mother-actions { opacity: 1; }
+.mother-hint { border-top: 1px solid var(--line); padding: 7px 14px; font-size: 12px; color: var(--text-2); }
+@media (max-width: 820px) {
+  .mother-cols { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  .mother-pane { border-right: 0; border-bottom: 1px solid var(--line); }
+  .mother-bar .mother-search { width: 100%; }
+}
+
+/* ===== 设置：字号 / 颜色 ===== */
+.settings-h { margin: 14px 0 6px; font-size: 12px; color: var(--text-2); font-weight: 600; }
+.settings-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; font-size: 12px; }
+.settings-row > span:first-child { min-width: 76px; color: var(--text-2); }
+.settings-row input[type="color"] { width: 38px; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: transparent; }
+.settings-row input[type="number"] { width: 72px; }
+.settings-row code { color: #7f8a99; font-size: 11px; }

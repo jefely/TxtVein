@@ -33,6 +33,8 @@ const FILES = [
   'js/core/example.js',
   'js/core/legacy.js',
   'js/core/source.js',
+  'js/core/en-codes.js',
+  'js/core/dict-v4.js',
 ];
 
 function loadTV() {

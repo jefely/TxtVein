@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-ve.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="TxtVein">
-<meta name="app-version" content="2.2.3">
+<meta name="app-version" content="2.4.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -32,12 +32,12 @@
       <span class="brand-mark">TXTVEIN</span>
     </div>
     <nav class="top-menu" aria-label="菜单">
-      <button type="button" class="menu-btn" id="btn-security" data-i18n="security">安全</button>
       <button type="button" class="menu-btn" id="btn-import" data-i18n="import">导入</button>
       <button type="button" class="menu-btn" id="btn-export" data-i18n="export">导出</button>
-      <button type="button" class="menu-btn" id="btn-mode" title="Ctrl+Shift+P" data-i18n="modeCode">简码</button>
-      <button type="button" class="menu-btn" id="btn-lang" title="Ctrl+Shift+L">中</button>
+      <button type="button" class="menu-btn" id="btn-settings" data-i18n="settings">设置</button>
       <button type="button" class="menu-btn" id="btn-help" data-i18n="help">帮助</button>
+      <button type="button" class="menu-btn" id="btn-mode" title="Ctrl+Shift+P" data-i18n="mask">掩码</button>
+      <button type="button" class="menu-btn" id="btn-lang" title="Ctrl+Shift+L" data-i18n="language">语言</button>
     </nav>
     <div class="top-right">
       <button class="chip" id="btn-candidates" title="未知节点候选" hidden data-i18n="candidates">候选</button>
@@ -47,6 +47,7 @@
     <button class="page-tab" id="btn-query" data-view="query" data-i18n="query">查询</button>
     <button class="page-tab is-active" id="btn-ledger" data-view="ledger" data-i18n="ledger">流水</button>
     <button class="page-tab" id="btn-dict" data-view="dict" data-i18n="dict">字典</button>
+    <button class="page-tab" id="btn-mother" data-view="mother" data-i18n="mother">母树</button>
     <button class="page-tab" id="btn-fixed" data-view="fixed" data-i18n="fixed">固定</button>
     <button class="page-tab" id="btn-report" data-view="report" data-i18n="report">统计</button>
   </nav>
@@ -55,6 +56,7 @@
     <section class="query-view" id="query-view" hidden></section>
     <section class="fixed-view" id="fixed-view" hidden></section>
     <section class="report-view" id="report-view" hidden></section>
+    <section class="mother-view" id="mother-view" hidden></section>
   </main>
   <div class="feedback" id="feedback">
     <span class="feedback-text" id="feedback-text"></span>
@@ -64,8 +66,8 @@
     <div class="composer-inner">
       <div class="bubble-layer" id="bubbles" hidden></div>
       <div class="prediction" id="prediction" hidden></div>
+      <div class="composer-batch-hint" id="composer-batch-hint" hidden></div>
       <div class="entry-row">
-        <span class="entry-prompt" id="entry-prompt">&gt;</span>
         <input id="entry" class="entry" type="text" autocomplete="off" autocorrect="off"
                autocapitalize="off" spellcheck="false" enterkeyhint="done"
                placeholder="wx1 > din 35 < 咖啡"> 
@@ -113,6 +115,8 @@
 <script src="js/core/ids.js"></script>
 <script src="js/core/parser.js"></script>
 <script src="js/core/source.js"></script>
+<script src="js/core/en-codes.js"></script>
+<script src="js/core/dict-v4.js"></script>
 <script src="js/core/calc.js"></script>
 <script src="js/core/domain.js"></script>
 <script src="js/core/rules.js"></script>

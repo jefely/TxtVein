@@ -38,17 +38,15 @@
     return map;
   }
 
-  function nameScore(query, candidate, aliases) {
+  function nameScore(query, candidate, aliases, lang) {
     const q = norm(query);
     if (!q) return 0;
-    const zh = norm(candidate.zh_name);
-    const en = norm(candidate.en_name);
-    const zhc = norm(candidate.zh_code);
-    const enc = norm(candidate.en_code);
-    if (q === zh || q === en || q === zhc || q === enc) return 100;
-    if (aliases.zh.get(q) === candidate.id || aliases.en.get(q) === candidate.id) return 95;
-    if (zh.startsWith(q) || en.startsWith(q) || zhc.startsWith(q) || enc.startsWith(q)) return 70;
-    if (zh.includes(q) || en.includes(q) || zhc.includes(q) || enc.includes(q)) return 45;
+    const nm = norm(lang === 'en' ? candidate.en_name : candidate.zh_name);
+    const cd = norm(lang === 'en' ? candidate.en_code : candidate.zh_code);
+    if (q === nm || q === cd) return 100;
+    if (aliases.get(q) === candidate.id) return 95;
+    if (nm.startsWith(q) || cd.startsWith(q)) return 70;
+    if (nm.includes(q) || cd.includes(q)) return 45;
     return 0;
   }
 
@@ -82,6 +80,7 @@
     const polarity = t.ok ? t.pole : '';
     const names = [input.zh_name, input.en_name, input.zh_code, input.en_code].filter(Boolean);
     const query = names.length ? names.join(' ') : '';
+    const lang = o.lang === 'en' ? 'en' : 'zh';
     const aliases = aliasMap(s);
     const leaves = leafList(s, polarity);
     const scores = new Map();
@@ -101,7 +100,7 @@
     names.forEach((q) => {
       leaves.forEach((id) => {
         const n = s.nodes[id];
-        const sc = nameScore(q, n, aliases);
+        const sc = nameScore(q, n, aliases[lang], lang);
         if (sc) add(id, sc, sc >= 95 ? '名称/别名精确命中' : '名称前缀/包含命中');
       });
     });
