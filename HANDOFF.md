@@ -1,205 +1,152 @@
-# TxtVein · 接续说明
+# TxtVein 交接文档
 
-> 给下一位 agent / 下一位自己：先读 [`STATUS.md`](STATUS.md) 一页看全，再读 [`README.md`](README.md) 的格式与边界。
-> 本文只记「改之前必须知道」的结构与踩过的坑。
+> 更新时间：2026-11-19
+> 当前版本：**v2.4.2**
+> 软件提交：`7e7f05b`（本文档的后续提交只含交接说明）
+> 仓库：https://github.com/jefely/TxtVein.git
+> 线上：https://jefely.github.io/TxtVein/TxtVein.html
 
 ---
 
-## 一、固定流程
+## 1. 这一版做了什么
+
+### 行号交互
+
+- 流水表和字典都支持：
+  - 点一次行号：选中该行，灰底，弹出横排菜单；
+  - 再点同一行号：取消选中并收起菜单；
+  - 点另一行：切换到新行。
+- 菜单项：删除 / 剪切 / 复制 / 粘贴 / 插入 / 上移。
+- 手机：
+  - 整条行号栏都可轻点，不要求点中数字；
+  - pointer 事件识别轻点；
+  - 位移 ≤ 12px 才开菜单，超过当滚动；
+  - 拖动不会误弹菜单。
+
+### 流水页滚动
+
+- 进入流水页时，把**最后 10 行**放到视口顶部，只执行一次。
+- 删除行：
+  - 记录删除前 `scrollTop`；
+  - 删除后恢复；
+  - 不再出现“先跳到底部，再回到最后 10 行”。
+- 末尾留白：
+  - 30 行高的 line widget；
+  - 背景 `#050505`，深灰，不和最后一行灰白连成一片；
+  - 不占行号；
+  - **只在行数变化时重挂**，不会每次编辑都触发重排滚动。
+
+### 多层组合输入（v2.4.0）
+
+完整规范见 [`docs/multi-input.md`](docs/multi-input.md)。要点：
+
+- `wx > s zc dt 3 3 2.5` → 3 条。
+- `1 2 *` → 循环 `1, 2, 1`。
+- `1 2*` → 首笔 1，其余 2。
+- `100/` → 均摊。
+- `1 9/` → 首笔 1，剩余均摊 9。
+- `1 9*` → 首笔 1，剩余全部 9。
+- `*d/*m/*y` → 当前笔 + 固定表新增周期计划。
+- 金额阶段提示：`金额 2/4 · 可 * 循环 / 100/ 均摊`。
+- 批量失败整批不落账。
+
+---
+
+## 2. 当前实现位置
+
+| 功能 | 文件 |
+|---|---|
+| 行号选中/取消、菜单、删除滚动恢复 | `js/ui/editor.js` |
+| 末尾留白 widget / 深色 | `js/ui/editor.js` + `css/editor.css`（`.cm-tail-pad`） |
+| 进入流水最后 10 行 | `js/ui/editor.js` 的 `scrollToTail` |
+| 批量语法/金额/计划 | `js/core/source.js`、`js/ui/app.js` |
+| 组合输入规范 | `docs/multi-input.md` |
+| 版本记录 | `CHANGELOG.md` |
+
+### 末尾留白的关键约束
+
+不要重复以下失败方案：
+
+1. `.CodeMirror-sizer::after`：不计入 CodeMirror 滚动高度。
+2. `.CodeMirror-sizer { margin-bottom: 600px }`：浏览器 scrollHeight 会增加，但 CodeMirror 刷新后按旧高度 clamp 回 1468。
+3. `.CodeMirror-scroll { padding-bottom: 600px }`：clientHeight 也会变大，视口被破坏。
+4. 每次 `changes` 都重挂 tail widget：会触发滚动。
+5. 60ms 防抖重挂 widget：会“先跳再回来”。
+
+当前方案：line widget + 只在 `lineCount()` 变化时 `syncTailPad`；删除时恢复 `scrollTop`。
+
+---
+
+## 3. 验证状态
+
+```text
+TxtVein.html              1,236.4 KB
+Node 测试                 230 pass / 0 fail
+门禁                     176 pass / 0 fail
+主 E2E                   91 pass
+v4 E2E                   62 pass
+```
+
+本轮实测：
+
+- 进入 100 行流水：`top=2010`，视口首行第 91 行（最后 10 行置顶）。
+- 删除最后空行：`top=2010`，差值为 0。
+- 16ms 间隔采样 63 次：`top` 全部 2010，无跳变。
+- 行号点两次：菜单 6 → 0，选中 class 2（两个 gutter）→ 0。
+- 流水和字典都测过。
+
+### 验证命令
 
 ```powershell
 cd D:\myproject\TxtVein
-
-node --test tests/*.test.cjs      # 1. 核心测试（198）
-node tools/gen-system-dict.cjs    # 2. 母树生成（build 会自动跑）
-node tools/build.cjs              # 3. 单文件
-node tools/check.cjs              # 4. 工程门禁（158）
-python serve.py 8899              # 5. 另开一个终端
-python tools/e2e.py               # 6. 浏览器 E2E（56）
-python tools/smoke_file.py        # 7. file:// 单文件冒烟
-```
-
-改动后至少跑：`test` → `build` → `check` → `e2e`。
-只改 CSS/UI 也要 `build`，因为用户双击的是 `TxtVein.html`。
-
----
-
-## 一之二、母树数据层
-
-```text
-js/core/system.dict        唯一可编辑源（Tree / Alias / Merchant）
-        ↓ node tools/gen-system-dict.cjs
-js/core/system-dict.js     生成物：VERSION / HASH / 冻结 nodes
-js/core/system-dict-core.js 解析 / 索引 / 图算法 / 路径 / 类型继承
-```
-
-- **只改 `system.dict`，不要手改 `system-dict.js`**；`tools/build.cjs` 会先跑生成器。
-- 首版：190 节点 / 162 叶子 / 56 银行 / 30 商户；深度 3；G1–G21。
-- 一个概念一个顶点；中英名成对；推荐简码在行内，不是身份。
-- 内部节点只汇总，叶子才可记账；每个内部节点有 `.GENERAL` 叶子。
-- 商户是 facet，不是锚点目标；`default_category` 指向可记账叶子。
-- 测试：`tests/system-graph.test.cjs`、`system-dict.test.cjs`、`system-i18n.test.cjs`。
-- 门禁会校验生成物哈希是否新鲜；改了 `.dict` 没生成会失败。
-
-### 一之三、v3 保险库与 P/C 拆分
-
-```text
-js/core/user-dict.js        split / merge / checkSide
-js/browser/store.js         payload v3：dictSourceP / dictSourceC / systemVersion
-```
-
-- 新保险库直接 v3；v2 只读兼容，不做迁移。
-- `dictSourceP` = P/F，`dictSourceC` = C/H；编译时合并成一个 Dict。
-- 同域唯一：P/C 可以各有一个 `coffee`；`resolveAlias`/`resolveTag` 先按域过滤。
-- 跨域同码的别名写成 `N:P:code` / `N:C:code`；`dictToSource` 自动加限定。
-- 测试：`tests/split-dict.test.cjs`、`tree-view.test.cjs`、`anchor.test.cjs`；E2E 走新保险库 setup/save/reload。
-
-### 一之四、私人树 sort 与锚点
-
-```text
-js/core/tree-view.js       会计类型块头 + 私人 parent_id 树；sort 优先
-js/core/anchor.js          锚点 set/clear/validate；类型/极性继承
-```
-
-- `sort` 是显示顺序（0–100000，默认 100）；`weight` 仍是候选排序。
-- 字典源码尾部可写 `sort:10`；`dictToSource` 只在非 100 时输出。
-- 锚点在源码尾部写 `^SYS.CAT.DINING.COFFEE`；`@SYS...` 兼容读。
-- 锚点必须是母树叶子；有历史时翻转极性拒绝；未确认不写。
-- 顶栏不再单独开“树”弹窗；字典源码 `[树]` 段用缩进列出私人树，改缩进即改父级。
-- 节点表单显示“公共：…”副标签，并提供“建议归属”按钮；建议只填选择，保存才写入。
-
----
-
-## 二、唯一状态与唯一写入
-
-```text
-app.js
-  S.dict / S.events / S.behaviors / S.notes / S.plans / S.rules / S.vaultId
-  S.ledgerSource / S.dictSource / S.sourceDiags
-  compileSources()        ← 唯一编译器入口：dict.tv + ledger.tv → ID 图
-  submitEntry()           ← 唯一录入入口：写一行源码 → compileSources()
-  projectEditorSource()   ← 4 态投影：合法行重渲染，错误行原位保留
-  buildTexts()            ← 唯一序列化 / 双哈希出口
-  saveNow()               ← 唯一写保险库出口
-
-editor.js                 ← CM5 双文件；只管文本/诊断/补全，不碰 ID 图
-panels.js                  ← 规则/导出/导入/帮助；不再有字典弹窗
-```
-
-不要在 `panes.js` / `report-view.js` 里存事件或余额；它们每次都从 `S` 重算/重渲染。
-
----
-
-## 三、数据流
-
-```text
-输入 raw
-  → parser.parseEntry(raw, draftDict, opts)
-      · 词法/日期/域/标签/链
-      · 绑定 ID（唯一命中才过；多义返回 candidates；未命中返回 suggest）
-      · 链式展开 + 差额 system loss/gain
-      · 周期计划
-  → app 提交 draftDict，分配 E_ ID
-  → S.events / S.plans
-  → buildTexts(): syncMeta → dictHash → ledger LINK → ledgerHash → dict.link
-  → store.save(encrypted payload)
-  → renderAll(): calc.compute → panes / report
-```
-
-**解析必须先克隆 dict**：`parser.parseEntry` 会原地写标签、别名、计数器、system 节点；失败时要丢弃整个草稿，不能污染 live dict。
-例如 `wx1 > rent 1000*m` 在创建标签后才发现计划非法，若 clone 前就提交，会留下孤儿标签。
-
----
-
-## 四、哈希互锁（最容易改坏）
-
-```text
-Hash_B = sha256(dictForHash(dict))       # link 字段不参与
-ledger.LINK = Hash_B
-Hash_A = sha256(ledgerBody(ledger))      # # LINK 行不参与
-dict.link = Hash_A
-```
-
-- `dict-file.bodyForHash()` 先 `normalizeDict()`，再 `canonicalJson`。
-- `normalizeDict()` 只保留已知字段；未知字段会被丢掉，所以 **哈希必须基于 normalize 后的对象**，否则「导出的文件自己校验不过」。
-- `ledger-file.bodyForHash()` 过滤 `# LINK:` 行、统一换行、去尾部空行，再加一个换行。
-- 导入时 `VAULT_ID` 与两条哈希都要校验；不匹配返回 `needsForce:true`，UI 勾选强制才继续。
-
-**踩过的真实 bug（2026-11-15）**：
-`dict.js` 里 `ensureMeta(dict).updatedAt = ...` 把 `updatedAt` 写到了 dict 顶层（`ensureMeta` 返回 dict，不是 meta），parseDict 丢字段 → 自己导出的明文导入时报「指纹不匹配」。
-修复：`ensureMeta(dict); dict.meta.updatedAt = ...`，并让 `normalizeDict` 兼容旧顶层 `updatedAt`。
-
----
-
-## 五、双极与域（不要退回）
-
-- `processTransfer`：from A `-=`，from B `+=`；to A `+=`，to B `-=`。
-- 期末 = 期初 + 本期增加 − 本期减少；`opening` 由区间前流水折入。
-- 全局守恒：`globalClosingNet === globalOpeningNet`；不要拿域子集去断言守恒。
-- 独立域视角：跨域那一端会让 A−B 变化；`calc.js` 算 `crossNetDelta`，报表用 `adjustedNet = closingNet - crossNetDelta` 显示「域内净额」。
-- 跨域不做镜像双记；一笔真实边 + 报表抵消。要镜像时必须先解决「同一笔钱被算两次」。
-
----
-
-## 六、UI 里踩过的坑
-
-1. **双空格宏**：只在「前一个字符是空格」且 250ms 内触发；否则金额后的第一个空格会被吞掉，第二次空格才变普通空格。
-2. **宏的光标**：替换后光标要落在 `pos - 1 + insert.length`（插入串末尾），不是 `pos + op.length`；否则 `>` 后没有空格会变成 `wx1 >din`。
-3. **冲突简码**：`displayCode()` 按别名数组顺序给 `wx1/wx2`；不要退回直接 `zh_code`，否则屏幕上两个 `wx`。
-4. **气泡**：`analyzeInput` 不要用「首项等于输入」就隐藏；`wx` 多义会被误吞。唯一命中由 `resolveAlias/resolveTag` 返回 `ok` 处理。
-5. **Enter**：有气泡时先选候选；没有气泡才提交。精确命中时 `resolveAlias` 已 `ok`，不产生气泡。
-6. **Delete**：条件是 `S.editingIndex < 0`（不是 `!S.editingIndex`，因为 -1 是 truthy）。
-7. **模式切换**：如果当前在报表视图，`renderAll()` 不会重绘隐藏的窗格；E2E 要先切回流水再断言窗格文本。
-8. **单文件构建**：`tools/build.cjs` 从 `index.html` 内联 `<link>` / `<script>`；新增 JS/CSS 必须加进 `index.html`，否则构建产物没有它。
-
----
-
-## 七、格式速查
-
-```txt
-ledger 行：
-[域] YYMMDD 转出ID > 转入ID 金额整数分 [T_ID...] [^C_ID]
-时间行：
-[P] 261115 N_001 > N_003 60min T_time
-
-dict 节点：
-{ zh_name, en_name, zh_code, en_code, polarity, type, form,
-  domain, parent_id, weight, system, created_at }
-
-dict 标签：
-{ zh_name, en_name, zh_code, en_code, domain, parent_id, weight, kind, created_at }
-
-[PLAN]
-R_001 active: 0 N_001 > N_004 100000 T_02 *m last_run=261111
-
-[RULES]
-R_101 active: keywords=(外卖)&amount<10000 -> N_001 > N_003 tags=T_05,T_02 name=外卖
-
-加密装甲：
-# [SECURE_START: P, AES-GCM-256]
-...
-# [SECURE_END]
+node tools/build.cjs
+node --test tests/*.test.cjs
+node tools/check.cjs
+$env:TXTVEIN_URL='file:///D:/myproject/TxtVein/index.html'
+python tools/e2e.py
+python tools/e2e_v4.py
 ```
 
 ---
 
-## 八、测试的边界
+## 4. 还需要在真机确认
 
-- Node tests cover: amount/date/dict/parser/calc/rules/file/crypto/report/legacy/example.
-- E2E covers UI 主链路；不测真实文件下载（下载由浏览器行为决定），加密导入通过 `store.encryptWithCurrent` + `importFiles` 覆盖。
-- `smoke_file.py` 只证明 `file://` 单文件可设密码/刷新解锁；不替代 E2E。
-- 若新增格式字段：先加 Node 往返测试，再加 E2E；不要只改 UI。
+1. GitHub Pages 是否已部署到 v2.4.2（帮助页底部版本）。
+2. 手机上删除最后空行，是否**全程无上下位移**（不是跳完再回来）。
+3. 末尾留白是否已是深灰 `#050505`，和最后一行明显分开。
+4. 流水/字典行号：
+   - 点一次选中并弹菜单；
+   - 再点同一行取消；
+   - 拖动行号栏只滚动。
+5. 如果最后一行 active line 的灰色背景仍然让它和留白看起来连在一起：
+   - 可在 `.CodeMirror-activeline-background` 上避开空行；
+   - 或把留白改为更接近页面底色的 `#0b0b0b`。
+
+> 用户口头说“20 行空行”，但实现保留 30 行。原因：手机视口约 35 行，只有留白 ≥ 25 行左右，才可能把最后 10 行顶到视口顶部；20 行会导致最后 10 行顶不到最上面。若用户坚持 20 行，需要接受最后 10 行无法完全置顶。
 
 ---
 
-## 九、已知未做
+## 5. 发布流程
 
-见 `NEXT.md`：自动锁屏、IndexedDB、万行压测、规则编辑 UI、穿戴、审计插件、深水掩码、多币种。
+当前已推 v2.4.2；后续若继续改：
+
+1. 改 `package.json`、`js/core/version.js`、`sw.js`、`index.html` meta、README 徽章、STATUS 标题。
+2. 更新 `CHANGELOG.md`。
+3. `node tools/build.cjs`。
+4. 跑全量测试。
+5. commit → push main → `git tag -a vX.Y.Z` → push tag。
+
+Git 注意：
+
+- `local/` 是私人账本，已加入 `.gitignore`，不要提交。
+- 截图、`_tmp_cdp_profile*`、临时文件不要进仓库。
+- 仓库是公开的；`docs/private-dict-v4.sample.*` 是测试样例，包含节点名，提交前留意隐私。
 
 ---
 
-## 十、工作区约定
+## 6. 下一步可选
 
-- 中文思考、中文反馈；中文术语（素参、沉积、意义权…）不翻译。
-- 默认 **B 档**；改论文/主张表/对外发布用 **C 档**；想撑开可能性用 **A 档**（A 档产出只能是假说）。
-- 动手前读 `AGENTS.md`；本子项目只依赖自身 `js/`，不引入第三方库。
+- 把行号菜单的“选中”做成可键盘操作（↑↓ 选择、Enter 执行）。
+- 行号菜单在窄屏改为底部动作条，避免遮挡。
+- 末尾留白行数做成设置项（默认 30）。
+- 增加真机触摸的 E2E 回归（目前是 CDP 触摸模拟）。
