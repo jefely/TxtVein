@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.4.1-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.4.2-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-green.svg" alt="License">
   <img src="https://img.shields.io/badge/data-100%25%20Local-black.svg" alt="Local First">
 </p>
@@ -400,7 +400,7 @@ TxtVein/
 │  ├─ check.cjs           ← 工程门禁（176 项）
 │  ├─ cdp.py              ← Chrome DevTools 小助手
 │  ├─ e2e.py              ← 浏览器端到端（91 项断言）
-│  ├─ e2e_v4.py           ← v4 字典端到端（61 项断言）
+│  ├─ e2e_v4.py           ← v4 字典端到端（62 项断言）
 │  ├─ smoke_file.py       ← file:// 单文件冒烟
 │  └─ smoke.py            ← 快速截图/冒烟
 ├─ docs/screens/          ← 截图
@@ -426,7 +426,7 @@ node tools/build.cjs              # 生成 TxtVein.html
 node tools/check.cjs              # 176 项工程门禁
 python serve.py 8899              # 另开一个终端（E2E 用）
 python tools/e2e.py               # 91 项浏览器断言（需先起 8899 服务）
-python tools/e2e_v4.py            # 61 项 v4 断言（导入/整页母树/点选绑定/采纳/输入流/编辑器/数字快捷键/金额）
+python tools/e2e_v4.py            # 62 项 v4 断言（导入/整页母树/点选绑定/采纳/输入流/编辑器/数字快捷键/金额）
 python tools/smoke_file.py        # file:// 单文件冒烟（含设密码 / 刷新解锁）
 ```
 

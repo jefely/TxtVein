@@ -407,6 +407,11 @@
     }
 
     function openLineMenu(cm, file, line, x, y) {
+      /* 同一行再次点击：取消选中并收起菜单 */
+      if (lineMenu && lineMenuCm === cm && lineMenuLine === line) {
+        closeLineMenu();
+        return;
+      }
       closeLineMenu();
       const menu = el('div', { class: 'cm-line-menu' });
       const add = (label, fn, disabled) => {
@@ -498,6 +503,15 @@
       wrap.addEventListener('pointerdown', (ev) => {
         const n = lineAtEvent(ev);
         if (!n) return;
+        if (lineMenu && lineMenuCm === cm && lineMenuLine === n - 1) {
+          tap = null;
+          suppressClickUntil = Date.now() + 500;
+          closeLineMenu();
+          ev.preventDefault();
+          ev.stopPropagation();
+          if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+          return;
+        }
         tap = { x: ev.clientX, y: ev.clientY, n, at: Date.now(), id: ev.pointerId };
       }, true);
       wrap.addEventListener('pointerup', (ev) => {
@@ -527,23 +541,7 @@
       });
     }
 
-    /* 末尾 30 行滚动留白：不是正文行，不占行号 */
-    function syncTailPad(cm) {
-      if (!cm || !cm.lineCount) return;
-      const h = Math.max(12, cm.defaultTextHeight() || 18) * 30;
-      if (cm._tailPad) {
-        try { cm.removeLineWidget(cm._tailPad); } catch (e) { /* ignore */ }
-        cm._tailPad = null;
-      }
-      const pad = el('div', { class: 'cm-tail-pad', 'aria-hidden': 'true' });
-      pad.style.height = h + 'px';
-      cm._tailPad = cm.addLineWidget(Math.max(0, cm.lineCount() - 1), pad, { above: false });
-    }
-
-    function scheduleTailPad(cm) {
-      clearTimeout(cm._tailTimer);
-      cm._tailTimer = setTimeout(() => syncTailPad(cm), 60);
-    }
+    /* 末尾留白改由 CSS sizer 提供，避免编辑时重挂 widget 触发滚动 */
 
     function makePane(file, mode) {
       const pane = el('div', { class: 'editor-pane' + (file === active ? ' is-active' : ''), dataset: { file } });
@@ -633,8 +631,6 @@
       }, true);
       cm.on('copy', () => { const s = cm.getSelection(); if (s) lineClip = s; });
       cm.on('cut', () => { const s = cm.getSelection(); if (s) lineClip = s; });
-      cm.on('changes', () => scheduleTailPad(cm));
-      syncTailPad(cm);
       const syncWrap = () => cm.setOption('lineWrapping', window.matchMedia('(max-width: 760px)').matches);
       syncWrap();
       window.addEventListener('resize', syncWrap);
@@ -663,6 +659,7 @@
           if (!hint || !hint.matches(':hover')) { if (cm.closeHint) cm.closeHint(); }
         }, 220);
       });
+      cm.on('changes', () => { if (cm._tailCount !== cm.lineCount()) syncTailPad(cm); });
       cm.on('inputRead', (cmx, change) => {
         if (file !== active) return;
         const t = change.text.join('');
@@ -867,6 +864,28 @@
       renderStatus();
     }
 
+    /* 末尾 30 行留白：只有行数变化时才重挂，避免每次编辑都触发滚动 */
+    function syncTailPad(cm) {
+      if (!cm || !cm.lineCount) return;
+      const count = cm.lineCount();
+      const h = Math.max(12, cm.defaultTextHeight() || 18) * 30;
+      if (cm._tailPad && cm._tailCount === count && cm._tailPad.node && cm._tailPad.node.isConnected) {
+        if (Math.abs((cm._tailPad.node.offsetHeight || 0) - h) > 1) {
+          cm._tailPad.node.style.height = h + 'px';
+          try { cm._tailPad.changed(); } catch (e) { /* ignore */ }
+        }
+        return;
+      }
+      if (cm._tailPad) {
+        try { cm.removeLineWidget(cm._tailPad); } catch (e) { /* ignore */ }
+        cm._tailPad = null;
+      }
+      const pad = el('div', { class: 'cm-tail-pad', 'aria-hidden': 'true' });
+      pad.style.height = h + 'px';
+      cm._tailPad = cm.addLineWidget(Math.max(0, count - 1), pad, { above: false });
+      cm._tailCount = count;
+    }
+
     function setTexts(ledgerText, dictText) {
       suspended = true;
       const a = editors.ledger;
@@ -874,10 +893,16 @@
       if (a && a.getValue() !== String(ledgerText == null ? '' : ledgerText)) {
         a.setValue(String(ledgerText == null ? '' : ledgerText));
         a.clearHistory();
+        a._tailPad = null;
+        a._tailCount = -1;
+        syncTailPad(a);
       }
       if (b && b.getValue() !== String(dictText == null ? '' : dictText)) {
         b.setValue(String(dictText == null ? '' : dictText));
         b.clearHistory();
+        b._tailPad = null;
+        b._tailCount = -1;
+        syncTailPad(b);
       }
       suspended = false;
       dirty.ledger = false;
@@ -925,24 +950,22 @@
       if (!cm || !cm.lineCount) return;
       const last = Math.max(0, cm.lineCount() - 1);
       const info = cm.getScrollInfo();
-      const padH = cm._tailPad && cm._tailPad.node ? cm._tailPad.node.offsetHeight || 0 : 0;
       /* 正文本身不足一屏：从顶部显示，不为了最后 10 行把开头藏掉 */
-      if (info.height - padH <= info.clientHeight) {
+      if (info.height <= info.clientHeight) {
         cm.scrollTo(null, 0);
         return;
       }
-      /* 最后 10 行放到视口顶部，末尾留白留在下方 */
+      /* 最后 10 行放到视口顶部；已经在目标位置附近就不重复滚动 */
       const first = Math.max(0, last - 9);
       const coords = cm.charCoords({ line: first, ch: 0 }, 'local');
       const maxTop = Math.max(0, info.height - info.clientHeight);
-      cm.scrollTo(null, Math.min(Math.max(0, coords.top), maxTop));
+      const target = Math.min(Math.max(0, coords.top), maxTop);
+      if (Math.abs(info.top - target) <= 48) return;
+      cm.scrollTo(null, target);
     }
 
     function refresh() {
-      Object.keys(editors).forEach((k) => {
-        editors[k].refresh();
-        syncTailPad(editors[k]);
-      });
+      Object.keys(editors).forEach((k) => { editors[k].refresh(); syncTailPad(editors[k]); });
     }
 
     setActive('ledger');

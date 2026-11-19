@@ -7,7 +7,7 @@
 
 ## 一、这是什么
 
-**TxtVein（文脉）v2.4.1**：纯文本、无分录、双极图论账本，外加备注层和行为层。
+**TxtVein（文脉）v2.4.2**：纯文本、无分录、双极图论账本，外加备注层和行为层。
 
 - 会计层：`N_` 节点 + `E_` 原子边，进 A/B 余额。
 - 备注层：`T_` 标签 + `X_` 备注/错误/注释，两级统计，不进余额。
@@ -72,17 +72,17 @@ D:\myproject\TxtVein\
 | 自动生成 | 备注标签自动；行为项自动（另一端已是行为项，或会计节点补行为角色）；会计节点只提议 |
 | 报表 | 双极四列 + 能量审计 + 时间 + 链式因果 + 顶部行为/备注统计 + 行为树/备注树 |
 | 存储 | localStorage 加密保险库；PBKDF2 150k → AES-GCM-256；CAS 防多标签覆盖 |
-| 测试 | **230** Node · **176** 门禁 · **91 + 61** E2E · 单文件冒烟通过 |
+| 测试 | **230** Node · **176** 门禁 · **91 + 62** E2E · 单文件冒烟通过 |
 | 字典 v4 | **已实施**：节点级固定绑定 / 无损转换 / 整页母树（点选绑定） / 同支推荐 / 语义校验 / 语义染色 / 录入流（编辑器同源 / 修正模式按波浪线启用 / 输入框收窄 / 自动别名不落盘 / v4 不自动建行为项 / 颜色与字号可配 / 改字典按 ID 重投影流水）；待打磨拖拽与状态栏计数 |
 
 最近验证（2026-11-18）：
 
 ```text
 node tests/*.test.cjs（沙箱下逐个运行）   223 pass / 0 fail
-node tools/build.cjs                     TxtVein.html 1,233.3 KB
+node tools/build.cjs                     TxtVein.html 1,236.4 KB
 node tools/check.cjs                     176 pass / 0 fail
 python tools/e2e.py    (file://)         91 pass / E2E PASSED
-python tools/e2e_v4.py (file://)        61 pass / E2E v4 PASSED
+python tools/e2e_v4.py (file://)        62 pass / E2E v4 PASSED
 ```
 
 > 沙箱下 E2E 能跑的原因：`tools/cdp.py` 把 Chrome 的 stdout/stderr 重定向到

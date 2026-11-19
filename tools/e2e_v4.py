@@ -266,6 +266,16 @@ def main():
       var info=cm.getScrollInfo(), last=cm.lineCount()-1;
       var c=cm.charCoords({line:last,ch:0},'local');
       return info.top>0 && cm.lineAtHeight(info.top,'local')>=last-9 && c.bottom<=info.top+info.clientHeight+2;})()""", b) is True)
+    pt = j(sid, """(function(){var ns=document.querySelectorAll('.CodeMirror')[0].querySelectorAll('.CodeMirror-linenumber');
+      for(var i=0;i<ns.length;i++){var r=ns[i].getBoundingClientRect();if(r.top>120&&r.top<600)return {x:r.left+r.width/2,y:r.top+r.height/2};}
+      return null;})()""", b)
+    for _ in range(2):
+        b.call("Input.dispatchMouseEvent", {"type": "mousePressed", "x": pt["x"], "y": pt["y"], "button": "left", "clickCount": 1}, sid)
+        b.call("Input.dispatchMouseEvent", {"type": "mouseReleased", "x": pt["x"], "y": pt["y"], "button": "left", "clickCount": 1}, sid)
+        time.sleep(0.35)
+    ok("line number toggles selection",
+       j(sid, "document.querySelectorAll('.cm-line-menu button').length", b) == 0
+       and j(sid, "document.querySelectorAll('.tv-line-selected').length", b) == 0)
     before_top = j(sid, "document.querySelectorAll('.CodeMirror')[0].CodeMirror.getScrollInfo().top", b)
     j(sid, """(function(){var cm=document.querySelectorAll('.CodeMirror')[0].CodeMirror;
       cm.setCursor({line:cm.lineCount()-1,ch:0}); cm.focus(); return true;})()""", b)
