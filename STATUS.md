@@ -7,7 +7,7 @@
 
 ## 一、这是什么
 
-**TxtVein（文脉）v2.5.0**：纯文本、无分录、双极图论账本，外加备注层和行为层。
+**TxtVein（文脉）v2.5.1**：纯文本、无分录、双极图论账本，外加备注层和行为层。
 
 - 会计层：`N_` 节点 + `E_` 原子边，进 A/B 余额。
 - 备注层：`T_` 标签 + `X_` 备注/错误/注释，两级统计，不进余额。
@@ -80,7 +80,7 @@ D:\myproject\TxtVein\
 
 ```text
 node --test tests/*.test.cjs             242 pass / 0 fail
-node tools/build.cjs                     TxtVein.html 1,313.9 KB
+node tools/build.cjs                     TxtVein.html 1,314.4 KB
 node tools/check.cjs                     178 pass / 0 fail
 python tools/e2e.py    (file://)         E2E PASSED
 python tools/e2e_v4.py (file://)         E2E v4 PASSED

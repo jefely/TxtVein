@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-ve.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="TxtVein">
-<meta name="app-version" content="2.5.0">
+<meta name="app-version" content="2.5.1">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -3857,7 +3857,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   'use strict';
 
   const TV = (root.TxtVein = root.TxtVein || {});
-  const APP_VER = 'txtvein-v2.5.0';
+  const APP_VER = 'txtvein-v2.5.1';
 
   function parseVer(v) {
     const m = String(v || '').match(/v?(\d+)\.(\d+)\.(\d+)/);
@@ -23933,9 +23933,14 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     const ev = rulesMod.confirmOccurrence(p, spec, new Date(), { dict: S.dict });
     if (!ev) { toast('这一期认不出来', 'error'); return; }
     if (!(ev.amountCents > 0)) { toast('金额必须大于 0', 'error'); return; }
-    insertLedgerLine(eventLineWithNote(ev));
+    const lineNo = insertLedgerLine(eventLineWithNote(ev));
+    /* 确认是在未来行的行号菜单里点的：先把正文同步进编辑器，
+     * 否则随后的未来区重建会从编辑器里读到旧正文，新流水要等切页才出现。 */
+    if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
     writeFixedSource();
     compileSources();
+    /* 新流水落在它自己的日期上，把视口带到那一行（未来行在末尾，不滚会看不见） */
+    if (editorCtl && lineNo) editorCtl.gotoLine('ledger', lineNo, 120);
     scheduleSave();
     toast('已确认' + (spec.periodIndex ? '（' + spec.periodIndex + ' 期）' : '') + '：' + rulesMod.shortDate(ev.date), 'ok');
   }
@@ -23972,6 +23977,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       r.events.slice()
         .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
         .forEach((e) => insertLedgerLine(eventLineWithNote(e)));
+      if (r.generated && editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
       compileSources();
       scheduleSave();
       if (r.generated) toast('已自动记账 ' + r.generated + ' 笔到期固定收支', 'ok');

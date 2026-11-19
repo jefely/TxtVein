@@ -782,9 +782,14 @@
     const ev = rulesMod.confirmOccurrence(p, spec, new Date(), { dict: S.dict });
     if (!ev) { toast('这一期认不出来', 'error'); return; }
     if (!(ev.amountCents > 0)) { toast('金额必须大于 0', 'error'); return; }
-    insertLedgerLine(eventLineWithNote(ev));
+    const lineNo = insertLedgerLine(eventLineWithNote(ev));
+    /* 确认是在未来行的行号菜单里点的：先把正文同步进编辑器，
+     * 否则随后的未来区重建会从编辑器里读到旧正文，新流水要等切页才出现。 */
+    if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
     writeFixedSource();
     compileSources();
+    /* 新流水落在它自己的日期上，把视口带到那一行（未来行在末尾，不滚会看不见） */
+    if (editorCtl && lineNo) editorCtl.gotoLine('ledger', lineNo, 120);
     scheduleSave();
     toast('已确认' + (spec.periodIndex ? '（' + spec.periodIndex + ' 期）' : '') + '：' + rulesMod.shortDate(ev.date), 'ok');
   }
@@ -821,6 +826,7 @@
       r.events.slice()
         .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
         .forEach((e) => insertLedgerLine(eventLineWithNote(e)));
+      if (r.generated && editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
       compileSources();
       scheduleSave();
       if (r.generated) toast('已自动记账 ' + r.generated + ' 笔到期固定收支', 'ok');
