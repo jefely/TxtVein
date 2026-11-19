@@ -2,7 +2,7 @@
 
 > 更新时间：2026-11-19
 > 当前版本：**v2.5.0**
-> 软件提交：`pending`（提交后填）
+> 软件提交：`d895b04`
 > 仓库：https://github.com/jefely/TxtVein.git
 > 线上：https://jefely.github.io/TxtVein/TxtVein.html
 
