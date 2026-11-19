@@ -103,9 +103,14 @@ def main():
     tails = j(sid, """(function(){return Array.from(document.querySelectorAll('.CodeMirror')).map(function(w){
       var cm=w.CodeMirror, pad=w.querySelector('.cm-tail-pad');
       return {pad:!!pad, h:pad?Math.round(pad.getBoundingClientRect().height):0,
+        future:!!w.querySelector('.cm-future-rows'),
         lines:cm.lineCount(), textLines:cm.getValue().split('\\n').length};});})()""", b)
-    ok("tail pad 30 lines", len(tails) == 2 and all(x["pad"] and x["lines"] == x["textLines"] for x in tails)
+    ok("bottom spacer only", len(tails) == 2 and all(not x["future"] for x in tails)
+       and all(x["lines"] == x["textLines"] for x in tails)
        and max(x["h"] for x in tails) >= 300, tails)
+    ok("ledger text has no synthetic lines",
+       j(sid, "document.querySelectorAll('.CodeMirror')[0].CodeMirror.getValue()", b)
+       == j(sid, "window.__txtvein.source().ledger", b))
     ok("81 fixed bindings", j(sid, """(function(){var s=window.__txtvein.getState();
       return Object.keys(s.dict.nodes).filter(function(id){var n=s.dict.nodes[id];return !n.system&&n.anchor_id;}).length;})()""", b) == 81)
 
@@ -234,20 +239,24 @@ def main():
     j(sid, """(function(){var cm=document.querySelectorAll('.CodeMirror')[0].CodeMirror;
       cm.setValue('AAA\\nBBB\\nCCC\\n'); return true;})()""", b)
     time.sleep(0.4)
-    j(sid, """(function(){var n=document.querySelectorAll('.CodeMirror-linenumber')[1];
-      n.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:50,clientY:120})); return true;})()""", b)
+    j(sid, """(function(){var ns=Array.from(document.querySelectorAll('.CodeMirror')[0].querySelectorAll('.CodeMirror-linenumber'));
+      var n=ns.find(function(x){return x.textContent.replace(/\u2007/g,'').trim()==='2';});
+      if(!n) return false; var r=n.getBoundingClientRect();
+      n.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:r.left+3,clientY:r.top+3})); return true;})()""", b)
     time.sleep(0.2)
     j(sid, """(function(){var b=Array.from(document.querySelectorAll('.cm-line-menu button'))
       .find(function(x){return x.textContent==='上移';}); if(b)b.click(); return true;})()""", b)
     time.sleep(0.4)
     ok("上移 swaps lines",
-       j(sid, "document.querySelectorAll('.CodeMirror')[0].CodeMirror.getValue()", b) == "BBB\nAAA\nCCC\n")
+       j(sid, "window.__txtvein.source().ledger", b).rstrip("\n") == "BBB\nAAA\nCCC")
     j(sid, """(function(){var cm=document.querySelectorAll('.CodeMirror')[0].CodeMirror;
       cm.setValue('AAA\\nBBB\\nCCC\\nDDD\\n'); return true;})()""", b)
     time.sleep(0.3)
     def line_action(idx, label):
-        j(sid, """(function(){var n=document.querySelectorAll('.CodeMirror-linenumber')[%d];
-          n.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:50,clientY:120})); return true;})()""" % idx, b)
+        j(sid, """(function(){var ns=Array.from(document.querySelectorAll('.CodeMirror')[0].querySelectorAll('.CodeMirror-linenumber'));
+          var n=ns.find(function(x){return x.textContent.replace(/\u2007/g,'').trim()===String(%d);});
+          if(!n) return false; var r=n.getBoundingClientRect();
+          n.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:r.left+3,clientY:r.top+3})); return true;})()""" % (idx + 1), b)
         time.sleep(0.15)
         j(sid, """(function(){var b=Array.from(document.querySelectorAll('.cm-line-menu button'))
           .find(function(x){return x.textContent===%s;}); if(b)b.click(); return true;})()""" % json.dumps(label), b)
@@ -256,16 +265,18 @@ def main():
     line_action(3, '粘贴')
     line_action(2, '插入')
     ok("paste replaces / insert before",
-       j(sid, "document.querySelectorAll('.CodeMirror')[0].CodeMirror.getValue()", b) == "AAA\nBBB\nBBB\nCCC\nBBB\n")
+       j(sid, "window.__txtvein.source().ledger", b).rstrip("\n") == "AAA\nBBB\nBBB\nCCC\nBBB")
     long_lines = "".join("260101 WX > DC 3\n" for _ in range(100))
     j(sid, "document.querySelectorAll('.CodeMirror')[0].CodeMirror.setValue(%s); true" % json.dumps(long_lines), b)
     time.sleep(0.6)
     j(sid, "document.querySelector('#btn-dict').click()", b); time.sleep(0.4)
     j(sid, "document.querySelector('#btn-ledger').click()", b); time.sleep(0.8)
-    ok("ledger opens at tail", j(sid, """(function(){var cm=document.querySelectorAll('.CodeMirror')[0].CodeMirror;
-      var info=cm.getScrollInfo(), last=cm.lineCount()-1;
+    tailinfo = j(sid, """(function(){var cm=document.querySelectorAll('.CodeMirror')[0].CodeMirror;
+      var info=cm.getScrollInfo(), last=window.__txtvein.realLines()-1;
       var c=cm.charCoords({line:last,ch:0},'local');
-      return info.top>0 && cm.lineAtHeight(info.top,'local')>=last-9 && c.bottom<=info.top+info.clientHeight+2;})()""", b) is True)
+      return {top:info.top, last:last, atTop:cm.lineAtHeight(info.top,'local'), bottom:c.bottom,
+        ch:info.clientHeight, ok:info.top>0 && cm.lineAtHeight(info.top,'local')>=last-9 && c.bottom<=info.top+info.clientHeight+2};})()""", b)
+    ok("ledger opens at tail", tailinfo.get("ok") is True, tailinfo)
     pt = j(sid, """(function(){var ns=document.querySelectorAll('.CodeMirror')[0].querySelectorAll('.CodeMirror-linenumber');
       for(var i=0;i<ns.length;i++){var r=ns[i].getBoundingClientRect();if(r.top>120&&r.top<600)return {x:r.left+r.width/2,y:r.top+r.height/2};}
       return null;})()""", b)
@@ -278,12 +289,12 @@ def main():
        and j(sid, "document.querySelectorAll('.tv-line-selected').length", b) == 0)
     before_top = j(sid, "document.querySelectorAll('.CodeMirror')[0].CodeMirror.getScrollInfo().top", b)
     j(sid, """(function(){var cm=document.querySelectorAll('.CodeMirror')[0].CodeMirror;
-      cm.setCursor({line:cm.lineCount()-1,ch:0}); cm.focus(); return true;})()""", b)
+      cm.setCursor({line:window.__txtvein.realLines()-1,ch:0}); cm.focus(); return true;})()""", b)
     time.sleep(0.2)
     send_key(b, sid, "Backspace", "Backspace", 8)
     time.sleep(0.8)
-    ok("delete tail keeps scroll top", j(sid, """(function(){var cm=document.querySelectorAll('.CodeMirror')[0].CodeMirror;
-      return Math.abs(cm.getScrollInfo().top - %s) <= 2;})()""" % before_top, b) is True)
+    after_top = j(sid, "document.querySelectorAll('.CodeMirror')[0].CodeMirror.getScrollInfo().top", b)
+    ok("delete tail keeps scroll top", abs(after_top - before_top) <= 2, (before_top, after_top))
 
     j(sid, "document.querySelectorAll('.CodeMirror')[0].CodeMirror.setValue('');", b)
     time.sleep(0.4)
@@ -337,8 +348,10 @@ def main():
     ok("period adds fixed plan", plan.get("ok") is True
        and j(sid, """(function(){var ps=window.__txtvein.getState().plans;
          return ps.some(function(p){return p.period==='m' && p.amountCents===300 && p.status==='active';});})()""", b) is True)
-    j(sid, "document.querySelector('#btn-fixed').click()", b); time.sleep(0.6)
-    ok("fixed table shows period", "*m" in j(sid, "document.querySelector('.fixed-editor .CodeMirror').CodeMirror.getValue()", b))
+    j(sid, "document.querySelector('#btn-fixed').click()", b); time.sleep(0.8)
+    fixed_src = j(sid, "document.querySelector('.fixed-editor .CodeMirror').CodeMirror.getValue()", b)
+    ok("fixed table shows *m", "[固定]" in fixed_src and "*m" in fixed_src, fixed_src[:160])
+    ok("fixed table no raw IDs", "N_" not in fixed_src, fixed_src[:160])
     j(sid, "document.querySelector('#btn-ledger').click()", b); time.sleep(0.5)
     j(sid, "if(window.__txtvein.state().mode!=='CODE'){document.querySelector('#btn-mode').click();} true", b)
     time.sleep(0.7)

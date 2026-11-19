@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-ve.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="TxtVein">
-<meta name="app-version" content="2.4.2">
+<meta name="app-version" content="2.5.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -2845,7 +2845,29 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   display: flex;
   flex-direction: column;
 }
-.fixed-head, .fixed-note { display: none; }
+.fixed-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 14px 2px;
+  flex: 0 0 auto;
+}
+.fixed-head .fixed-title { font-size: 13px; font-weight: 600; color: #e8e8e8; }
+.fixed-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #6f6f6f;
+  letter-spacing: 0.04em;
+}
+.fixed-note {
+  display: block;
+  padding: 0 14px 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: #6f6f6f;
+  flex: 0 0 auto;
+}
 .fixed-editor {
   flex: 1 1 auto;
   height: auto;
@@ -2853,6 +2875,31 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   border: 0;
 }
 .fixed-editor .CodeMirror { height: 100%; }
+.fixed-errors {
+  flex: 0 0 auto;
+  padding: 3px 14px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: #6f6f6f;
+  background: #0a0a0a;
+  border-top: 1px solid #1c1c1c;
+  max-height: 92px;
+  overflow: auto;
+}
+.fixed-summary {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 4px 14px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: #8a8a8a;
+  background: #0a0a0a;
+  border-top: 1px solid #1c1c1c;
+}
+.fixed-errors .fixed-ok { color: #6f9a7a; }
+.fixed-errors .fixed-error { color: #d98a8a; line-height: 1.7; }
 
 /* 弹窗：NT 式窄卡片，字段纵向排列（手机竖屏） */
 .modal { padding: 12px; z-index: 500; }
@@ -3457,6 +3504,267 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .editor-pane .CodeMirror-gutters { touch-action: pan-y; }
 .editor-pane .CodeMirror-linenumber { touch-action: pan-y; -webkit-user-select: none; user-select: none; }
 
+/* ================= 固定收支：卡片 / 流水末尾清单 =================
+ * 只出现名字、金额、周期、日期；底层 ID 不上界面。
+ * .pv-* 同时服务「固定」页与流水末尾的 dock。
+ */
+.pv-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 20px 60px;
+  color: #f2f2f2;
+  font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+.pv-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #222;
+  margin-bottom: 6px;
+}
+.pv-head-main { flex: 1 1 320px; min-width: 260px; }
+.pv-head h2 { margin: 0 0 6px; font-size: 19px; font-weight: 600; letter-spacing: 0.01em; }
+.pv-lead { margin: 0; color: #8a8a8a; font-size: 12.5px; line-height: 1.7; }
+.pv-head-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.pv-stat {
+  min-width: 96px;
+  border: 1px solid #262626;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #0b0b0b;
+}
+.pv-stat.is-off { opacity: 0.55; }
+.pv-stat span { display: block; font-size: 10px; letter-spacing: 0.08em; color: #8a8a8a; text-transform: uppercase; }
+.pv-stat b { display: block; font-family: var(--mono); font-size: 17px; font-weight: 600; color: #f2f2f2; }
+.pv-stat i { display: block; font-style: normal; font-family: var(--mono); font-size: 11px; color: #6f6f6f; }
+.pv-stat i:only-of-type { color: #6f6f6f; }
+
+.pv-section { margin-top: 22px; }
+.pv-section h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #d7d7d7;
+}
+.pv-section h3 span { margin-left: 10px; font-size: 10.5px; font-weight: 400; letter-spacing: 0.02em; color: #6f6f6f; }
+.pv-list { display: flex; flex-direction: column; gap: 8px; }
+.pv-empty { margin: 0; padding: 10px 12px; border: 1px dashed #2a2a2a; border-radius: 6px; color: #6f6f6f; font-size: 12px; }
+
+.pv-card {
+  border: 1px solid #262626;
+  border-radius: 7px;
+  background: #0b0b0b;
+  padding: 11px 13px 9px;
+}
+.pv-card:hover { border-color: #343434; }
+.pv-card.is-off { opacity: 0.55; }
+.pv-card-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.pv-sched {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: #4ADE80;
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+.pv-sched.is-d { color: #22D3EE; border-color: rgba(34, 211, 238, 0.3); }
+.pv-sched.is-y { color: #FB923C; border-color: rgba(251, 146, 60, 0.3); }
+.pv-flow { font-size: 13.5px; color: #f2f2f2; }
+.pv-amt { margin-left: auto; font-family: var(--mono); font-size: 14px; font-weight: 600; color: #f2f2f2; font-variant-numeric: tabular-nums; }
+.pv-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; font-size: 11px; color: #8a8a8a; }
+.pv-note { color: #c9c9c9; }
+.pv-tag { color: #7ee787; }
+.pv-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+.pv-btn {
+  appearance: none;
+  border: 1px solid #333;
+  background: transparent;
+  color: #bdbdbd;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.pv-btn:hover { color: #fff; border-color: #555; }
+.pv-btn.is-primary { border-color: rgba(74, 222, 128, 0.4); color: #4ADE80; }
+.pv-btn.is-ok { color: #4ADE80; border-color: rgba(74, 222, 128, 0.32); }
+.pv-btn.is-danger { color: #d98a8a; border-color: rgba(217, 138, 138, 0.28); }
+.pv-btn.is-danger:hover { color: #ff9d9d; border-color: #a04b4b; }
+
+.pv-rule { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 7px 10px; border: 1px solid #232323; border-radius: 6px; background: #0b0b0b; }
+.pv-rule.is-off { opacity: 0.55; }
+.pv-rule-cond { font-size: 11.5px; color: #9a9a9a; }
+.pv-rule .pv-btn { margin-left: auto; }
+.pv-advanced { margin-top: 22px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pv-advanced span { font-size: 11px; color: #6f6f6f; }
+
+/* 今天待确认 */
+.pv-pending-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 9px 12px;
+  border: 1px solid rgba(74, 222, 128, 0.24);
+  border-radius: 7px;
+  background: rgba(74, 222, 128, 0.045);
+}
+.pv-today { font-family: var(--mono); font-size: 10px; color: #4ADE80; letter-spacing: 0.08em; }
+.pv-pending-note { font-size: 11px; color: #8a8a8a; }
+.pv-pending-row .pv-amt { margin-left: auto; }
+
+/* ---- 流水末尾的清单 ---- */
+.pv-dock {
+  width: 100%;
+  background: #050505;
+  border-top: 1px solid #202020;
+  padding: 12px 14px 18px;
+  box-sizing: border-box;
+  user-select: none;
+}
+.pv-dock-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.pv-dock-title { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: #8a8a8a; }
+.pv-dock-sub { font-family: var(--mono); font-size: 10.5px; color: #5f5f5f; }
+.pv-dock-gap { flex: 1 1 auto; }
+.pv-btn.pv-link { border: 0; padding: 2px 4px; color: #6f9a7a; }
+.pv-btn.pv-link:hover { color: #4ADE80; }
+.pv-dock-rows { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+.pv-dock-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 22px;
+  padding: 3px 2px;
+  border-bottom: 1px solid #101010;
+  font-size: 12px;
+  color: #cfcfcf;
+}
+.pv-dock-row:last-child { border-bottom: 0; }
+.pv-dock-row.is-off { opacity: 0.45; }
+.pv-dock-row .pv-amt { font-size: 12.5px; margin-left: auto; }
+.pv-dock-row .pv-when {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: #6f6f6f;
+  margin-left: 16px;
+  min-width: 72px;
+  text-align: right;
+}
+.pv-dock-row .pv-btn { padding: 1px 7px; font-size: 10px; }
+.pv-btn.pv-mini { border-radius: 3px; }
+.pv-dock-empty { margin: 8px 0 0; font-size: 11.5px; color: #5f5f5f; line-height: 1.7; }
+
+/* ---- 表单 ---- */
+.pv-form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.pv-form-row > .pv-field { flex: 1 1 180px; min-width: 160px; }
+.pv-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.pv-field label { font-size: 11px; color: #9a9a9a; }
+.pv-field .input { width: 100%; box-sizing: border-box; }
+.pv-field-hint { font-size: 10.5px; color: #6f6f6f; }
+.pv-select { min-height: 28px; }
+.pv-form-error { color: #d98a8a; font-size: 12px; min-height: 18px; }
+.pv-form-tip { margin: 4px 0 8px; font-size: 11px; line-height: 1.7; color: #6f6f6f; }
+.pv-src {
+  width: 100%;
+  min-height: 180px;
+  box-sizing: border-box;
+  background: #0b0b0b;
+  color: #e6e6e6;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+@media (max-width: 760px) {
+  .pv-wrap { padding: 14px 12px 48px; }
+  .pv-amt { margin-left: 0; }
+  .pv-dock { padding: 10px 8px 14px; }
+  .pv-dock-row { gap: 6px 8px; }
+  .pv-dock-row .pv-when { width: auto; margin-left: auto; min-width: 0; }
+}
+
+/* ================= 流水末尾：未来记录 =================
+ * 紧接最后一行真实流水；行标是按钮（＋），点开就是和行号菜单同一套横排菜单。
+ */
+.cm-future-rows { width: 100%; background: #050505; }
+.cm-tail-bottom { width: 100%; background: #050505; pointer-events: none; }
+.pv-future {
+  background: #070707;
+  border-top: 1px dashed #1d1d1d;
+  padding: 9px 14px 5px;
+  box-sizing: border-box;
+  user-select: none;
+}
+.pvf-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.pvf-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+}
+.pvf-sub { font-size: 10.5px; color: #5f5f5f; }
+.pvf-rows { display: flex; flex-direction: column; gap: 2px; }
+.pvf-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+  min-height: 24px;
+  padding: 1px 0;
+  border-radius: 3px;
+}
+.pvf-row:hover { background: #0d0d0d; }
+.pvf-lineno {
+  flex: 0 0 44px;
+  width: 44px;
+  padding: 2px 6px;
+  border: 0;
+  background: transparent;
+  border-radius: 3px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.35;
+  color: #4ADE80;
+  cursor: pointer;
+}
+.pvf-lineno:hover { background: #1b1b1b; color: #7ee787; }
+.pvf-lineno.is-selected { background: #3a3a3a; color: #ffffff; }
+.pvf-date { font-family: var(--mono); font-size: 12px; color: #b9b9b9; }
+.pvf-kind {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: #6f6f6f;
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+  padding: 0 4px;
+}
+.pvf-row.is-today .pvf-kind { color: #4ADE80; border-color: rgba(74, 222, 128, 0.32); }
+.pvf-row .pv-sched { font-size: 9.5px; }
+.pvf-row .pv-flow { font-size: 12.5px; }
+.pvf-row .pv-amt { font-size: 12.5px; }
+.cm-line-menu button.is-primary { color: #4ADE80; }
+
+@media (max-width: 760px) {
+  .pv-future { padding: 8px 8px 4px; }
+  .pvf-lineno { flex-basis: 30px; width: 30px; padding: 2px 2px; }
+  .pvf-row { gap: 6px; }
+  .pvf-row .pv-amt { margin-left: auto; }
+}
+
 </style>
 </head>
 <body>
@@ -3549,7 +3857,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   'use strict';
 
   const TV = (root.TxtVein = root.TxtVein || {});
-  const APP_VER = 'txtvein-v2.4.2';
+  const APP_VER = 'txtvein-v2.5.0';
 
   function parseVer(v) {
     const m = String(v || '').match(/v?(\d+)\.(\d+)\.(\d+)/);
@@ -9526,6 +9834,185 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     };
   }
 
+  function centsToYuan(c) {
+    return Math.round(Number(c) || 0) / 100;
+  }
+
+  function yuanToCents(v) {
+    const n = Number(String(v == null ? 0 : v).replace(/[¥￥,\s]/g, ''));
+    return Number.isFinite(n) ? Math.round(n * 100) : 0;
+  }
+
+  /** NT 的月份是 'YYYY-MM'；TxtVein 固定表用 'YYMM'。 */
+  function isoToMonthKey(m) {
+    const s = S(m).match(/^(\d{4})-(\d{2})$/);
+    return s ? s[1].slice(2) + s[2] : '';
+  }
+
+  function monthKeyToIso(k) {
+    const s = S(k);
+    return /^\d{4}$/.test(s) ? '20' + s.slice(0, 2) + '-' + s.slice(2, 4) : '';
+  }
+
+  function monthKeyOfStamp(stamp) {
+    const s = S(stamp).replace(/[^\d]/g, '');
+    if (/^\d{6}$/.test(s)) return s.slice(0, 4);
+    if (/^\d{8}$/.test(s)) return s.slice(2, 6);
+    const m = S(stamp).match(/^(\d{4})-(\d{2})/);
+    return m ? m[1].slice(2) + m[2] : '';
+  }
+
+  function dayOfPlan(plan) {
+    const d = Number(plan && plan.day);
+    return d >= 1 && d <= 31 ? d : 1;
+  }
+
+  /**
+   * TxtVein 固定表 → NT 的 scheduled（计划流水）。
+   * 字段一一对应：freq / day / from_id / to_id / amount(元) / note / inst。
+   */
+  function plansToScheduled(plans, dict, opts) {
+    const o = opts || {};
+    const tag = o.idPrefix || 'tv';
+    return (plans || []).filter(Boolean).map((p, i) => {
+      const sched = {
+        id: tag + '_sched_' + String(i + 1).padStart(3, '0'),
+        isScheduled: true,
+        freq: p.period === 'd' ? 'daily' : 'monthly',
+        day: p.period === 'd' ? 1 : dayOfPlan(p),
+        from_id: p.from || null,
+        to_id: p.to || null,
+        amount: centsToYuan(p.amountCents),
+        note: S(p.note),
+      };
+      if (p.kind === 'installment') {
+        const inst = p.inst || {};
+        sched.inst = {
+          periods: Math.max(0, Math.floor(Number(inst.periods || p.periods) || 0)),
+          firstMonth: monthKeyToIso(inst.firstMonth || p.firstMonth),
+          principal: centsToYuan(inst.principalCents != null ? inst.principalCents : p.principalCents),
+          interest: centsToYuan(inst.interestCents != null ? inst.interestCents : p.interestCents),
+        };
+      }
+      return sched;
+    });
+  }
+
+  /** NT 的 scheduled → TxtVein 固定表行（plan 对象，cents）。 */
+  function scheduledToPlans(scheduled, dict, opts) {
+    const o = opts || {};
+    const mapId = typeof o.mapId === 'function' ? o.mapId : (id) => id;
+    const out = [];
+    (scheduled || []).filter(Boolean).forEach((s, i) => {
+      if (!s.from_id || !s.to_id) return;
+      const inst = s.inst && Number(s.inst.periods) > 0 ? s.inst : null;
+      const periods = inst ? Math.max(0, Math.floor(Number(inst.periods) || 0)) : 0;
+      const firstMonth = inst ? isoToMonthKey(inst.firstMonth) : '';
+      const principalCents = inst ? yuanToCents(inst.principal) : 0;
+      const interestCents = inst ? yuanToCents(inst.interest) : 0;
+      const amountCents = yuanToCents(s.amount)
+        || (periods ? Math.round((principalCents + interestCents) / periods) : 0);
+      out.push({
+        id: 'P_' + (i + 1),
+        kind: inst ? 'installment' : 'fixed',
+        status: 'active',
+        period: s.freq === 'daily' ? 'd' : 'm',
+        day: s.freq === 'daily' ? 0 : dayOfPlan(s),
+        month: 0,
+        note: S(s.note),
+        state: { generated: [], confirmed: [], voided: [] },
+        inst: inst ? { periods, firstMonth, principalCents, interestCents } : null,
+        periods,
+        firstMonth,
+        principalCents,
+        interestCents,
+        domain: 'P',
+        from: mapId(s.from_id),
+        to: mapId(s.to_id),
+        amountCents,
+        tagIds: [],
+      });
+    });
+    return out;
+  }
+
+  /** NT 的 scheduled → 固定表文本（[固定] / [分期] 两段）。 */
+  function scheduledToFixedSource(scheduled, dict, opts) {
+    const o = opts || {};
+    const plans = scheduledToPlans(scheduled, dict, o);
+    if (!TV.source || !TV.source.fixedSourceFromPlans) return '';
+    return TV.source.fixedSourceFromPlans(plans, dict, o);
+  }
+
+  /**
+   * TxtVein → NT state（账户 / 流水 / 计划 / 作废期）。
+   * 行尾注释里带 planKey 的流水也会被还原成 NT 的 planKey。
+   */
+  function toNTState(dict, events, plans, opts) {
+    const o = opts || {};
+    const codeMap = TV.source && TV.source.sourceCodeMap ? TV.source.sourceCodeMap(dict) : null;
+    const nodes = (dict && dict.nodes) || {};
+    const accounts = [];
+    Object.keys(nodes).forEach((id) => {
+      const n = nodes[id];
+      if (!n || n.system || n.domain !== 'P') return;
+      accounts.push({
+        id,
+        type: TYPE_OUT[n.type] || n.type,
+        category: n.category || (n.parent_id && nodes[n.parent_id] ? nodes[n.parent_id].zh_name : ''),
+        code: (codeMap && codeMap.get(id)) || n.zh_code || n.en_code || id,
+        name: n.zh_name || n.en_name || id,
+        opening: 0,
+      });
+    });
+    const scheduled = plansToScheduled(plans, dict, o);
+    const keyById = new Map();
+    scheduled.forEach((s, i) => {
+      keyById.set((plans || [])[i] && plans[i].id, s.id);
+    });
+    const used = new Set();
+    const transactions = (events || []).map((e, i) => {
+      const tx = {
+        id: 'tx_' + String(i + 1).padStart(6, '0'),
+        date: e.date && e.date.length === 6
+          ? '20' + e.date.slice(0, 2) + '-' + e.date.slice(2, 4) + '-' + e.date.slice(4, 6)
+          : S(e.date),
+        from_id: e.from || null,
+        to_id: e.to || null,
+        amount: centsToYuan(e.amountCents),
+        note: S(e.note),
+      };
+      const plan = (plans || []).find((p) => p.from === e.from && p.to === e.to
+        && Math.round(p.amountCents) === Math.round(Number(e.amountCents) || 0));
+      if (plan) {
+        const mk = monthKeyOfStamp(e.date);
+        const st = plan.state || {};
+        const hit = (st.generated || []).includes(mk) || (st.confirmed || []).includes(mk)
+          || (st.confirmed || []).includes(S(e.date));
+        if (hit && !used.has(plan.id + '|' + mk)) {
+          tx.planKey = (keyById.get(plan.id) || plan.id) + '|' + monthKeyToIso(mk);
+          tx.planSourceId = keyById.get(plan.id) || plan.id;
+          used.add(plan.id + '|' + mk);
+        }
+      }
+      return tx;
+    });
+    const voidedPlans = [];
+    (plans || []).forEach((p) => {
+      const st = p.state || {};
+      const sid = keyById.get(p.id) || p.id;
+      (st.voided || []).forEach((k) => {
+        const iso = k.length === 8 ? monthKeyToIso(k.slice(0, 4)) : monthKeyToIso(k);
+        if (iso) voidedPlans.push(sid + '|' + iso);
+      });
+    });
+    return { accounts, transactions, scheduled, voidedPlans };
+  }
+
+  /**
+   * 在 NT 明文里追加固定表两段（NT 侧若还不认识这两段，可忽略；
+   * 真正无损的互通走 toNTState / fromNTState 的 JSON state）。
+   */
   function toNTText(dict, events) {
     const source = TV.source;
     const codeMap = source.sourceCodeMap(dict);
@@ -9603,7 +10090,43 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       })),
       errors: [],
     };
-    return toTxtVein(parsed);
+    const built = toTxtVein(parsed);
+    const dict = built.dict;
+    const byCode = new Map();
+    Object.keys((dict && dict.nodes) || {}).forEach((id) => {
+      const n = dict.nodes[id];
+      if (n && n.zh_code) byCode.set(String(n.zh_code).toUpperCase(), id);
+    });
+    const mapId = (ntId) => {
+      const code = idToCode[ntId] || ntId;
+      return byCode.get(String(code).toUpperCase()) || byCode.get(String(ntId).toUpperCase()) || ntId;
+    };
+    const plans = scheduledToPlans(state.scheduled || [], dict, { mapId });
+    /* NT 的状态在 transactions.planKey / voidedPlans 里；搬回计划行的 state */
+    const bySched = new Map();
+    plans.forEach((p, i) => bySched.set((state.scheduled || [])[i] && state.scheduled[i].id, p));
+    (state.transactions || []).forEach((t) => {
+      const key = S(t.planKey);
+      const m = key.match(/^(.*)\|(\d{4})-(\d{2})$/);
+      if (!m) return;
+      const plan = bySched.get(m[1]);
+      if (!plan) return;
+      const mk = m[2].slice(2) + m[3];
+      if (!plan.state.generated.includes(mk)) plan.state.generated.push(mk);
+    });
+    (state.voidedPlans || []).forEach((key) => {
+      const m = S(key).match(/^(.*)\|(\d{4})-(\d{2})$/);
+      if (!m) return;
+      const plan = bySched.get(m[1]);
+      if (!plan) return;
+      const mk = m[2].slice(2) + m[3];
+      if (!plan.state.voided.includes(mk)) plan.state.voided.push(mk);
+    });
+    let fixedSource = '';
+    if (TV.source && TV.source.fixedSourceFromPlans) {
+      fixedSource = TV.source.fixedSourceFromPlans(plans, dict, { mode: 'CODE', lang: 'zh' });
+    }
+    return Object.assign({}, built, { plans, fixedSource });
   }
 
   function detect(text) {
@@ -9616,7 +10139,11 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     return 'unknown';
   }
 
-  TV.ntBridge = { parseText, toTxtVein, toNTText, decryptBackup, fromNTState, detect, isNTBackup, isNTText };
+  TV.ntBridge = {
+    parseText, toTxtVein, toNTText, decryptBackup, fromNTState, detect, isNTBackup, isNTText,
+    plansToScheduled, scheduledToPlans, scheduledToFixedSource, toNTState,
+    isoToMonthKey, monthKeyToIso, monthKeyOfStamp,
+  };
   if (typeof module === 'object' && module.exports) module.exports = TV.ntBridge;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
@@ -11804,6 +12331,320 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     )).join('\n');
   }
 
+  /* ---------------- 固定收支：源码里的 [固定] 段 ----------------
+   *
+   * 固定收支不建单独的“软件表单”，它仍然是源码的一部分：
+   *
+   *   每月16日 微信钱包 > 房租 1000 < 消费 上次=261116
+   *   每天 微信钱包 > 早餐 5
+   *   每年11月16日 微信钱包 > 保险 3000
+   *   停用 每月20日 微信钱包 > 餐饮 15
+   *
+   * 段在流水末尾，前面固定空 20 行；编译后得到计划对象，再投影回当前模式。
+   */
+
+  const PLAN_HEADER = '[固定]';
+  const INSTALLMENT_HEADER = '[分期]';
+  const PLAN_GAP = 20;
+  const PLAN_COMMENT = '// 与流水同形：每日 / 每月16日 / 每年11月16日 + 转出 > 转入 金额 < 标签 *d|*m|*y  // 备注';
+  const INSTALLMENT_COMMENT = '// 分期：同上 + 期数=N 首月=YYMM 本金=… 利息=…；备注后用 | 接 生成=/确认=/作废=';
+
+  function planSections(source) {
+    const lines = S(source).replace(/\r\n?/g, '\n').split('\n');
+    const out = [];
+    for (let i = 0; i < lines.length; i += 1) {
+      const t = lines[i].trim();
+      if (t !== PLAN_HEADER && t !== INSTALLMENT_HEADER) continue;
+      out.push({
+        header: t === INSTALLMENT_HEADER ? 'installment' : 'fixed',
+        head: i,
+        start: i + 1,
+        end: lines.length,
+      });
+    }
+    out.forEach((sec, i) => {
+      if (i + 1 < out.length) sec.end = out[i + 1].head;
+    });
+    return { lines, sections: out };
+  }
+
+  function planSectionRange(source) {
+    const r = planSections(source);
+    const first = r.sections[0];
+    if (!first) return { lines: r.lines, header: -1, start: r.lines.length, end: r.lines.length };
+    return { lines: r.lines, header: first.head, start: first.start, end: r.sections[r.sections.length - 1].end };
+  }
+
+  /** 流水正文的结束位置（不含 20 行空行与 [固定]/[分期] 段）。 */
+  function recordsEndIndex(source) {
+    const r = planSections(source);
+    let end = r.sections.length ? r.sections[0].head : r.lines.length;
+    while (end > 0 && !r.lines[end - 1].trim()) end -= 1;
+    return end;
+  }
+
+  function planDay(plan) {
+    const n = Number(plan && plan.day);
+    if (n >= 1 && n <= 31) return n;
+    const p = dateMod.parseDate((plan && (plan.firstDue || plan.lastRun || plan.start)) || '');
+    return p.ok ? p.day : 1;
+  }
+
+  function planMonth(plan) {
+    const n = Number(plan && plan.month);
+    if (n >= 1 && n <= 12) return n;
+    const p = dateMod.parseDate((plan && (plan.firstDue || plan.lastRun || plan.start)) || '');
+    return p.ok ? p.month : 1;
+  }
+
+  /** '2608' / '2026-08' / '2026-08-16' → '2608'（固定表的月份 key）。 */
+  function planMonthKey(raw) {
+    const s = S(raw).replace(/[^\d]/g, '');
+    if (!s) return '';
+    if (s.length >= 6 && /^(19|20)\d{2}$/.test(s.slice(0, 4))) return s.slice(2, 4);
+    if (s.length >= 4) return s.slice(0, 4);
+    return '';
+  }
+
+  function planSchedule(plan) {
+    if (!plan || plan.period === 'd') return '每日';
+    if (plan.period === 'y') return '每年' + planMonth(plan) + '月' + planDay(plan) + '日';
+    return '每月' + planDay(plan) + '日';
+  }
+
+  function planRef(dict, codeMap, id, kind) {
+    const rec = kind === 'tag' ? (dict.tags || {}) : (dict.nodes || {});
+    const x = rec[id];
+    if (!x) return '?';
+    return (codeMap && codeMap.get(id)) || S(x.zh_code) || S(x.en_code) || id;
+  }
+
+  const PLAN_STATE_LABEL = { generated: '生成', confirmed: '确认', voided: '作废' };
+
+  function planStateText(plan) {
+    const st = (plan && plan.state) || {};
+    const parts = [];
+    Object.keys(PLAN_STATE_LABEL).forEach((k) => {
+      const list = Array.isArray(st[k]) ? st[k].filter((x) => /^\d{4,8}$/.test(S(x))).map(String) : [];
+      if (list.length) parts.push(PLAN_STATE_LABEL[k] + '=' + list.join(','));
+    });
+    return parts.join(' ');
+  }
+
+  function parsePlanState(text, out) {
+    const st = out || { generated: [], confirmed: [], voided: [] };
+    S(text).split(/[\s\u3000]+/).filter(Boolean).forEach((tok) => {
+      const m = tok.match(/^(生成|确认|作废|generated|confirmed|voided)=(.+)$/i);
+      if (!m) return;
+      const key = m[1] === '生成' || /^generated$/i.test(m[1]) ? 'generated'
+        : m[1] === '确认' || /^confirmed$/i.test(m[1]) ? 'confirmed' : 'voided';
+      m[2].split(',').map((x) => x.trim()).filter((x) => /^\d{4,8}$/.test(x))
+        .forEach((x) => { if (!st[key].includes(x)) st[key].push(x); });
+    });
+    return st;
+  }
+
+  function planLineText(plan, dict, opts) {
+    const o = opts || {};
+    const mode = o.mode === 'PLAIN' ? 'PLAIN' : 'CODE';
+    const lang = o.lang === 'en' ? 'en' : 'zh';
+    const codeMap = sourceCodeMap(dict);
+    const name = (kind, id) => {
+      if (!kind || !id) return '?';
+      const rec = kind === 'tag' ? (dict.tags || {}) : (dict.nodes || {});
+      if (!rec[id]) return '?';
+      if (mode === 'CODE') return planRef(dict, codeMap, id, kind);
+      return kind === 'tag'
+        ? dictMod.renderTag(dict, id, 'PLAIN', lang)
+        : dictMod.renderNode(dict, id, 'PLAIN', lang);
+    };
+    let from = name('node', plan.from);
+    let to = name('node', plan.to);
+    const fn = dict.nodes && dict.nodes[plan.from];
+    const tn = dict.nodes && dict.nodes[plan.to];
+    if (mode === 'CODE' && fn && tn && fn.domain !== tn.domain) {
+      from = fn.domain + ':' + from;
+      to = tn.domain + ':' + to;
+    }
+    const tags = (plan.tagIds || []).map((id) => ' < ' + name('tag', id)).join('');
+    let head = (plan.status === 'canceled' ? '停用 ' : '')
+      + planSchedule(plan) + ' ' + from + ' > ' + to + ' ' + formatYuanExact(plan.amountCents) + tags
+      + ' *' + (plan.period || 'm');
+    if (plan.kind === 'installment') {
+      const inst = plan.inst || {};
+      const periods = Number(inst.periods) || Number(plan.periods) || 0;
+      const firstMonth = planMonthKey(inst.firstMonth || plan.firstMonth || '');
+      head += ' 期数=' + periods;
+      if (firstMonth) head += ' 首月=' + firstMonth;
+      head += ' 本金=' + formatYuanExact(inst.principalCents || plan.principalCents || 0);
+      head += ' 利息=' + formatYuanExact(inst.interestCents || plan.interestCents || 0);
+    }
+    const note = S(plan.note).trim();
+    const state = planStateText(plan);
+    const comment = note ? (state ? note + ' | ' + state : note) : state;
+    return head + (comment ? ' // ' + comment : '');
+  }
+
+  function parsePlanLineText(raw, dict, opts, lineNo, kind) {
+    const o = opts || {};
+    const type = kind === 'installment' ? 'installment' : 'fixed';
+    let text = S(raw).trim();
+    if (!text) return null;
+    let note = '';
+    let state = { generated: [], confirmed: [], voided: [] };
+    const ci = text.indexOf('//');
+    if (ci >= 0) {
+      const comment = text.slice(ci + 2).trim();
+      text = text.slice(0, ci).trim();
+      const bar = comment.indexOf('|');
+      if (bar >= 0) {
+        note = comment.slice(0, bar).trim();
+        state = parsePlanState(comment.slice(bar + 1), state);
+      } else {
+        const only = parsePlanState(comment, { generated: [], confirmed: [], voided: [] });
+        const hasState = only.generated.length || only.confirmed.length || only.voided.length;
+        if (hasState) state = only;
+        else note = comment.trim();
+      }
+    } else {
+      text = stripComment(text).trim();
+    }
+    if (!text) return null;
+    let status = 'active';
+    if (/^停用(\s|$)/.test(text)) { status = 'canceled'; text = text.replace(/^停用\s*/, ''); }
+    const sm = text.match(/^(每日|每月\s*(\d{1,2})\s*日|每年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日)\s+(.+)$/);
+    if (!sm) return { error: '固定收支行格式：每月16日 微信 > 房租 1000 *m', line: lineNo };
+    let period = 'm';
+    let day = 0;
+    let month = 0;
+    if (sm[1] === '每日') period = 'd';
+    else if (sm[2]) { period = 'm'; day = Number(sm[2]); }
+    else { period = 'y'; month = Number(sm[3]); day = Number(sm[4]); }
+    let rest = sm[5];
+    let periods = 0;
+    let firstMonth = '';
+    let principalCents = 0;
+    let interestCents = 0;
+    const pm = rest.match(/(^|\s)\*([dmy])(?=\s|$)/i);
+    if (pm) {
+      period = pm[2].toLowerCase();
+      rest = rest.replace(pm[0], ' ');
+    }
+    if (type === 'installment') {
+      const take = (re, apply) => {
+        const m = rest.match(re);
+        if (!m) return;
+        rest = rest.replace(m[0], ' ');
+        apply(m);
+      };
+      take(/(^|\s)期数=(\d{1,3})(?=\s|$)/, (m) => { periods = Number(m[2]); });
+      take(/(^|\s)首月=(\d{4}|\d{4}-\d{2})(?=\s|$)/, (m) => { firstMonth = planMonthKey(m[2]); });
+      take(/(^|\s)本金=(\d+(?:\.\d{1,2})?[kK]?)(?=\s|$)/, (m) => {
+        const q = amount.parseAmount(m[2]);
+        principalCents = q.ok ? q.cents : 0;
+      });
+      take(/(^|\s)利息=(\d+(?:\.\d{1,2})?[kK]?)(?=\s|$)/, (m) => {
+        const q = amount.parseAmount(m[2]);
+        interestCents = q.ok ? q.cents : 0;
+      });
+      /* 兼容旧写法：共N期 / 首期=YYMMDD */
+      if (!(periods >= 1)) {
+        take(/(^|\s)共\s*(\d{1,3})\s*期(?=\s|$)/, (m) => { periods = Number(m[2]); });
+        take(/(^|\s)(\d{1,3})\s*期(?=\s|$)/, (m) => { periods = Number(m[2]); });
+      }
+      if (!firstMonth) {
+        take(/(^|\s)首期=(\d{6})(?=\s|$)/, (m) => { firstMonth = planMonthKey(m[2]); });
+      }
+      if (!(periods >= 1)) return { error: '分期缺少 期数=N', line: lineNo };
+      if (periods > 360) return { error: '分期期数不能超过 360', line: lineNo };
+      if (!/^\d{4}$/.test(firstMonth)) return { error: '分期缺少 首月=YYMM', line: lineNo };
+      if (principalCents < 0 || interestCents < 0) return { error: '分期本金 / 利息不能为负', line: lineNo };
+    }
+    rest = rest.replace(/\s+/g, ' ').trim();
+    if (!rest) return { error: '固定收支缺 转出 > 转入 金额', line: lineNo };
+    const today = dateMod.todayStamp(o.now || new Date());
+    const compiled = compileLedgerSource(today + ' ' + rest, dict, {
+      now: o.now, domain: o.domain || 'P', autoCreateBehaviors: false,
+    });
+    const ev = (compiled.events || [])[0];
+    if (!ev || ev.kind !== 'account') {
+      const d = (compiled.diagnostics || []).find((x) => x.severity === 'error') || (compiled.diagnostics || [])[0];
+      return { error: '固定收支认不出：' + (d ? d.message : rest), line: lineNo };
+    }
+    if (!(ev.amountCents > 0)) return { error: '固定收支金额必须大于 0', line: lineNo };
+    if (type === 'installment' && period === 'd') return { error: '分期不能按天', line: lineNo };
+    return {
+      ok: true,
+      id: 'P_' + lineNo,
+      kind: type,
+      status,
+      period,
+      day,
+      month,
+      note,
+      state,
+      periods: type === 'installment' ? periods : 0,
+      firstMonth: type === 'installment' ? firstMonth : '',
+      principalCents: type === 'installment' ? principalCents : 0,
+      interestCents: type === 'installment' ? interestCents : 0,
+      inst: type === 'installment'
+        ? { periods, firstMonth, principalCents, interestCents }
+        : null,
+      domain: ev.domain || 'P',
+      from: ev.from,
+      to: ev.to,
+      amountCents: ev.amountCents,
+      tagIds: (ev.tagIds || []).slice(),
+      line: lineNo,
+      raw: S(raw).trim(),
+    };
+  }
+
+  function parsePlanSection(source, dict, opts) {
+    const r = planSections(source);
+    const plans = [];
+    const diagnostics = [];
+    r.sections.forEach((sec) => {
+      for (let i = sec.start; i < sec.end; i += 1) {
+        const line = S(r.lines[i]).trim();
+        if (!line || line.startsWith('//')) continue;
+        const p = parsePlanLineText(r.lines[i], dict, opts, i + 1, sec.header);
+        if (!p) continue;
+        if (p.error) { diagnostics.push(diag(i + 1, p.error)); continue; }
+        plans.push(p);
+      }
+    });
+    return { plans, diagnostics };
+  }
+
+  /** [固定] + [分期] 两段（含前面 20 行空行）；没有计划时返回空数组。 */
+  function planSectionBlock(plans, dict, opts) {
+    const list = plans || [];
+    if (!list.length) return [];
+    const fixed = list.filter((p) => p.kind !== 'installment');
+    const inst = list.filter((p) => p.kind === 'installment');
+    const out = [];
+    for (let i = 0; i < PLAN_GAP; i += 1) out.push('');
+    out.push(PLAN_HEADER);
+    out.push(PLAN_COMMENT);
+    fixed.forEach((p) => out.push(planLineText(p, dict, opts)));
+    out.push('');
+    out.push(INSTALLMENT_HEADER);
+    out.push(INSTALLMENT_COMMENT);
+    inst.forEach((p) => out.push(planLineText(p, dict, opts)));
+    return out;
+  }
+
+  /** 用 [固定]/[分期] 段重建整份流水文本（正文 + 20 空行 + 计划）。 */
+  function withPlanSection(source, plans, dict, opts) {
+    const end = recordsEndIndex(source);
+    const lines = S(source).replace(/\r\n?/g, '\n').replace(/\n+$/, '').split('\n');
+    const head = lines.slice(0, end);
+    const block = planSectionBlock(plans, dict, opts);
+    const all = block.length ? head.concat(block) : head;
+    return all.join('\n') + '\n';
+  }
+
   function ledgerToSource(dict, events, behaviors, notes) {
     const codeMap = sourceCodeMap(dict);
     const lines = [];
@@ -11816,7 +12657,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       const to = (cross ? tn.domain + ':' : '') + (codeMap.get(e.to) || '?');
       const amt = e.minutes > 0 ? amount.formatTime(e.minutes) : formatYuanExact(e.amountCents);
       const tags = (e.tagIds || []).map((id) => codeMap.get(id)).filter(Boolean).map((c) => ' < ' + c).join('');
-      lines.push(domainPrefix(e.domain) + e.date + ' ' + from + ' > ' + to + ' ' + amt + tags);
+      const note = S(e.note).trim() ? ' // ' + S(e.note).trim().replace(/\/\//g, '/ /') : '';
+      lines.push(domainPrefix(e.domain) + e.date + ' ' + from + ' > ' + to + ' ' + amt + tags + note);
     });
     (behaviors || []).forEach((b) => {
       const from = codeMap.get(b.from) || '?';
@@ -11835,6 +12677,29 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       lines.push(domainPrefix(n.domain) + n.date + ' ' + (amt ? amt + ' ' : '') + '< ' + cat + (kws ? ' < ' + kws : ''));
     });
     return lines.join('\n') + '\n';
+  }
+
+  /** 独立的固定表文本（[固定] + [分期] 两个区域，不需要前面的 20 行空行）。 */
+  function fixedSourceFromPlans(plans, dict, opts) {
+    const list = plans || [];
+    const fixed = list.filter((p) => p.kind !== 'installment');
+    const inst = list.filter((p) => p.kind === 'installment');
+    const out = [];
+    out.push(PLAN_HEADER);
+    out.push(PLAN_COMMENT);
+    fixed.forEach((p) => out.push(planLineText(p, dict, opts)));
+    out.push('');
+    out.push(INSTALLMENT_HEADER);
+    out.push(INSTALLMENT_COMMENT);
+    inst.forEach((p) => out.push(planLineText(p, dict, opts)));
+    return out.join('\n') + '\n';
+  }
+
+  /** 编译独立的固定表：返回计划对象 + 行级诊断。 */
+  function compileFixed(fixedSource, dict, opts) {
+    const r = parsePlanSection(S(fixedSource), dict, opts);
+    const errors = r.diagnostics.filter((d) => d.severity === 'error').length;
+    return { ok: errors === 0, plans: r.plans, diagnostics: r.diagnostics, errors };
   }
 
   function parseNames(text) {
@@ -12640,6 +13505,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
             amountCents: q.unit === 'money' ? q.cents : 0,
             minutes: q.unit === 'time' ? q.minutes : 0,
             tagIds: tagIds.slice(), chainId: '', sourceLine: lineNo, raw: rawSeg,
+            period: period || '',
             crossDomain: !!(dict.nodes[a.account] && dict.nodes[b.account]
               && dict.nodes[a.account].domain !== dict.nodes[b.account].domain),
           });
@@ -12746,6 +13612,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
           amountCents: q.unit === 'money' ? q.cents : 0,
           minutes: q.unit === 'time' ? q.minutes : 0,
           tagIds: tagIds.slice(), chainId, sourceLine: lineNo, raw: rawSeg,
+          period: period || '',
           crossDomain: !!(dict.nodes[resolved[i].account] && dict.nodes[resolved[i + 1].account]
             && dict.nodes[resolved[i].account].domain !== dict.nodes[resolved[i + 1].account].domain),
         });
@@ -12790,10 +13657,14 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     if (!work.behaviors) work.behaviors = {};
     const usedIds = new Set(Object.keys(work.nodes || {}).concat(Object.keys(work.tags || {}), Object.keys(work.behaviors || {})));
     const lines = S(text).replace(/\r\n?/g, '\n').split('\n');
+    let inPlan = false;
     lines.forEach((raw, idx) => {
       const lineNo = idx + 1;
       const line = S(raw).trim();
       if (!line) return;
+      if (line === PLAN_HEADER || line === INSTALLMENT_HEADER) { inPlan = true; return; }
+      if (inPlan && /^\[[^\]]+\]$/.test(line)) inPlan = false;
+      if (inPlan) return; /* [固定] 段由 parsePlanSection 单独编译 */
       if (/^\[(PLAN|RULES?)\]$/i.test(line)) {
         diagnostics.push(diag(lineNo, 'PLAN/RULES 暂由规则面板管理', 'warning'));
         return;
@@ -12806,8 +13677,13 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       r.autoTags.forEach((t) => { if (!autoTags.some((x) => x.id === t.id)) autoTags.push(t); });
       (r.autoBehaviors || []).forEach((t) => { if (!autoBehaviors.some((x) => x.id === t.id)) autoBehaviors.push(t); });
     });
+    const planParse = parsePlanSection(S(text), work, { now, domain: o.domain || 'P', lang: o.lang });
+    planParse.diagnostics.forEach((d) => diagnostics.push(d));
     const errors = diagnostics.filter((x) => x.severity === 'error').length;
-    return { ok: errors === 0, dict: work, events, behaviors, notes, autoTags, autoBehaviors, diagnostics, errors, lines: lines.length };
+    return {
+      ok: errors === 0, dict: work, events, behaviors, notes,
+      plans: planParse.plans, autoTags, autoBehaviors, diagnostics, errors, lines: lines.length,
+    };
   }
 
   function compileAll(dictSource, ledgerSource, opts) {
@@ -12820,6 +13696,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       events: l.events,
       behaviors: l.behaviors,
       notes: l.notes,
+      plans: l.plans || [],
       autoTags: l.autoTags,
       autoBehaviors: l.autoBehaviors,
       diagnostics: d.diagnostics.concat(l.diagnostics),
@@ -12833,19 +13710,22 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   /** 单 TXT 导出格式：## 统计 / ## 流水 / ## 行为 / ## 备注 / ## 字典 */
   function parseSingleTxt(text) {
     const lines = S(text).replace(/\r\n?/g, '\n').split('\n');
-    const sec = { flow: [], behavior: [], notes: [], dict: [] };
+    const sec = { flow: [], behavior: [], notes: [], fixed: [], dict: [] };
     let cur = '';
     let sawDict = false;
     let sawFlow = false;
+    let sawFixed = false;
     lines.forEach((line) => {
-      const m = line.match(/^##\s*(统计|流水|行为|备注|字典)\s*$/);
+      const m = line.match(/^##\s*(统计|流水|固定|行为|备注|字典)\s*$/);
       if (m) {
         cur = m[1];
         if (cur === '字典') sawDict = true;
         if (cur === '流水') sawFlow = true;
+        if (cur === '固定') sawFixed = true;
         return;
       }
       if (cur === '流水') sec.flow.push(line);
+      else if (cur === '固定') sec.fixed.push(line);
       else if (cur === '行为') sec.behavior.push(line);
       else if (cur === '备注') sec.notes.push(line);
       else if (cur === '字典') sec.dict.push(line);
@@ -12855,16 +13735,31 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     const dictSource = sec.dict.join('\n').trim() + '\n';
     const ledgerSource = [sec.flow.join('\n'), sec.behavior.join('\n'), sec.notes.join('\n')]
       .map((x) => x.trim()).filter(Boolean).join('\n') + '\n';
-    return { ok: true, dictSource, ledgerSource };
+    const fixedSource = sawFixed ? sec.fixed.join('\n').trim() + '\n' : '';
+    return { ok: true, dictSource, ledgerSource, fixedSource, hasFixed: sawFixed };
   }
 
   TV.source = {
     TAG_KINDS,
+    PLAN_HEADER,
+    INSTALLMENT_HEADER,
+    PLAN_GAP,
+    PLAN_COMMENT,
     formatYuanExact,
     sourceCodeMap,
     dictToSource,
     ledgerToSource,
     normalizeDomainSyntax,
+    planSectionRange,
+    recordsEndIndex,
+    planSchedule,
+    planLineText,
+    parsePlanLineText,
+    parsePlanSection,
+    planSectionBlock,
+    withPlanSection,
+    fixedSourceFromPlans,
+    compileFixed,
     compileDictSource,
     compileLedgerSource,
     compileAll,
@@ -14946,10 +15841,20 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 <script>
 /* js/core/rules.js */
 /* TxtVein · 规则层
- * 周期规则（PLAN）：*d / *m / *y，到期生成真实流水，只推进 last_run。
- * 事件规则（RULES）：关键字 + 金额条件 → 预测式录入模板。
+ * 周期规则（PLAN）：*d / *m / *y。
  *
- * 规则本身也是纯文本，存在 ledger.txt 末尾的 [PLAN] / [RULES] 区块里。
+ * 过去 / 现在 / 未来（与 NT账本 README §8 一致）：
+ *   · 过去：不补历史。每月计划只补**本月**这一期；每日计划过期不补。
+ *   · 现在：每月到期自动确认，落成真实流水；每日只把**今天**摆出来待确认，
+ *           不确认就过期（不落账、不追问）。
+ *   · 未来：只在列表里显示下次到期，不预先写流水。
+ *
+ * 计划字段：
+ *   *m 保留流水记录的「日」→ 每月该日自动添加（31 号在小月钳到月末）。
+ *   *d 不保留日期 → 每天自动生成「今天」这一期待确认项。
+ *   *y 保留月 + 日 → 每年该月该日自动添加。
+ *
+ * 规则本身也是纯文本，存在导出用的 [PLAN] / [RULES] 区块里。
  * 取消规则只改状态，历史流水一行不动。
  */
 (function (root) {
@@ -14963,9 +15868,321 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 
   const STATUS = ['active', 'canceled'];
 
+  const PERIOD_LABEL = { d: '每日', m: '每月', y: '每年' };
+  const PERIOD_LABEL_EN = { d: 'Daily', m: 'Monthly', y: 'Yearly' };
+
   function periodLabel(p) {
-    return p === 'd' ? '每天' : p === 'm' ? '每月' : p === 'y' ? '每年' : p;
+    return PERIOD_LABEL[p] || p;
   }
+
+  function clampDay(year, month, day) {
+    return Math.max(1, Math.min(Number(day) || 1, date.daysInMonth(year, month)));
+  }
+
+  /** 计划里的「日」：缺省时从首期 / 上次执行 / 起始日期推断。 */
+  function dayOf(plan) {
+    const n = Number(plan && plan.day);
+    if (n >= 1 && n <= 31) return Math.round(n);
+    const p = date.parseDate((plan && (plan.firstDue || plan.lastRun || plan.start)) || '');
+    return p.ok ? p.day : 1;
+  }
+
+  /** 年计划的「月」：缺省时从首期 / 上次执行 / 起始日期推断。 */
+  function monthOf(plan) {
+    const n = Number(plan && plan.month);
+    if (n >= 1 && n <= 12) return Math.round(n);
+    const p = date.parseDate((plan && (plan.firstDue || plan.lastRun || plan.start)) || '');
+    return p.ok ? p.month : 1;
+  }
+
+  /**
+   * 人能读的周期：每月 16 日 / 每天 / 每年 11 月 16 日。
+   * 每日计划不写日期（用户 2026-11 定的口径）。
+   */
+  function scheduleText(plan, lang) {
+    const p = plan || {};
+    const en = lang === 'en';
+    if (p.period === 'd' || p.period == null) return en ? 'Daily' : '每日';
+    if (p.period === 'm') return en ? ('Monthly · day ' + dayOf(p)) : ('每月' + dayOf(p) + '日');
+    if (p.period === 'y') {
+      return en
+        ? ('Yearly · ' + monthOf(p) + '/' + dayOf(p))
+        : ('每年' + monthOf(p) + '月' + dayOf(p) + '日');
+    }
+    return periodLabel(p.period);
+  }
+
+  /** 内部短日期：261116 → 11-16。 */
+  function shortDate(stamp) {
+    const s = S(stamp);
+    return /^\d{6}$/.test(s) ? s.slice(2, 4) + '-' + s.slice(4, 6) : (s || '—');
+  }
+
+  /** 当月（年计划为当年）的应发生日，无论是否已过。 */
+  function dueStampIn(plan, now) {
+    if (!plan) return '';
+    const today = date.parseDate(date.todayStamp(now));
+    if (!today.ok) return '';
+    if (plan.period === 'm') {
+      const d = clampDay(today.year, today.month, dayOf(plan));
+      return date.pad2(today.year % 100) + date.pad2(today.month) + date.pad2(d);
+    }
+    if (plan.period === 'y') {
+      const m = monthOf(plan);
+      const d = clampDay(today.year, m, dayOf(plan));
+      return date.pad2(today.year % 100) + date.pad2(m) + date.pad2(d);
+    }
+    return '';
+  }
+
+  /**
+   * 列表里显示的「下次」：这一次还没处理就是本期，已经处理过就跳到下期。
+   * 计划本身不存状态 —— 「处理过没有」由真实流水决定（同一期有没有同流向同额的一条）。
+   * 每日计划：今天还没记就是今天，记了就不摆（每日不做未来预测）。
+   */
+  /* ---------------- NT 对齐的计划发生（固定 / 分期） ----------------
+   *
+   * 和 NT账本 core/plan-occurrence.js + timeline/time-state.js 同一套口径：
+   *   · 每月固定：到期自动落成真实流水（日期=当月应发生日，备注=模板备注）；
+   *   · 每日固定：不自动，只在未来区摆今天一条，确认才落账；
+   *   · 分期：不自动落账，未来区按月份摆出每一期（确认才落账）；
+   *   · 确认 = 把这一期落成它自己的日期（NT confirmOccurrence 记到今天；
+   *     TxtVein 的未来记录按具体日期排，确认后保留该日期）；
+   *   · 每一期用「月 key」去重：生成 / 已确认 / 已作废 三张表都记在计划行上；
+   *   · 作废的一期不再补；计划行删掉状态就从头算。
+   */
+
+  /** '261116' → '2611'；也接受 '2026-11' / '2026-11-16'。 */
+  function monthKeyOf(raw) {
+    const s = S(raw).replace(/[^\d]/g, '');
+    if (/^\d{4}$/.test(s)) return s;
+    if (s.length >= 6 && s.length <= 8) {
+      const y4 = s.slice(0, 4);
+      if (/^(19|20)\d{2}$/.test(y4)) return y4.slice(2) + s.slice(4, 6);
+      return s.slice(0, 4);
+    }
+    return '';
+  }
+
+  /** '2611' → '2026-11'（给 NT 的 inst.firstMonth 用）。 */
+  function isoMonthOf(key) {
+    const s = S(key);
+    if (!/^\d{4}$/.test(s)) return '';
+    return '20' + s.slice(0, 2) + '-' + s.slice(2, 4);
+  }
+
+  function addMonthKey(key, n) {
+    const s = S(key);
+    if (!/^\d{4}$/.test(s)) return '';
+    let y = Number(s.slice(0, 2));
+    let m = Number(s.slice(2, 4)) + Number(n || 0);
+    y += Math.floor((m - 1) / 12);
+    m = ((m - 1) % 12 + 12) % 12 + 1;
+    return date.pad2(y % 100) + date.pad2(m);
+  }
+
+  function monthsBetweenKeys(a, b) {
+    const x = S(a);
+    const y = S(b);
+    if (!/^\d{4}$/.test(x) || !/^\d{4}$/.test(y)) return NaN;
+    return (Number(y.slice(0, 2)) * 12 + Number(y.slice(2, 4)))
+      - (Number(x.slice(0, 2)) * 12 + Number(x.slice(2, 4)));
+  }
+
+  /** 某个月的「应发生日」：day 钳到月末。 */
+  function dueStampInMonth(plan, monthKey) {
+    const mk = S(monthKey);
+    if (!/^\d{4}$/.test(mk)) return '';
+    const year = 2000 + Number(mk.slice(0, 2));
+    const month = Number(mk.slice(2, 4));
+    return mk + date.pad2(clampDay(year, month, dayOf(plan)));
+  }
+
+  /** NT 的计划状态：生成 / 确认 / 作废（月 key；每日用 YYMMDD）。 */
+  function planState(plan) {
+    const st = (plan && plan.state) || {};
+    const list = (x) => (Array.isArray(x) ? x.filter((k) => /^\d{4,8}$/.test(S(k))).map(String) : []);
+    return { generated: list(st.generated), confirmed: list(st.confirmed), voided: list(st.voided) };
+  }
+
+  function stateHas(plan, kind, key) {
+    if (!kind || !key) return false;
+    return planState(plan)[kind].includes(String(key));
+  }
+
+  function addPlanState(plan, kind, key) {
+    if (!plan || !kind || !key) return false;
+    plan.state = plan.state || {};
+    const list = Array.isArray(plan.state[kind]) ? plan.state[kind] : [];
+    if (list.includes(String(key))) return false;
+    list.push(String(key));
+    /* 状态只保留最近 120 个 key，避免一行越写越长 */
+    plan.state[kind] = list.slice(-120);
+    return true;
+  }
+
+  function stateTokenOf(plan) {
+    const st = planState(plan);
+    const parts = [];
+    ['generated', 'confirmed', 'voided'].forEach((k) => {
+      if (st[k].length) parts.push(k + '=' + st[k].join(','));
+    });
+    return parts.join(' ');
+  }
+
+  /** 分期宏观状态（NT installment-engine.computeInstallment 的同一口径）。 */
+  function installmentInfo(plan, fromKey) {
+    const inst = (plan && plan.inst) || {};
+    const periods = Math.max(0, Math.floor(Number(inst.periods) || 0));
+    const firstMonth = monthKeyOf(inst.firstMonth);
+    const principal = Math.round(Number(inst.principalCents) || 0);
+    const interest = Math.round(Number(inst.interestCents) || 0);
+    const total = principal + interest;
+    const per = periods > 0
+      ? Math.round(Number(plan.amountCents) || total / periods)
+      : 0;
+    const principalPer = periods > 0 ? Math.round(principal / periods) : 0;
+    const interestPer = periods > 0 ? Math.round(interest / periods) : 0;
+    const lastMonth = periods > 0 && firstMonth ? addMonthKey(firstMonth, periods - 1) : '';
+    const ref = fromKey || date.todayStamp().slice(0, 4);
+    const elapsed = firstMonth ? monthsBetweenKeys(firstMonth, ref) : NaN;
+    const paid = Number.isFinite(elapsed) ? Math.min(periods, Math.max(0, elapsed)) : 0;
+    return {
+      periods,
+      firstMonth,
+      lastMonth,
+      principalCents: principal,
+      interestCents: interest,
+      totalCents: total,
+      perPeriodCents: per,
+      principalPerCents: principalPer,
+      interestPerCents: interestPer,
+      paidPeriods: paid,
+      remainingPeriods: Math.max(0, periods - paid),
+      remainingPrincipalCents: principalPer * Math.max(0, periods - paid),
+      remainingInterestCents: interestPer * Math.max(0, periods - paid),
+      finished: periods > 0 && paid >= periods,
+    };
+  }
+
+  function hasSameMonthEvent(events, plan, monthKey, amountCents) {
+    const mk = S(monthKey);
+    const cents = Math.round(Number(amountCents == null ? plan.amountCents : amountCents) || 0);
+    return (events || []).some((e) => e && S(e.date).slice(0, 4) === mk
+      && e.from === plan.from && e.to === plan.to
+      && Math.round(Number(e.amountCents) || 0) === cents);
+  }
+
+  function hasSameDayEvent(events, plan, stamp) {
+    const cents = Math.round(Number(plan.amountCents) || 0);
+    return (events || []).some((e) => e && e.date === stamp && e.from === plan.from
+      && e.to === plan.to && Math.round(Number(e.amountCents) || 0) === cents);
+  }
+
+  /** 分期某一期的备注：NT 用「分期还款 第 n/N 期」。 */
+  function installmentNote(plan, monthKey) {
+    const info = installmentInfo(plan, monthKey);
+    if (!info.periods) return S(plan.note);
+    const n = (Number.isFinite(monthsBetweenKeys(info.firstMonth, monthKey))
+      ? monthsBetweenKeys(info.firstMonth, monthKey) + 1 : 0);
+    return '分期还款 第 ' + Math.max(1, n) + '/' + info.periods + ' 期';
+  }
+
+  /**
+   * 未来区：NT 的 buildVirtualFixed 同口径 —— 每月固定 / 分期 往后 6 个月，
+   * 每日只摆今天一条；已经生成 / 已确认 / 已作废的期不再出现。
+   * @returns {Array<{plan, month, date, kind, amountCents, note, periodIndex, principalCents, interestCents}>}
+   */
+  function futureOccurrences(plan, now, events, horizon) {
+    if (!plan || plan.status !== 'active') return [];
+    const today = date.todayStamp(now);
+    const out = [];
+    const st = planState(plan);
+    const skip = (key) => st.generated.includes(key) || st.confirmed.includes(key) || st.voided.includes(key);
+    if (plan.period === 'd') {
+      if (skip(today)) return out;
+      if (hasSameDayEvent(events, plan, today)) return out;
+      out.push({
+        plan, month: today, date: today, kind: 'daily',
+        amountCents: Math.round(Number(plan.amountCents) || 0),
+        note: S(plan.note), periodIndex: '', principalCents: 0, interestCents: 0,
+      });
+      return out;
+    }
+    if (plan.period === 'y') {
+      const base = date.parseDate(today);
+      const y = base.year;
+      const m = monthOf(plan);
+      const d = clampDay(y, m, dayOf(plan));
+      let due = date.pad2(y % 100) + date.pad2(m) + date.pad2(d);
+      if (due < today) {
+        const ny = y + 1;
+        const nd = clampDay(ny, m, dayOf(plan));
+        due = date.pad2(ny % 100) + date.pad2(m) + date.pad2(nd);
+      }
+      const mk = due.slice(0, 4);
+      if (!skip(mk) && !hasSameMonthEvent(events, plan, mk)) {
+        out.push({
+          plan, month: mk, date: due, kind: 'yearly',
+          amountCents: Math.round(Number(plan.amountCents) || 0),
+          note: S(plan.note), periodIndex: '', principalCents: 0, interestCents: 0,
+        });
+      }
+      return out;
+    }
+    const cur = today.slice(0, 4);
+    const months = Math.max(1, Math.min(12, Number(horizon) || 6));
+    if (plan.kind === 'installment') {
+      const info = installmentInfo(plan, cur);
+      if (!info.periods || !info.firstMonth) return out;
+      for (let i = 0; i < months; i += 1) {
+        const mk = addMonthKey(cur, i);
+        if (!mk) continue;
+        if (monthsBetweenKeys(info.firstMonth, mk) < 0) continue;
+        if (monthsBetweenKeys(info.firstMonth, mk) >= info.periods) continue;
+        const due = dueStampInMonth(plan, mk);
+        if (!due || due < today) continue;
+        if (skip(mk) || hasSameMonthEvent(events, plan, mk)) continue;
+        const n = monthsBetweenKeys(info.firstMonth, mk) + 1;
+        out.push({
+          plan, month: mk, date: due, kind: 'installment',
+          amountCents: info.perPeriodCents,
+          note: installmentNote(plan, mk),
+          periodIndex: n + '/' + info.periods,
+          principalCents: info.principalPerCents,
+          interestCents: info.interestPerCents,
+        });
+      }
+      return out;
+    }
+    for (let i = 0; i < months; i += 1) {
+      const mk = addMonthKey(cur, i);
+      if (!mk) continue;
+      const due = dueStampInMonth(plan, mk);
+      if (!due || due < today) continue;
+      if (skip(mk) || hasSameMonthEvent(events, plan, mk)) continue;
+      out.push({
+        plan, month: mk, date: due, kind: 'monthly',
+        amountCents: Math.round(Number(plan.amountCents) || 0),
+        note: S(plan.note), periodIndex: '', principalCents: 0, interestCents: 0,
+      });
+    }
+    return out;
+  }
+
+  /** 一条计划在未来区里的全部期（6 个月 / 今天一条）。 */
+  function planOccurrences(plans, now, events, horizon) {
+    const out = [];
+    (plans || []).forEach((p) => {
+      futureOccurrences(p, now, events, horizon).forEach((x) => out.push(x));
+    });
+    out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)
+      || (a.plan.id < b.plan.id ? -1 : 1));
+    return out;
+  }
+
+
+  /* ---------------- 导出用的 [PLAN] / [RULES] 机器格式 ---------------- */
 
   function parsePlanLine(line, index) {
     const raw = S(line).trim();
@@ -14975,17 +16192,21 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     const rest = m[7] || '';
     let period = '';
     let lastRun = '';
+    let day = 0;
+    let month = 0;
     const tagIds = [];
     let name = '';
     rest.split(/[\s\u3000]+/).filter(Boolean).forEach((tok) => {
       if (/^\*[dmy]$/i.test(tok)) { period = tok.slice(1).toLowerCase(); return; }
+      if (/^day=\d{1,2}$/i.test(tok)) { day = Number(tok.slice(4)); return; }
+      if (/^month=\d{1,2}$/i.test(tok)) { month = Number(tok.slice(6)); return; }
       if (/^last_run=/i.test(tok)) { lastRun = tok.split('=')[1] || ''; return; }
       if (/^name=/i.test(tok)) { name = decodeURIComponent(tok.slice(5)); return; }
       if (/^T_[A-Za-z0-9_]+$/.test(tok)) { tagIds.push(tok); return; }
     });
     if (!period) return { error: '计划缺少周期 *d/*m/*y：' + raw, raw, line: index };
     const d = date.parseDate(lastRun || '');
-    return {
+    const plan = {
       ok: true,
       id: m[1],
       status: m[2].toLowerCase(),
@@ -15001,13 +16222,21 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       raw,
       line: index,
     };
+    if (period !== 'd') {
+      plan.day = day >= 1 && day <= 31 ? day : (d.ok ? d.day : 1);
+      if (period === 'y') plan.month = month >= 1 && month <= 12 ? month : (d.ok ? d.month : 1);
+    } else {
+      plan.day = 0;
+    }
+    return plan;
   }
 
   function serializePlan(plan) {
     const p = plan || {};
     const tagPart = (p.tagIds || []).join(' ');
     const nm = p.name ? ' name=' + (/[\s\u3000]/.test(p.name) ? encodeURIComponent(p.name) : p.name) : '';
-    return [
+    const period = p.period || 'm';
+    const parts = [
       p.id || 'R_???',
       (p.status || 'active') + ':',
       '0',
@@ -15015,11 +16244,17 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       '>',
       p.to,
       String(Math.round(Number(p.amountCents) || 0)),
-      tagPart,
-      '*' + (p.period || 'm'),
-      p.lastRun ? 'last_run=' + p.lastRun : '',
-      nm.trim(),
-    ].filter(Boolean).join(' ');
+    ];
+    if (tagPart) parts.push(tagPart);
+    parts.push('*' + period);
+    if (period === 'm') parts.push('day=' + dayOf(p));
+    if (period === 'y') {
+      parts.push('month=' + monthOf(p));
+      parts.push('day=' + dayOf(p));
+    }
+    if (p.lastRun) parts.push('last_run=' + p.lastRun);
+    if (nm.trim()) parts.push(nm.trim());
+    return parts.join(' ');
   }
 
   function parseRuleLine(line, index) {
@@ -15140,17 +16375,277 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   function nextDue(plan, now) {
     if (!plan || plan.status !== 'active') return '';
     const base = plan.lastRun || plan.start;
-    if (!base) return '';
+    if (!base) return dueStampIn(plan, now);
     const next = date.addPeriod(base, plan.period, 1);
-    if (!next) return '';
-    const today = date.todayStamp(now);
-    return next <= today ? next : next;
+    return next || '';
   }
 
   function isDue(plan, now) {
     const next = nextDue(plan, now);
     return !!next && next <= date.todayStamp(now);
   }
+
+  function planEvent(plan, stamp, dict) {
+    return {
+      domain: plan.domain || 'P',
+      date: stamp,
+      from: plan.from,
+      to: plan.to,
+      amountCents: Math.round(Number(plan.amountCents) || 0),
+      minutes: 0,
+      tagIds: (plan.tagIds || []).slice(),
+      chainId: '',
+      planId: plan.id,
+      note: S(plan.note),
+      raw: '[plan ' + plan.id + ']',
+      crossDomain: !!(dict && dict.nodes[plan.from] && dict.nodes[plan.to]
+        && dict.nodes[plan.from].domain !== dict.nodes[plan.to].domain),
+    };
+  }
+
+  function hasSameEvent(events, plan, stamp) {
+    const cents = Math.round(Number(plan.amountCents) || 0);
+    return (events || []).some((e) => e && e.date === stamp && e.from === plan.from
+      && e.to === plan.to && Math.round(Number(e.amountCents) || 0) === cents);
+  }
+
+  /**
+   * 每月固定：到期自动落账（分期、每日都不在这里）。
+   * NT 的口径：只处理当前月，日期=当月应发生日，备注=模板备注。
+   * 生成后把月 key 记进 generated；同一期已有真实流水也记 generated（删了不会复活）。
+   */
+  function materializeDue(plans, now, opts) {
+    const o = opts || {};
+    const today = date.todayStamp(now);
+    const existing = o.existing || [];
+    const generated = [];
+    (plans || []).forEach((plan) => {
+      if (!plan || plan.status !== 'active') return;
+      if (plan.period !== 'm' || plan.kind === 'installment') return;
+      const mk = today.slice(0, 4);
+      const due = dueStampInMonth(plan, mk);
+      if (!due || due > today) return;
+      if (stateHas(plan, 'generated', mk) || stateHas(plan, 'confirmed', mk) || stateHas(plan, 'voided', mk)) return;
+      if (hasSameMonthEvent(existing, plan, mk)) {
+        addPlanState(plan, 'generated', mk);
+        return;
+      }
+      generated.push(planEvent(plan, due, o.dict));
+      addPlanState(plan, 'generated', mk);
+    });
+    return { events: generated, generated: generated.length, changed: generated.length > 0 };
+  }
+
+  /** 手动确认：把这一期落成它自己的日期（NT 记到今天；文本表保留该期日期）。 */
+  function confirmOccurrence(plan, occurrence, now, opts) {
+    if (!plan || !occurrence) return null;
+    const o = opts || {};
+    const today = date.todayStamp(now);
+    const key = plan.period === 'd' ? today : S(occurrence.month);
+    if (!key) return null;
+    /* 确认 = 把这一期落成它自己的日期（未来记录原来就按这个日期排） */
+    const stamp = plan.period === 'd' ? today : (S(occurrence.date) || today);
+    const ev = planEvent(plan, stamp, o.dict);
+    ev.amountCents = Math.round(Number(occurrence.amountCents == null
+      ? plan.amountCents : occurrence.amountCents) || 0);
+    ev.note = S(occurrence.note == null ? plan.note : occurrence.note);
+    ev.periodIndex = S(occurrence.periodIndex || '');
+    addPlanState(plan, 'confirmed', key);
+    return ev;
+  }
+
+  /** 作废这一期：只记 key，不动计划本身。 */
+  function voidOccurrence(plan, occurrence) {
+    if (!plan || !occurrence) return false;
+    const key = occurrence.month || occurrence.date;
+    return addPlanState(plan, 'voided', key);
+  }
+
+  /** 未来行 → 给 app 的确认 / 作废参数（不依赖 plan 对象引用）。 */
+  function occurrenceSpec(row) {
+    if (!row) return null;
+    return {
+      planId: row.plan ? row.plan.id : row.planId,
+      month: S(row.month),
+      date: S(row.date),
+      kind: S(row.kind),
+      amountCents: Math.round(Number(row.amountCents) || 0),
+      note: S(row.note),
+      periodIndex: S(row.periodIndex),
+      principalCents: Math.round(Number(row.principalCents) || 0),
+      interestCents: Math.round(Number(row.interestCents) || 0),
+    };
+  }
+
+  /** 每日待确认（NT：只摆今天一条）。 */
+  function pendingDaily(plans, events, now) {
+    const out = [];
+    (plans || []).forEach((p) => {
+      const rows = futureOccurrences(p, now, events, 1);
+      rows.forEach((r) => { if (r.kind === 'daily') out.push(r); });
+    });
+    return out;
+  }
+
+  /** 固定表顶部聚合（NT getSchedulerSummary 的口径）。 */
+  function summarizePlans(plans, dict, now) {
+    const list = (plans || []).filter((p) => p && p.status === 'active' && p.kind !== 'installment');
+    const typeOf = (id) => (dict && dict.nodes && dict.nodes[id] ? dict.nodes[id].type : '');
+    let monthlyIncome = 0;
+    let monthlyExpense = 0;
+    let dailyIncome = 0;
+    let dailyExpense = 0;
+    list.forEach((p) => {
+      const cents = Math.round(Number(p.amountCents) || 0);
+      const income = S(typeOf(p.to)).replace(/类$/, '') === '收入';
+      if (p.period === 'd') {
+        if (income) dailyIncome += cents; else dailyExpense += cents;
+      } else if (p.period === 'm') {
+        if (income) monthlyIncome += cents; else monthlyExpense += cents;
+      }
+    });
+    let remainingPrincipal = 0;
+    let remainingInterest = 0;
+    (plans || []).forEach((p) => {
+      if (!p || p.status !== 'active' || p.kind !== 'installment') return;
+      const info = installmentInfo(p);
+      remainingPrincipal += info.remainingPrincipalCents;
+      remainingInterest += info.remainingInterestCents;
+    });
+    return {
+      fixedCount: list.length,
+      installCount: (plans || []).filter((p) => p && p.status === 'active' && p.kind === 'installment').length,
+      monthlyIncome, monthlyExpense, dailyIncome, dailyExpense,
+      remainingPrincipal, remainingInterest,
+    };
+  }
+
+  /**
+   * 计划的跨会话身份：底层 ID 每次编译都会重新随机，不能持久化。
+   * 持久化的是「域:源码简码」（例 `P:wx1` / `P:rent`），加载后用当次字典解析回来。
+   */
+  function codeIndex(dict) {
+    const out = { node: new Map(), tag: new Map() };
+    let map = null;
+    try {
+      if (TV.source && TV.source.sourceCodeMap) map = TV.source.sourceCodeMap(dict);
+    } catch (e) { map = null; }
+    const key = (rec, id) => {
+      const x = rec[id];
+      if (!x) return '';
+      const domain = S(x.domain || 'P').toUpperCase();
+      const code = (map && map.get(id)) || S(x.zh_code) || S(x.en_code);
+      return code ? domain + ':' + code : '';
+    };
+    Object.keys((dict && dict.nodes) || {}).forEach((id) => {
+      const k = key(dict.nodes, id);
+      if (k && !out.node.has(k)) out.node.set(k, id);
+    });
+    Object.keys((dict && dict.tags) || {}).forEach((id) => {
+      const k = key(dict.tags, id);
+      if (k && !out.tag.has(k)) out.tag.set(k, id);
+    });
+    return out;
+  }
+
+  /** 把当前 ID 写成可持久化的引用（fromRef / toRef / tagRefs）。 */
+  function syncPlanRefs(dict, list) {
+    const arr = list || [];
+    if (!dict) return arr;
+    /* 一次建表，避免每条都重算 sourceCodeMap */
+    let map = null;
+    try { map = TV.source && TV.source.sourceCodeMap ? TV.source.sourceCodeMap(dict) : null; } catch (e) { map = null; }
+    const refFor = (kind, id) => {
+      const rec = kind === 'tag' ? (dict.tags || {}) : (dict.nodes || {});
+      const x = rec[id];
+      if (!x) return '';
+      const code = (map && map.get(id)) || S(x.zh_code) || S(x.en_code);
+      return code ? S(x.domain || 'P').toUpperCase() + ':' + code : '';
+    };
+    arr.forEach((p) => {
+      if (!p) return;
+      p.fromRef = refFor('node', p.from) || p.fromRef || '';
+      p.toRef = refFor('node', p.to) || p.toRef || '';
+      if (Array.isArray(p.tagIds) && p.tagIds.length) {
+        p.tagRefs = p.tagIds.map((id) => refFor('tag', id)).filter(Boolean);
+      }
+    });
+    return arr;
+  }
+
+  /** 用持久化的引用把计划的 from / to / tagIds 挂回当次字典。 */
+  function resolvePlanRefs(dict, list) {
+    const arr = list || [];
+    if (!dict) return arr;
+    const idx = codeIndex(dict);
+    arr.forEach((p) => {
+      if (!p) return;
+      if (p.fromRef && idx.node.has(p.fromRef)) p.from = idx.node.get(p.fromRef);
+      if (p.toRef && idx.node.has(p.toRef)) p.to = idx.node.get(p.toRef);
+      if (Array.isArray(p.tagRefs) && p.tagRefs.length) {
+        const ids = p.tagRefs.map((r) => idx.tag.get(r)).filter(Boolean);
+        if (ids.length) p.tagIds = ids;
+      }
+    });
+    return arr;
+  }
+
+  /**
+   * 字典重编译后 ID 会重新编号（源码按简码重建节点），计划 / 规则里存的
+   * from / to / tagIds 必须跟着改，否则界面上只剩底层 ID、到期也找不到节点。
+   * 只按「域 + 源码简码」配对；同一个键有歧义时不动。
+   */
+  function remapRefs(list, oldDict, newDict) {
+    const arr = list || [];
+    if (!oldDict || !newDict || oldDict === newDict) return arr;
+    const oldNodes = oldDict.nodes || {};
+    const newNodes = newDict.nodes || {};
+    const newIds = Object.keys(newNodes);
+    /* 源码里写的是 sourceCodeMap 的简码（同码重名会变成 wx1 / wx2），
+     * 不是节点自己的 zh_code —— 必须用同一套映射来配对新旧 ID。 */
+    let oldCodeMap = null;
+    try {
+      if (TV.source && TV.source.sourceCodeMap) oldCodeMap = TV.source.sourceCodeMap(oldDict);
+    } catch (e) { oldCodeMap = null; }
+    const codeOf = (kind, id) => {
+      if (oldCodeMap && oldCodeMap.get(id)) return oldCodeMap.get(id);
+      const rec = (kind === 'tag' ? oldDict.tags : oldNodes) || {};
+      return S((rec[id] || {}).zh_code);
+    };
+    const findIn = (kind, oldId) => {
+      const rec = (kind === 'tag' ? oldDict.tags : oldNodes) || {};
+      const n = rec[oldId];
+      if (!n) return '';
+      const target = (kind === 'tag' ? newDict.tags : newNodes) || {};
+      if (target[oldId]) return oldId;
+      const code = codeOf(kind, oldId);
+      const hits = Object.keys(target).filter((id) => target[id]
+        && S(target[id].domain).toUpperCase() === S(n.domain).toUpperCase()
+        && (S(target[id].zh_code) === code || S(target[id].zh_code) === S(n.zh_code)));
+      return hits.length === 1 ? hits[0] : '';
+    };
+    const nodeMap = new Map();
+    Object.keys(oldNodes).forEach((id) => {
+      const hit = findIn('node', id);
+      if (hit && hit !== id) nodeMap.set(id, hit);
+    });
+    const tagMap = new Map();
+    Object.keys(oldDict.tags || {}).forEach((id) => {
+      const hit = findIn('tag', id);
+      if (hit && hit !== id) tagMap.set(id, hit);
+    });
+    if (!nodeMap.size && !tagMap.size) return arr;
+    arr.forEach((p) => {
+      if (!p) return;
+      if (nodeMap.has(p.from)) p.from = nodeMap.get(p.from);
+      if (nodeMap.has(p.to)) p.to = nodeMap.get(p.to);
+      if (Array.isArray(p.tagIds) && tagMap.size) {
+        p.tagIds = p.tagIds.map((t) => tagMap.get(t) || t);
+      }
+    });
+    return arr;
+  }
+
 
   /**
    * 到期生成真实流水。
@@ -15254,12 +16749,43 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     const canceled = (plans || []).filter((p) => p.status === 'canceled');
     const monthly = active.filter((p) => p.period === 'm')
       .reduce((s, p) => s + (Number(p.amountCents) || 0), 0);
-    return { active: active.length, canceled: canceled.length, monthlyCents: monthly };
+    return {
+      active: active.length,
+      canceled: canceled.length,
+      monthlyCents: monthly,
+      monthly: active.filter((p) => p.period === 'm').length,
+      daily: active.filter((p) => p.period === 'd').length,
+      yearly: active.filter((p) => p.period === 'y').length,
+    };
   }
 
   TV.rules = {
     STATUS,
+    PERIOD_LABEL,
+    PERIOD_LABEL_EN,
     periodLabel,
+    dayOf,
+    monthOf,
+    clampDay,
+    scheduleText,
+    shortDate,
+    dueStampIn,
+    monthKeyOf,
+    isoMonthOf,
+    addMonthKey,
+    monthsBetweenKeys,
+    dueStampInMonth,
+    planState,
+    stateHas,
+    addPlanState,
+    stateTokenOf,
+    installmentInfo,
+    installmentNote,
+    futureOccurrences,
+    planOccurrences,
+    confirmOccurrence,
+    voidOccurrence,
+    occurrenceSpec,
     parsePlanLine,
     serializePlan,
     parseRuleLine,
@@ -15269,7 +16795,17 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     upsertPlan,
     nextDue,
     isDue,
+    planEvent,
+    hasSameEvent,
     runDuePlans,
+    materializeDue,
+    pendingDaily,
+    summarizePlans,
+    codeIndex,
+    syncPlanRefs,
+    resolvePlanRefs,
+    remapRefs,
+    remapPlans: remapRefs,
     cancelPlan,
     resumePlan,
     guessAmountCents,
@@ -15676,7 +17212,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     ];
     (event.tagIds || []).forEach((id) => parts.push(id));
     if (event.chainId) parts.push('^' + event.chainId);
-    return parts.join(' ');
+    const note = S(event.note).trim();
+    return parts.join(' ') + (note ? ' // ' + note.replace(/\/\//g, '/ /') : '');
   }
 
   function serializeLedger(state) {
@@ -16991,6 +18528,30 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     }
   }
 
+  /** 固定收支计划只留可序列化字段；老保险库没有 plans 字段时按空数组恢复。 */
+  function normalizePlans(list) {
+    return (Array.isArray(list) ? list : []).filter((p) => p && typeof p === 'object').map((p) => ({
+      id: String(p.id || ''),
+      status: p.status === 'canceled' ? 'canceled' : 'active',
+      period: ['d', 'm', 'y'].indexOf(p.period) >= 0 ? p.period : 'm',
+      day: Math.round(Number(p.day) || 0),
+      month: Math.round(Number(p.month) || 0),
+      domain: String(p.domain || 'P'),
+      from: String(p.from || ''),
+      to: String(p.to || ''),
+      amountCents: Math.round(Number(p.amountCents) || 0),
+      tagIds: (Array.isArray(p.tagIds) ? p.tagIds : []).map(String),
+      /* 底层 ID 每次编译都会重新随机；跨会话要认的是「域:源码简码」 */
+      fromRef: String(p.fromRef || ''),
+      toRef: String(p.toRef || ''),
+      tagRefs: (Array.isArray(p.tagRefs) ? p.tagRefs : []).map(String),
+      name: String(p.name || ''),
+      lastRun: /^\d{6}$/.test(String(p.lastRun || '')) ? String(p.lastRun) : '',
+      start: /^\d{6}$/.test(String(p.start || '')) ? String(p.start) : '',
+      createdAt: String(p.createdAt || ''),
+    })).filter((p) => p.id && p.from && p.to);
+  }
+
   function normalizePayload(p) {
     const o = p && typeof p === 'object' ? p : {};
     const hinted = Number(o.version) || ((o.dictSourceP != null || o.dictSourceC != null) ? 3 : 2);
@@ -17000,6 +18561,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       version,
       vaultId: String(o.vaultId == null ? '' : o.vaultId),
       ledgerSource: String(o.ledgerSource == null ? '' : o.ledgerSource),
+      fixedSource: String(o.fixedSource == null ? '' : o.fixedSource),
+      plans: normalizePlans(o.plans),
       updatedAt: String(o.updatedAt || ''),
     };
     if (version >= 3) {
@@ -17184,6 +18747,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     readHint,
     saveHint,
     normalizePayload,
+    normalizePlans,
     isUnlocked,
     createVault,
     unlockVault,
@@ -18022,12 +19586,37 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       }
       closeLineMenu();
       const menu = el('div', { class: 'cm-line-menu' });
-      const add = (label, fn, disabled) => {
-        const b = el('button', { type: 'button' }, [label]);
-        if (disabled) b.disabled = true;
+      const add = (label, fn, disabled, primary) => {
+        const b = el('button', { type: 'button', class: primary ? 'is-primary' : '' }, [label]);
+        if (disabled || !fn) b.disabled = true;
         else b.addEventListener('click', () => { closeLineMenu(); fn(); cm.focus(); });
         menu.appendChild(b);
       };
+      /* 未来区（20 行空行 + 未来记录）是只读的：编辑类动作禁用，
+       * 复制仍可用；未来记录的最后再加一个「确认」。 */
+      const tail = (cm._virtualCount || 0);
+      const realEnd = cm.lineCount() - tail;
+      const isTail = tail > 0 && line >= realEnd;
+      /* 未来记录第一行的行号在重建时算好，空行不参与下标 */
+      const vi = isTail && cm._virtualStart >= 0 ? line - cm._virtualStart : -1;
+      const futureRow = isTail && vi >= 0 && vi < virtualRows.length ? virtualRows[vi] : null;
+      if (isTail) {
+        /* 未来记录的删除 / 剪切 = 作废这一期（不改正文，NT 的 virtual delete 同义）；
+         * 粘贴 / 插入 / 上移会改正文，禁用；最后是「确认」。 */
+        add('删除', futureRow && h.onVoidVirtual ? () => h.onVoidVirtual(futureRow) : null,
+          !futureRow || !h.onVoidVirtual);
+        add('剪切', futureRow && h.onVoidVirtual
+          ? () => { copyEditorLine(cm, line); h.onVoidVirtual(futureRow); } : null,
+          !futureRow || !h.onVoidVirtual);
+        add('复制', () => copyEditorLine(cm, line));
+        add('粘贴', null, true);
+        add('插入', null, true);
+        add('上移', null, true);
+        add('确认', () => {
+          if (h.onConfirmVirtual && futureRow) h.onConfirmVirtual(futureRow);
+        }, !futureRow || !h.onConfirmVirtual, true);
+        return placeLineMenu(cm, line, x, y, menu);
+      }
       add('删除', () => removeEditorLine(cm, line));
       add('剪切', () => { copyEditorLine(cm, line); removeEditorLine(cm, line); });
       add('复制', () => copyEditorLine(cm, line));
@@ -18070,6 +19659,11 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
         /* 只替换 A\nB 这两行，不吞掉 B 后面的换行，保证是交换而不是拼接 */
         cm.replaceRange(b + '\n' + a, { line: line - 1, ch: 0 }, { line, ch: b.length });
       }, line <= 0);
+      return placeLineMenu(cm, line, x, y, menu);
+    }
+
+    /** 横排菜单定位 + 选中行高亮（真实行与未来记录共用）。 */
+    function placeLineMenu(cm, line, x, y, menu) {
       document.body.appendChild(menu);
       const r = menu.getBoundingClientRect();
       const wrap = cm.getWrapperElement();
@@ -18216,7 +19810,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
         if (ev.key !== 'Backspace' || file !== 'ledger') return;
         if (ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey || cm.somethingSelected()) return;
         const cur = cm.getCursor();
-        if (cur.line !== cm.lineCount() - 1 || cur.ch !== 0) return;
+        const lastReal = cm.lineCount() - (cm._virtualCount || 0) - 1;
+        if (cur.line !== lastReal || cur.ch !== 0) return;
         if ((cm.getLine(cur.line) || '').trim() !== '') return;
         const prev = cm.getLine(cur.line - 1) || '';
         const savedTop = cm.getScrollInfo().top;
@@ -18249,12 +19844,32 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
         bindRelativeDateFix(cm);
         bindMotherHintPick(cm);
       }
-      cm.on('change', () => {
+      cm.on('changes', () => { if (cm._spacerCount !== cm.lineCount()) syncSpacer(cm); });
+      cm.on('beforeChange', () => { cm._oldLineCount = cm.lineCount(); });
+      cm.on('change', (cmx, change) => {
         if (suspended) return;
+        /* 整篇替换（setValue / 全选粘贴 / 清空）：新文本当作正文，未来区重新接在后面 */
+        const fullReplace = file === 'ledger' && change && change.from.line === 0
+          && change.from.ch === 0 && change.to.line >= Math.max(0, (cmx._oldLineCount || 1) - 1)
+          && change.text.length > 0 && (cmx._virtualCount || 0) > 0;
+        if (fullReplace) {
+          /* 整篇被替换：新文本全是正文；未来区交给 app 在下一拍重建，
+           * 不在 change 回调里 setValue（CodeMirror 不允许）。 */
+          cmx._virtualCount = 0;
+          cmx._virtualStart = -1;
+          cmx._spacerCount = -1;
+          clearTailMarks(cmx);
+          clearSemantic(file);
+          dirty[file] = true;
+          updateTab(file);
+          if (h.onChange) h.onChange('ledger', cmx.getValue());
+          setTimeout(() => { if (h.onTailDirty) h.onTailDirty(); }, 0);
+          return;
+        }
         clearSemantic(file);   /* 文本一改，语义层立即失效，等下一次编译 */
         dirty[file] = true;
         updateTab(file);
-        if (h.onChange) h.onChange(file, cm.getValue());
+        if (h.onChange) h.onChange(file, file === 'ledger' ? realTextOf(cm) : cm.getValue());
       });
       cm.on('cursorActivity', () => {
         if (file === active) renderStatus();
@@ -18267,7 +19882,6 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
           if (!hint || !hint.matches(':hover')) { if (cm.closeHint) cm.closeHint(); }
         }, 220);
       });
-      cm.on('changes', () => { if (cm._tailCount !== cm.lineCount()) syncTailPad(cm); });
       cm.on('inputRead', (cmx, change) => {
         if (file !== active) return;
         const t = change.text.join('');
@@ -18333,7 +19947,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       renderStatus();
       if (editors[active]) setTimeout(() => {
         editors[active].refresh();
-        syncTailPad(editors[active]);
+        markTail(editors[active]);
+        syncSpacer(editors[active]);
         if (active === 'ledger') scrollToTail(editors[active]);
       }, 0);
       if (h.onActive) h.onActive(active);
@@ -18472,45 +20087,152 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       renderStatus();
     }
 
-    /* 末尾 30 行留白：只有行数变化时才重挂，避免每次编辑都触发滚动 */
-    function syncTailPad(cm) {
-      if (!cm || !cm.lineCount) return;
-      const count = cm.lineCount();
-      const h = Math.max(12, cm.defaultTextHeight() || 18) * 30;
-      if (cm._tailPad && cm._tailCount === count && cm._tailPad.node && cm._tailPad.node.isConnected) {
-        if (Math.abs((cm._tailPad.node.offsetHeight || 0) - h) > 1) {
-          cm._tailPad.node.style.height = h + 'px';
-          try { cm._tailPad.changed(); } catch (e) { /* ignore */ }
+    /* 未来记录 = 文档末尾的只读区（真正的 CodeMirror 行）：
+     * 先在最后一条正文后空 20 行，再按具体日期排未来记录。
+     * 它们有真正的行号、能点行标菜单，但不进 S.ledgerSource，也不算真实流水。 */
+    const VIRTUAL_GAP = 20;
+    let virtualRows = [];
+    let tailMarks = [];
+
+    function tailCount() {
+      return virtualRows.length ? VIRTUAL_GAP + virtualRows.length : 0;
+    }
+
+    /** 从编辑器全文里剥掉未来区，得到真正要保存 / 编译的流水文本。 */
+    function realTextOf(cm) {
+      const tail = (cm && cm._virtualCount) || 0;
+      if (!tail) return cm.getValue();
+      const n = Math.max(0, cm.lineCount() - tail);
+      const lines = [];
+      for (let i = 0; i < n; i += 1) lines.push(cm.getLine(i));
+      return lines.join('\n') + '\n';
+    }
+
+    function tailText() {
+      if (!virtualRows.length) return '';
+      return '\n'.repeat(VIRTUAL_GAP) + virtualRows.map((x) => x.text).join('\n') + '\n';
+    }
+
+    function fullText(real) {
+      const r = String(real == null ? '' : real);
+      if (!virtualRows.length) return r;
+      /* 正文尾部的空行归一，保证未来区前面正好 20 行空行 */
+      const base = r.replace(/\n+$/, '') + '\n';
+      return base + tailText();
+    }
+
+    function clearTailMarks(cm) {
+      tailMarks.forEach((m) => { try { m.clear(); } catch (e) { /* ignore */ } });
+      tailMarks = [];
+    }
+
+    function markTail(cm) {
+      if (cm !== editors.ledger) return;
+      clearTailMarks(cm);
+      const tail = tailCount();
+      if (!tail || !cm || !cm.lineCount) return;
+      const start = cm.lineCount() - tail;
+      if (start < 0) return;
+      const last = cm.lineCount() - 1;
+      try {
+        tailMarks.push(cm.markText(
+          { line: start, ch: 0 },
+          { line: last, ch: (cm.getLine(last) || '').length },
+          { readOnly: true, inclusiveLeft: true, inclusiveRight: true, handleMouseEvents: true },
+        ));
+      } catch (e) { /* ignore */ }
+    }
+
+    /** 未来记录第一行在文档里的行号（最后一条正文之后、20 行空行之后）。 */
+    function computeRowStart(cm) {
+      if (!virtualRows.length || !cm || !cm.lineCount) return -1;
+      const last = cm.getLine(cm.lineCount() - 1);
+      let start = cm.lineCount() - virtualRows.length - (String(last == null ? '' : last).trim() ? 0 : 1);
+      return Math.max(0, start);
+    }
+
+    /* 未来区下面的空高（不在正文里、没有行号）：保证「最后 10 行正文顶到视口上方」
+     * 在桌面上仍成立；没有未来记录时就是旧的 30 行留白。 */
+    const BOTTOM_ROWS = 10;
+    const EMPTY_ROWS = 30;
+
+    function syncSpacer(cm) {
+      if (!cm || !cm.lineCount || cm !== editors.ledger) return;
+      const rows = virtualRows.length ? BOTTOM_ROWS : EMPTY_ROWS;
+      const h = Math.max(12, cm.defaultTextHeight() || 18) * rows;
+      if (cm._spacer && cm._spacerCount === cm.lineCount() && cm._spacer.node && cm._spacer.node.isConnected) {
+        if (Math.abs((cm._spacer.node.offsetHeight || 0) - h) > 1) {
+          cm._spacer.node.style.height = h + 'px';
+          try { cm._spacer.changed(); } catch (e) { /* ignore */ }
         }
         return;
       }
-      if (cm._tailPad) {
-        try { cm.removeLineWidget(cm._tailPad); } catch (e) { /* ignore */ }
-        cm._tailPad = null;
+      if (cm._spacer) {
+        try { cm.removeLineWidget(cm._spacer); } catch (e) { /* ignore */ }
+        cm._spacer = null;
       }
       const pad = el('div', { class: 'cm-tail-pad', 'aria-hidden': 'true' });
       pad.style.height = h + 'px';
-      cm._tailPad = cm.addLineWidget(Math.max(0, count - 1), pad, { above: false });
-      cm._tailCount = count;
+      cm._spacer = cm.addLineWidget(Math.max(0, cm.lineCount() - 1), pad, { above: false });
+      cm._spacerCount = cm.lineCount();
+    }
+
+    /** rows: [{ text, planId, month, date, kind, periodIndex, amountCents, note }] */
+    function setVirtualRows(rows) {
+      const list = (rows || []).filter((r) => r && r.text);
+      const cm = editors.ledger;
+      if (!cm) { virtualRows = list; return; }
+      const oldCount = cm._virtualCount || 0;
+      const n = Math.max(0, cm.lineCount() - oldCount);
+      const lines = [];
+      for (let i = 0; i < n; i += 1) lines.push(cm.getLine(i));
+      const real = lines.join('\n').replace(/\n+$/, '') + '\n';
+      virtualRows = list;
+      suspended = true;
+      try {
+        const cur = cm.getCursor();
+        const info = cm.getScrollInfo();
+        const inTail = oldCount > 0 && cur.line >= Math.max(0, cm.lineCount() - oldCount);
+        cm.setValue(fullText(real));
+        cm._virtualCount = tailCount();
+        cm._virtualStart = computeRowStart(cm);
+        markTail(cm);
+        syncSpacer(cm);
+        if (inTail) {
+          cm.setCursor({ line: Math.max(0, cm.lineCount() - (cm._virtualCount || 0)), ch: 0 });
+        } else {
+          cm.setCursor({ line: Math.min(cur.line, Math.max(0, cm.lineCount() - 1)), ch: cur.ch });
+        }
+        const ni = cm.getScrollInfo();
+        cm.scrollTo(info.left, Math.min(info.top, Math.max(0, ni.height - ni.clientHeight)));
+      } finally {
+        suspended = false;
+      }
+      cm.refresh();
+    }
+
+    /** 行数 / 行号变化后重新压住未来区（只读标记跟着文本走，这里只兜底）。 */
+    function refreshVirtualRows() {
+      const cm = editors.ledger;
+      if (!cm) return;
+      markTail(cm);
     }
 
     function setTexts(ledgerText, dictText) {
       suspended = true;
       const a = editors.ledger;
       const b = editors.dict;
-      if (a && a.getValue() !== String(ledgerText == null ? '' : ledgerText)) {
-        a.setValue(String(ledgerText == null ? '' : ledgerText));
+      if (a && a.getValue() !== fullText(ledgerText)) {
+        a.setValue(fullText(ledgerText));
         a.clearHistory();
-        a._tailPad = null;
-        a._tailCount = -1;
-        syncTailPad(a);
+        a._virtualCount = tailCount();
+        a._virtualStart = computeRowStart(a);
+        markTail(a);
+        syncSpacer(a);
       }
       if (b && b.getValue() !== String(dictText == null ? '' : dictText)) {
         b.setValue(String(dictText == null ? '' : dictText));
         b.clearHistory();
-        b._tailPad = null;
-        b._tailCount = -1;
-        syncTailPad(b);
       }
       suspended = false;
       dirty.ledger = false;
@@ -18524,7 +20246,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 
     function getTexts() {
       return {
-        ledger: editors.ledger ? editors.ledger.getValue() : '',
+        ledger: editors.ledger ? realTextOf(editors.ledger) : '',
         dict: editors.dict ? editors.dict.getValue() : '',
       };
     }
@@ -18540,13 +20262,20 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       updateTab('dict');
     }
 
-    function gotoLine(file, line) {
+    function gotoLine(file, line, margin) {
       setActive(file);
       const cm = editors[active];
       if (!cm) return;
       const l = Math.max(0, Math.min((cm.lineCount() || 1) - 1, (Number(line) || 1) - 1));
       cm.setCursor({ line: l, ch: 0 });
-      cm.scrollIntoView({ line: l, ch: 0 }, 120);
+      if (margin == null) {
+        cm.scrollIntoView({ line: l, ch: 0 }, 120);
+      } else {
+        const info = cm.getScrollInfo();
+        const coords = cm.charCoords({ line: l, ch: 0 }, 'local');
+        const maxTop = Math.max(0, info.height - info.clientHeight);
+        cm.scrollTo(null, Math.max(0, Math.min(coords.top - margin, maxTop)));
+      }
       cm.focus();
     }
 
@@ -18556,7 +20285,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 
     function scrollToTail(cm) {
       if (!cm || !cm.lineCount) return;
-      const last = Math.max(0, cm.lineCount() - 1);
+      /* 目标是最后一条正文；未来区（20 行空行 + 未来记录）不算正文 */
+      const last = Math.max(0, cm.lineCount() - (cm._virtualCount || 0) - 1);
       const info = cm.getScrollInfo();
       /* 正文本身不足一屏：从顶部显示，不为了最后 10 行把开头藏掉 */
       if (info.height <= info.clientHeight) {
@@ -18573,7 +20303,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     }
 
     function refresh() {
-      Object.keys(editors).forEach((k) => { editors[k].refresh(); syncTailPad(editors[k]); });
+      Object.keys(editors).forEach((k) => { editors[k].refresh(); markTail(editors[k]); syncSpacer(editors[k]); });
     }
 
     setActive('ledger');
@@ -18588,6 +20318,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       gotoLine,
       focus,
       refresh,
+      setVirtualRows,
+      refreshVirtualRows,
       editors,
     };
   }
@@ -19695,7 +21427,6 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   const amount = TV.amount;
   const dictMod = TV.dict;
   const dateMod = TV.date;
-  const rulesMod = TV.rules;
 
   const PREFS_KEY = 'txtvein.prefs.v1';
   const COLOR_DEFS = [
@@ -19859,39 +21590,18 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
         const from = dictMod.renderNode(s.dict, p.from, s.mode, s.lang);
         const to = dictMod.renderNode(s.dict, p.to, s.mode, s.lang);
         const tags = (p.tagIds || []).map((id) => dictMod.renderTag(s.dict, id, s.mode, s.lang)).filter(Boolean);
-        const due = rulesMod.nextDue(p, new Date());
         return el('div', { class: 'plan-card' + (p.status !== 'active' ? ' is-canceled' : '') }, [
           el('div', { class: 'plan-top' }, [
-            el('span', { class: 'plan-id' }, [p.id]),
             el('span', { class: 'plan-status' + (p.status !== 'active' ? ' is-off' : '') }, [p.status === 'active' ? 'ACTIVE' : 'CANCELED']),
-            el('span', { class: 'plan-meta' }, [
-              '从 ' + (p.start || '—') + ' 起',
-              p.lastRun ? '上次 ' + p.lastRun : '未执行',
-              due ? '下次 ' + due : '不再生成',
-            ]),
           ]),
           el('div', { class: 'plan-text' }, [
             from + ' > ' + to + '  ' + amount.formatPlain(p.amountCents)
               + '  *' + p.period + (tags.length ? '  < ' + tags.join(' < ') : ''),
           ]),
           el('div', { class: 'plan-actions' }, [
-            p.status === 'active'
-              ? mini('取消未来', 'is-danger', () => {
-                app.cancelPlan(p.id);
-                toast('已取消 ' + p.id + '；历史流水未动', 'ok');
-                showRules(app);
-              })
-              : mini('恢复', 'is-accent', () => {
-                app.resumePlan(p.id);
-                toast('已恢复 ' + p.id, 'ok');
-                showRules(app);
-              }),
-            mini('删除规则', '', () => {
-              confirm(app, '删除规则', '删除 ' + p.id + '？只删规则，不删已经生成的流水。', () => {
-                app.deletePlan(p.id);
-                toast('已删除规则 ' + p.id, 'ok');
-                showRules(app);
-              });
+            mini('到固定表里改', '', () => {
+              close();
+              app.setView('fixed');
             }),
           ]),
         ]);
@@ -20904,7 +22614,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
             el('li', {}, [el('code', {}, ['sav > wx1 > din 1000 995']), ' 链式转移，差额进损耗']),
             el('li', {}, [el('code', {}, ['261110 wx1 > din 12.5']), ' 指定日期']),
             el('li', {}, [el('code', {}, ['-1 wx1 > din 35']), ' 昨天（落盘固化）']),
-            el('li', {}, [el('code', {}, ['wx1 > rent 1000*m']), ' 周期规则']),
+            el('li', {}, [el('code', {}, ['wx1 > rent 1000*m']), ' 固定收支：每月（自动落账）']),
+            el('li', {}, [el('code', {}, ['wx1 > din 5*d']), ' 固定收支：每日（确认才落账）']),
             el('li', {}, [el('code', {}, ['P:wx1 > C:cbiz 1000 < 垫付']), ' 跨域']),
             el('li', {}, [el('code', {}, ['wx1 > din 60m < 时间']), ' 时间代币']),
           ]),
@@ -20919,7 +22630,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
           shortcut('Ctrl+Z', '撤销刚固化的别名'),
           shortcut('Delete', '删除选中的流水'),
           shortcut('Ctrl+S', '立即保存'),
-          shortcut('Ctrl+R', '规则面板'),
+          shortcut('Ctrl+R', '跳到固定收支段'),
           shortcut('Ctrl+Shift+P', '简码 / 明文'),
           shortcut('Ctrl+Shift+L', '中文 / 英文'),
           shortcut('Ctrl+Shift+K', '锁定'),
@@ -21352,6 +23063,91 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 
 </script>
 <script>
+/* js/ui/plan-view.js */
+/* TxtVein · 固定收支的未来记录
+ *
+ * 固定表（fixed.tv）是独立的表；这里只把它算出来的「未来记录」变成
+ * 流水记录表末尾的真实文本行（带行号、只读）：
+ *
+ *   261216 wx1 > rent 1000 < xf
+ *
+ * 行形和真实流水完全一样；计划 / 期状态只留在 meta 里，不进正文。
+ */
+(function (root) {
+  'use strict';
+
+  const TV = (root.TxtVein = root.TxtVein || {});
+  const D = TV.dict;
+  const rules = TV.rules;
+
+  function nodeName(dict, id, mode, lang) {
+    if (!dict || !dict.nodes || !dict.nodes[id]) return String(id || '?');
+    return D.renderNode(dict, id, mode, lang || 'zh');
+  }
+
+  function buildModel(s, now) {
+    const at = now instanceof Date ? now : new Date();
+    const plans = (s && s.plans) || [];
+    const events = (s && s.events) || [];
+    return {
+      dict: s && s.dict,
+      plans,
+      events,
+      mode: (s && s.mode) || 'CODE',
+      lang: (s && s.lang) || 'zh',
+      now: at,
+      today: TV.date.todayStamp(at),
+      summary: rules.summarizePlans(plans, s && s.dict, at),
+    };
+  }
+
+  /**
+   * 未来记录：按具体日期排好，行形与真实流水相同。
+   * 每月固定 / 分期往后 6 个月，每日只有今天；已生成 / 已确认 / 已作废的不出现。
+   * @returns {Array<{text, planId, month, date, kind, amountCents, note, periodIndex}>}
+   */
+  function futureLineRows(model, horizon) {
+    const rows = rules.planOccurrences(model.plans || [], model.now, model.events || [], horizon || 6);
+    const mode = model.mode === 'CODE' ? 'CODE' : 'PLAIN';
+    return rows.map((r) => {
+      const p = r.plan;
+      let from = nodeName(model.dict, p.from, mode, model.lang);
+      let to = nodeName(model.dict, p.to, mode, model.lang);
+      const fn = model.dict.nodes && model.dict.nodes[p.from];
+      const tn = model.dict.nodes && model.dict.nodes[p.to];
+      if (mode === 'CODE' && fn && tn && fn.domain !== tn.domain) {
+        from = fn.domain + ':' + from;
+        to = tn.domain + ':' + to;
+      }
+      const tags = (p.tagIds || [])
+        .map((id) => (model.dict.tags[id] ? ' < ' + D.renderTag(model.dict, id, mode, model.lang) : ''))
+        .join('');
+      const domain = String(p.domain || 'P').toUpperCase();
+      const pre = domain === 'P' ? '' : domain + ' ';
+      return {
+        text: pre + r.date + ' ' + from + ' > ' + to + ' '
+          + TV.source.formatYuanExact(r.amountCents) + tags,
+        planId: p.id,
+        month: r.month,
+        date: r.date,
+        kind: r.kind,
+        amountCents: r.amountCents,
+        note: r.note,
+        periodIndex: r.periodIndex,
+      };
+    });
+  }
+
+  TV.planView = {
+    buildModel,
+    futureLineRows,
+  };
+
+  if (typeof module === 'object' && module.exports) module.exports = TV.planView;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
 /* js/ui/app.js */
 /* TxtVein · 应用外壳
  * 唯一状态：dict + events + plans + rules（全部可序列化成两份纯文本）。
@@ -21381,6 +23177,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     plans: [],
     rules: [],
     ledgerSource: '',
+    fixedSource: '',
     dictSource: '',
     systemVersion: '',
     sourceDiags: [],
@@ -21404,6 +23201,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     calcAll: null,
     texts: null,
     lastAliasUndo: null,
+    fixedDiags: [],
+    planDay: '',          /* 最近一次自动记账的日期；跨日重算 */
+    planDockSig: '',      /* 流水末尾清单缓存签名，避免每次编译都重排 */
   };
 
   const LABELS = {
@@ -21424,8 +23224,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       staleAnchor: '归属失效', reconcile: '对账',
       statsColName: '分类', statsColNode: '节点', statsColOther: '对方', statsWeight: '强度',
       statsMonth: '月', statsItems: '项', statsRecords: '条', statsSelect: '左侧选择一项',
-      noRows: '没有匹配的流水', fixedTitle: '固定收支与规则',
-      fixedHint: '文本编辑，自动保存 · [PLAN] 固定收支 / [RULES] 自动规则',
+      noRows: '没有匹配的流水', fixedTitle: '固定收支表',
+      fixedHint: '独立的表，自动保存 · 行形同流水：每日 / 每月16日 + 转出 > 转入 金额 < 标签 *d|*m|*y // 备注 · 分期加 期数=N 首月=YYMM 本金=… 利息=… · 状态在 | 后（生成 / 确认 / 作废）',
       feedbackHint: '行首空格补日期 · 双击空格 > · 三击 < · 数字/鼠标选候选 · Ctrl+Enter 编译',
     },
     en: {
@@ -21445,8 +23245,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       staleAnchor: 'Stale anchor', reconcile: 'Reconcile',
       statsColName: 'Category', statsColNode: 'Node', statsColOther: 'Counterpart', statsWeight: 'Weight',
       statsMonth: 'month', statsItems: 'items', statsRecords: 'records', statsSelect: 'Select an item on the left',
-      noRows: 'No matching entries', fixedTitle: 'Fixed entries & rules',
-      fixedHint: 'Text editor, auto-saved · [PLAN] fixed entries / [RULES] auto rules',
+      noRows: 'No matching entries', fixedTitle: 'Fixed table',
+      fixedHint: 'Independent table, auto-saved · same shape as ledger rows: Daily / Monthly day 16 + from > to amount < tags *d|*m|*y // note · installments add 期数=N 首月=YYMM 本金=… 利息=… · state after | (生成 / 确认 / 作废)',
       feedbackHint: 'Leading space adds date · double space > · triple < · Ctrl+Enter compile',
     },
   };
@@ -21474,6 +23274,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     renderTabs();
     if (S.view === 'query') renderQuery();
     if (S.view === 'fixed') renderFixedHint();
+    renderFutureBlock(true);
     updateFeedback();
   }
 
@@ -21595,7 +23396,12 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     if (!S.dict) return;
     if (!force && S.ledgerSource && S.dictSource) return;
     S.dictSource = TV.source.dictToSource(S.dict);
-    S.ledgerSource = TV.source.normalizeDomainSyntax(TV.source.ledgerToSource(S.dict, S.events, S.behaviors, S.notes));
+    S.ledgerSource = TV.source.normalizeDomainSyntax(TV.source.ledgerToSource(
+      S.dict, S.events, S.behaviors, S.notes,
+    ));
+    if (!S.fixedSource) {
+      S.fixedSource = TV.source.fixedSourceFromPlans(S.plans || [], S.dict, { mode: S.mode, lang: S.lang });
+    }
     if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
   }
 
@@ -21622,8 +23428,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     S.systemVersion = TV.systemDict.VERSION_STRING;
     S.texts = {
       ledger, dict, vaultId: S.vaultId, ledgerHash, dictHash,
-      ledgerSource: S.ledgerSource, dictSource: S.dictSource,
+      ledgerSource: S.ledgerSource, fixedSource: S.fixedSource, dictSource: S.dictSource,
       dictSourceP: split.p, dictSourceC: split.c,
+      plans: S.plans,
       systemVersion: S.systemVersion,
     };
     return S.texts;
@@ -21639,6 +23446,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       await store.save({
         vaultId: S.vaultId,
         ledgerSource: texts.ledgerSource,
+        fixedSource: texts.fixedSource,
         dictSourceP: texts.dictSourceP,
         dictSourceC: texts.dictSourceC,
         systemVersion: texts.systemVersion,
@@ -21825,6 +23633,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   let feedbackFn = null;
   let compileTimer = 0;
   let compiling = false;
+  let plansDueRunning = false;
+  let planSyncTimer = 0;
 
   function ensureEditor() {
     if (editorCtl || !TV.editor) return editorCtl;
@@ -21854,6 +23664,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       onCursor: (file, line) => { if (file === 'ledger') onLedgerCursor(line); },
       onExpandBatch: (cm, line) => expandBatchInEditor(cm, line),
       onCanonicalLine: (cm, line) => markCanonicalOnEnter(cm, line),
+      onConfirmVirtual: (row) => confirmPlanOccurrence(row),
+      onVoidVirtual: (row) => voidPlanOccurrence(row),
+      onTailDirty: () => renderFutureBlock(true),
       onAdoptMother: (id, domain) => {
         const r = adoptMother(id, '', domain);
         if (r.ok && S.dict.nodes[r.id]) r.name = S.dict.nodes[r.id].zh_name;
@@ -21921,7 +23734,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     (S.events || []).forEach((e) => add(e.sourceLine, { kind: 'E', e }));
     (S.behaviors || []).forEach((b) => add(b.sourceLine, { kind: 'B', b }));
     (S.notes || []).forEach((n) => add(n.line, { kind: 'X', n }));
-    const lines = S.ledgerSource.replace(/\n$/, '').split('\n');
+    const recordsEnd = TV.source.recordsEndIndex(S.ledgerSource);
+    const lines = S.ledgerSource.replace(/\n$/, '').split('\n').slice(0, recordsEnd);
     const out = [];
     lines.forEach((raw, idx) => {
       const recs = byLine.get(idx + 1) || [];
@@ -21943,6 +23757,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
         }
         return;
       }
+      const cmtIdx = raw.indexOf('//');
+      const cmt = cmtIdx >= 0 ? raw.slice(cmtIdx).trim() : '';
+      const outBefore = out.length;
       semantic.forEach((r) => {
         if (r.kind === 'E') {
           const e = r.e;
@@ -21962,6 +23779,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
           out.push(domainPrefix(b.domain) + b.date + ' ' + from + ' > ' + to + ' ' + (b.weight || 1) + tags);
         }
       });
+      /* 行尾注释（固定收支模板备注 / 手工注释）跟着行一起走 */
+      if (cmt && out.length > outBefore) out[out.length - 1] += ' ' + cmt;
       /* 同一行还有备注节点（通常没有）时保留原文，避免丢失 */
       if (notes.some((r) => r.n.kind === 'note')) {
         notes.filter((r) => r.n.kind === 'note').forEach((r) => {
@@ -22022,49 +23841,224 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     }
   }
 
-  function nextPlanId() {
-    S.dict.meta = S.dict.meta || {};
-    let n = Number(S.dict.meta.nextPlan) || 1;
-    let id;
-    do { id = 'R_' + String(n).padStart(3, '0'); n += 1; } while ((S.plans || []).some((p) => p.id === id));
-    S.dict.meta.nextPlan = n;
-    return id;
+  /* ---------------- 固定收支：独立的一张表（[固定] / [分期]） ----------------
+   *
+   * 固定收支不是流水文本的一部分，它是一张独立的表（fixed.tv）：
+   *   · 行形和流水一样，只是最前面是 每日 / 每月16日 / 每年11月16日，
+   *     最后面挂 *d / *m / *y；
+   *   · 两个大区域：[固定] 与 [分期]（分期再加 共N期 首期=YYMMDD）；
+   *   · 它定期向流水记录的未来区域添加流水：每月/分期到期自动落成真实流水，
+   *     每日只摆今天，确认才落账（不确认就过期）。
+   */
+
+  function planModel() {
+    return TV.planView.buildModel(S, new Date());
   }
 
-  function refreshFixedSource() {
-    if (!fixedCtl) return;
-    const src = fixedSource();
-    if (fixedCtl.cm.getValue() !== src) {
-      fixedCtl.cm.setValue(src);
+  function planById(id) {
+    return (S.plans || []).find((p) => p.id === id) || null;
+  }
+
+  function planSignature() {
+    const list = (S.plans || []).map((p) => [
+      p.id, p.status, p.kind, p.period, p.day, p.month, p.note,
+      p.periods, p.firstMonth, p.principalCents, p.interestCents,
+      p.from, p.to, p.amountCents, (p.tagIds || []).join(','), p.line,
+      JSON.stringify(p.state || {}),
+    ].join('\u0001'));
+    const ev = S.events || [];
+    const sum = ev.reduce((a, e) => a + Math.round(Number(e.amountCents) || 0), 0);
+    const last = ev.length ? ev[ev.length - 1].date : '';
+    return list.join('\u0002') + '|' + date.todayStamp() + '|' + S.lang + '|' + S.mode
+      + '|' + ev.length + '|' + last + '|' + sum;
+  }
+
+  /** 未来记录 = 流水末尾的只读文本行；计划 / 日期 / 条数变了才重建。 */
+  function renderFutureBlock(force) {
+    if (!editorCtl || !editorCtl.setVirtualRows) return;
+    const sig = planSignature();
+    if (!force && sig === S.planDockSig) return;
+    S.planDockSig = sig;
+    editorCtl.setVirtualRows(TV.planView.futureLineRows(planModel(), 6));
+  }
+
+  const planActions = {
+    confirm: (spec) => confirmPlanOccurrence(spec),
+    void: (spec) => voidPlanOccurrence(spec),
+    edit: (id) => gotoPlanLine(id),
+  };
+
+  /** 把 S.plans 写回独立的固定表文本（含生成/确认/作废状态）。 */
+  function writeFixedSource() {
+    if (!S.dict) return false;
+    const next = TV.source.fixedSourceFromPlans(S.plans || [], S.dict, {
+      mode: S.mode, lang: S.lang,
+    });
+    if (next === S.fixedSource) return false;
+    S.fixedSource = next;
+    if (fixedCtl && fixedCtl.cm && fixedCtl.cm.getValue() !== next) {
+      fixedCtl.cm.setValue(next);
       fixedCtl.cm.clearHistory();
+    }
+    return true;
+  }
+
+  function gotoPlanLine(id) {
+    const p = planById(id);
+    if (!p || !p.line) return;
+    setView('fixed');
+    if (fixedCtl && fixedCtl.cm) {
+      const l = Math.max(0, Math.min(p.line - 1, fixedCtl.cm.lineCount() - 1));
+      fixedCtl.cm.setCursor({ line: l, ch: 0 });
+      fixedCtl.cm.scrollIntoView({ line: l, ch: 0 }, 120);
+      fixedCtl.cm.focus();
     }
   }
 
-  function syncLedgerPlans() {
-    if (!S.dict || !S.events) return false;
-    S.plans = S.plans || [];
-    const lines = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n');
+  /** 流水行：固定收支模板的备注作为行尾注释保留（NT 的 note）。 */
+  function eventLineWithNote(e) {
+    const line = renderEventLine(e);
+    const note = String((e && e.note) || '').trim().replace(/\/\//g, '/ /');
+    return note ? line + ' // ' + note : line;
+  }
+
+  /**
+   * 确认某一期（NT 的 confirmOccurrence：记到「今天」这一笔）。
+   * 固定表只多一个「确认=YYMM」状态，计划本身不动。
+   */
+  function confirmPlanOccurrence(spec) {
+    if (!spec) return;
+    const p = planById(spec.planId);
+    if (!p) return;
+    const ev = rulesMod.confirmOccurrence(p, spec, new Date(), { dict: S.dict });
+    if (!ev) { toast('这一期认不出来', 'error'); return; }
+    if (!(ev.amountCents > 0)) { toast('金额必须大于 0', 'error'); return; }
+    insertLedgerLine(eventLineWithNote(ev));
+    writeFixedSource();
+    compileSources();
+    scheduleSave();
+    toast('已确认' + (spec.periodIndex ? '（' + spec.periodIndex + ' 期）' : '') + '：' + rulesMod.shortDate(ev.date), 'ok');
+  }
+
+  /** 作废这一期：只记「作废=YYMM」，不删计划，也不写流水。 */
+  function voidPlanOccurrence(spec) {
+    if (!spec) return;
+    const p = planById(spec.planId);
+    if (!p) return;
+    rulesMod.voidOccurrence(p, spec);
+    writeFixedSource();
+    compilePlansOnly();
+    scheduleSave();
+    toast('已作废这一期，固定表本身没动', 'ok');
+  }
+
+  /**
+   * 到期自动落账（NT 口径）：
+   *   · 只处理每月固定收支（每日、分期都不自动）；
+   *   · 只补当前月这一期，日期 = 当月应发生日，备注 = 模板备注；
+   *   · 生成后把月 key 记进「生成=」，删掉那一笔也不会复活。
+   */
+  function syncPlansDue(force) {
+    if (!S.dict || !(S.plans || []).length || plansDueRunning) return false;
+    const now = new Date();
+    const today = date.todayStamp(now);
+    if (!force && S.planDay === today) return false;
+    plansDueRunning = true;
+    try {
+      S.planDay = today;
+      const r = rulesMod.materializeDue(S.plans, now, { existing: S.events, dict: S.dict });
+      const wrote = writeFixedSource();
+      if (!r.generated && !wrote) return false;
+      r.events.slice()
+        .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+        .forEach((e) => insertLedgerLine(eventLineWithNote(e)));
+      compileSources();
+      scheduleSave();
+      if (r.generated) toast('已自动记账 ' + r.generated + ' 笔到期固定收支', 'ok');
+      return true;
+    } finally {
+      plansDueRunning = false;
+    }
+  }
+
+  function planDayTick() {
+    if (!S.dict) return;
+    if (S.planDay !== date.todayStamp()) syncPlansDue();
+  }
+
+  /**
+   * 流水行尾录了 `*m` / `*d` / `*y`：
+   *   · *m 保留这一笔的「日」；*d 不保留日期；*y 保留月 + 日；
+   *   · 把它加进固定表，再把流水行尾的标记去掉。
+   */
+  function adoptInlinePeriods(r) {
+    const plans = ((r && r.plans) || []).slice();
     let changed = false;
-    lines.forEach((line, idx) => {
-      const pm = String(line).match(/\*([dmy])\b/i);
-      if (!pm) return;
-      const period = pm[1].toLowerCase();
-      S.events.filter((e) => e.sourceLine === idx + 1 && e.kind === 'account' && e.amountCents > 0)
-        .forEach((e) => {
-          const same = S.plans.find((p) => p.status === 'active'
-            && p.from === e.from && p.to === e.to && p.amountCents === e.amountCents
-            && p.period === period && (p.domain || 'P') === (e.domain || 'P'));
-          if (same) return;
-          S.plans.push({
-            id: nextPlanId(), status: 'active', start: e.date, lastRun: e.date,
-            period, domain: e.domain || 'P', from: e.from, to: e.to,
-            amountCents: e.amountCents, tagIds: (e.tagIds || []).slice(),
-            raw: String(line).trim(), createdAt: new Date().toISOString(),
-          });
-          changed = true;
+    const lines = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n');
+    ((r && r.events) || []).forEach((e) => {
+      if (!e || !e.period || e.kind !== 'account' || !(e.amountCents > 0) || !e.sourceLine) return;
+      const idx = e.sourceLine - 1;
+      if (idx < 0 || idx >= lines.length) return;
+      const period = e.period;
+      const day = period === 'd' ? 0 : Number(e.date.slice(4, 6));
+      const month = period === 'y' ? Number(e.date.slice(2, 4)) : 0;
+      const same = plans.some((p) => p.from === e.from && p.to === e.to
+        && p.amountCents === e.amountCents && p.period === period
+        && (p.domain || 'P') === (e.domain || 'P')
+        && (period === 'd' || rulesMod.dayOf(p) === day)
+        && (period === 'y' ? rulesMod.monthOf(p) === month : true));
+      if (!same) {
+        plans.push({
+          id: 'P_new_' + plans.length,
+          kind: 'fixed',
+          status: 'active',
+          period,
+          day,
+          month,
+          note: '',
+          inst: null,
+          /* NT 的 markPlanHandled：从哪一笔流水挂出来的，就把那个月记成已生成，
+           * 避免到期自动补账时重复落一笔。 */
+          state: { generated: [e.date.slice(0, 4)], confirmed: [], voided: [] },
+          domain: e.domain || 'P',
+          from: e.from,
+          to: e.to,
+          amountCents: e.amountCents,
+          tagIds: (e.tagIds || []).slice(),
+          line: 0,
         });
+        changed = true;
+      }
+      const next = lines[idx].replace(/\s+\*[dmy]\b/gi, '');
+      if (next !== lines[idx]) { lines[idx] = next; changed = true; }
     });
-    if (changed) refreshFixedSource();
+    S.plans = plans;
+    if (!changed) return false;
+    S.ledgerSource = lines.join('\n') + '\n';
+    writeFixedSource();
+    return true;
+  }
+
+  /**
+   * 改了「自动落账」那一笔的金额 → 写回固定表模板（NT syncPlanFromEdit 的口径）。
+   * 只认 generated 月份里唯一一条同流向流水，避免误改别的流水。
+   */
+  function syncPlanFromRows(plans, events) {
+    let changed = false;
+    (plans || []).forEach((plan) => {
+      if (!plan || plan.kind === 'installment' || plan.period !== 'm') return;
+      const st = plan.state || {};
+      (st.generated || []).forEach((mk) => {
+        const rows = (events || []).filter((e) => e && e.from === plan.from && e.to === plan.to
+          && String(e.date || '').slice(0, 4) === mk);
+        if (rows.length !== 1) return;
+        const cents = Math.round(Number(rows[0].amountCents) || 0);
+        if (cents > 0 && cents !== plan.amountCents) {
+          plan.amountCents = cents;
+          changed = true;
+        }
+      });
+    });
     return changed;
   }
 
@@ -22077,12 +24071,21 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       const r = TV.source.compileAll(S.dictSource, S.ledgerSource, {
         vaultId: S.vaultId, now: new Date(), domain: S.domain, system: TV.systemDict,
       });
+      const prevDict = S.dict;
       S.dict = r.dict;
+      rulesMod.remapRefs(S.rules, prevDict, S.dict);
+      /* 独立的固定表：和流水各自编译，互不污染 */
+      const fp = TV.source.compileFixed(fixedViewSource(), S.dict, {
+        now: new Date(), domain: S.domain,
+      });
+      S.plans = fp.plans || [];
+      S.fixedDiags = fp.diagnostics || [];
       S.events = r.events || [];
       S.behaviors = r.behaviors || [];
       S.notes = r.notes || [];
       S.projCache = {};
-      syncLedgerPlans();
+      if (syncPlanFromRows(S.plans, S.events)) writeFixedSource();
+      const inlineChanged = adoptInlinePeriods({ events: r.events, plans: S.plans });
       S.sourceDiags = (r.dictDiagnostics || []).map((x) => Object.assign({ file: 'dict' }, x))
         .concat((r.ledgerDiagnostics || []).map((x) => Object.assign({ file: 'ledger' }, x)));
       if (editorCtl) editorCtl.setDiagnostics(S.sourceDiags);
@@ -22090,6 +24093,12 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       renderCandidateButton();
       renderAll();
       scheduleSave();
+      if (inlineChanged) {
+        clearTimeout(planSyncTimer);
+        planSyncTimer = setTimeout(() => {
+          if (!syncPlansDue(true)) compileSources();
+        }, 80);
+      }
       if (r.autoTags && r.autoTags.length && editorCtl) {
         if (!isDictV4()) {
         /* v3：备注标签自动建，写回 dict.tv 的 [NOTE] 段，避免下次编译丢失 */
@@ -22158,7 +24167,6 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 
   /* ---------------- 查询页：三段独立流水查询（NT 风格） ---------------- */
   let queryCtl = null;
-  let fixedCtl = null;
   const QUERY_PANELS = [
     { key: 'A', kind: 'day' },
     { key: 'B', kind: 'month' },
@@ -22363,29 +24371,83 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     (queryCtl.panels || []).forEach((p) => renderQueryPanel(p));
   }
 
-  /* ---------------- 固定页 ---------------- */
-  function fixedSource() {
-    const body = TV.rules.serializeBlocks(S.plans || [], S.rules || []).trim();
-    return '// 固定收支与规则 · [PLAN] 固定收支 / [RULES] 自动规则\n'
-      + (body ? body + '\n' : '');
+  /* ---------------- 固定页：独立的固定表（文本编译器） ---------------- */
+  let fixedCtl = null;
+
+  function fixedViewSource() {
+    if (!S.fixedSource) {
+      S.fixedSource = TV.source.fixedSourceFromPlans(S.plans || [], S.dict, {
+        mode: S.mode, lang: S.lang,
+      });
+    }
+    return S.fixedSource;
+  }
+
+  function compilePlansOnly() {
+    if (!S.dict) return false;
+    const r = TV.source.compileFixed(S.fixedSource, S.dict, {
+      now: new Date(), domain: S.domain,
+    });
+    S.plans = r.plans || [];
+    S.fixedDiags = r.diagnostics || [];
+    renderFixedErrors();
+    renderFutureBlock(true);
+    renderHUD();
+    return r.ok;
+  }
+
+  function renderFixedErrors() {
+    if (!fixedCtl || !fixedCtl.errors) return;
+    clear(fixedCtl.errors);
+    if (fixedCtl.summary) {
+      const sum = rulesMod.summarizePlans(S.plans || [], S.dict, new Date());
+      clear(fixedCtl.summary);
+      const money = (c) => TV.amount.formatPlain(c);
+      fixedCtl.summary.appendChild(el('span', {}, [
+        '固定 ' + sum.fixedCount + ' 条 · 每月收入 ' + money(sum.monthlyIncome)
+          + ' / 支出 ' + money(sum.monthlyExpense)
+          + (sum.dailyIncome || sum.dailyExpense
+            ? ' · 每日收入 ' + money(sum.dailyIncome) + ' / 支出 ' + money(sum.dailyExpense) : ''),
+      ]));
+      fixedCtl.summary.appendChild(el('span', {}, [
+        '分期 ' + sum.installCount + ' 条 · 未还本金 ' + money(sum.remainingPrincipal)
+          + ' / 利息 ' + money(sum.remainingInterest),
+      ]));
+    }
+    const list = (S.fixedDiags || []);
+    fixedCtl.note.textContent = t('fixedHint');
+    if (!list.length) {
+      fixedCtl.errors.appendChild(el('span', { class: 'fixed-ok' }, ['语法 OK']));
+      return;
+    }
+    list.slice(0, 6).forEach((d) => {
+      fixedCtl.errors.appendChild(el('div', { class: 'fixed-error' }, [
+        '第 ' + d.line + ' 行：' + d.message,
+      ]));
+    });
   }
 
   function ensureFixed() {
-    if (fixedCtl) return;
+    if (fixedCtl || !TV.editor) return fixedCtl;
     clear(dom.fixedView);
     const inner = el('div', { class: 'fixed-inner' });
     const head = el('div', { class: 'fixed-head' }, [
       el('div', { class: 'fixed-title' }, [t('fixedTitle')]),
+      el('span', { class: 'fixed-sub' }, ['独立的表 · 定期向流水未来区域添加']),
     ]);
     const note = el('div', { class: 'fixed-note' }, [t('fixedHint')]);
     const host = el('div', { class: 'fixed-editor' });
+    const summary = el('div', { class: 'fixed-summary' });
+    const errors = el('div', { class: 'fixed-errors' });
     inner.appendChild(head);
     inner.appendChild(note);
     inner.appendChild(host);
+    inner.appendChild(summary);
+    inner.appendChild(errors);
     dom.fixedView.appendChild(inner);
     if (TV.editor && TV.editor.defineModes) TV.editor.defineModes();
     const cm = CodeMirror(host, {
-      value: fixedSource(),
+      value: fixedViewSource(),
       mode: 'txtvein-ledger',
       theme: 'txtvein',
       lineNumbers: true,
@@ -22397,33 +24459,37 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     cm.on('change', () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        const parsed = TV.rules.parseBlocks(cm.getValue());
-        S.plans = parsed.plans || [];
-        S.rules = parsed.rules || [];
+        S.fixedSource = cm.getValue();
+        compilePlansOnly();
         scheduleSave();
-        renderHUD();
-        if (parsed.warnings && parsed.warnings.length) {
-          updateFeedback(parsed.warnings[0], 'error');
-        }
-      }, 320);
+      }, 260);
     });
-    fixedCtl = { cm, note, head };
+    fixedCtl = { cm, note, head, errors, summary };
+    renderFixedErrors();
     setTimeout(() => cm.refresh(), 0);
+    return fixedCtl;
   }
 
   function renderFixed() {
     ensureFixed();
+    if (!fixedCtl) return;
+    const src = fixedViewSource();
+    if (fixedCtl.cm.getValue() !== src) {
+      fixedCtl.cm.setValue(src);
+      fixedCtl.cm.clearHistory();
+    }
     fixedCtl.head.firstChild.textContent = t('fixedTitle');
-    fixedCtl.note.textContent = t('fixedHint');
+    renderFixedErrors();
     setTimeout(() => fixedCtl.cm.refresh(), 0);
   }
 
   function renderFixedHint() {
     if (fixedCtl) {
       fixedCtl.head.firstChild.textContent = t('fixedTitle');
-      fixedCtl.note.textContent = t('fixedHint');
+      renderFixedErrors();
     }
   }
+
 
   /* ---------------- 反馈栏 ---------------- */
   function defaultFeedback() {
@@ -23245,7 +25311,6 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       ensureQuery();
       renderQuery();
     } else if (S.view === 'fixed') {
-      ensureFixed();
       renderFixed();
     } else if (S.view === 'report') {
       ensureReport();
@@ -23265,6 +25330,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     S.calcAll = calcMod.compute(S.dict, S.events, { range: null });
     renderHUD();
     renderTabs();
+    renderFutureBlock();
     if (S.view === 'query') renderQuery();
     else if (S.view === 'fixed') renderFixed();
     else if (S.view === 'report') { ensureReport(); renderReport(); }
@@ -23706,22 +25772,31 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     return (domain === 'P' ? '' : domain + ' ') + date + ' ' + rest.trim();
   }
 
+  /** 正文行（[固定]/[分期] 段之前，不含 20 行空行）。 */
+  function ledgerHeadLines() {
+    const src = String(S.ledgerSource || '').replace(/\n+$/, '');
+    const end = TV.source.recordsEndIndex(src);
+    return src.split('\n').slice(0, end);
+  }
+
+  function setLedgerHead(head) {
+    S.ledgerSource = head.join('\n') + '\n';
+    S.projCache = {};
+  }
+
   function insertLedgerLine(text) {
-    const lines = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n');
+    const lines = ledgerHeadLines();
     const dm = String(text || '').match(/^\s*(?:(?:\[[PFCH]\]|[PFCH])\s*)?(\d{6})\b/i);
-    if (!dm) {
-      lines.push(text);
-      S.ledgerSource = lines.join('\n') + '\n';
-      return lines.length;
-    }
-    const stamp = dm[1];
     let at = lines.length;
-    for (let i = 0; i < lines.length; i += 1) {
-      const m = lines[i].match(/^\s*(?:(?:\[[PFCH]\]|[PFCH])\s*)?(\d{6})\b/i);
-      if (m && m[1] > stamp) { at = i; break; }
+    if (dm) {
+      const stamp = dm[1];
+      for (let i = 0; i < lines.length; i += 1) {
+        const m = lines[i].match(/^\s*(?:(?:\[[PFCH]\]|[PFCH])\s*)?(\d{6})\b/i);
+        if (m && m[1] > stamp) { at = i; break; }
+      }
     }
     lines.splice(at, 0, text);
-    S.ledgerSource = lines.join('\n') + '\n';
+    setLedgerHead(lines);
     return at + 1;
   }
 
@@ -23732,6 +25807,15 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 
   function onLedgerCursor(line) {
     if (!editorCtl || S.view !== 'ledger') return;
+    /* [固定]/[分期] 段里的错误就地改文本，不抢到录入框里 */
+    if (line > TV.source.recordsEndIndex(S.ledgerSource)) {
+      if (TV.inputApi.isEditing() && S.pendingRepair) {
+        S.pendingRepair = null;
+        TV.inputApi.setEditing(false);
+        TV.inputApi.clear();
+      }
+      return;
+    }
     const err = (S.sourceDiags || []).find((d) => d.file === 'ledger' && d.severity === 'error' && d.line === line);
     if (!err) {
       if (TV.inputApi.isEditing() && S.pendingRepair && S.pendingRepair.line !== line) {
@@ -23765,6 +25849,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   }
 
   function markCanonicalOnEnter(cm, line) {
+    if (line >= TV.source.recordsEndIndex(S.ledgerSource)) return false;
     const text = cm.getLine(line) || '';
     if (!text.trim() || text.trim().startsWith('//')) return false;
     const parsed = TV.source.compileLedgerSource(text, S.dict, { now: new Date(), domain: S.domain });
@@ -23774,6 +25859,8 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   }
 
   function expandBatchInEditor(cm, line) {
+    /* [固定]/[分期] 段里的行不是流水，不参与批量拆行 */
+    if (line >= TV.source.recordsEndIndex(S.ledgerSource)) return false;
     const text = cm.getLine(line) || '';
     const expanded = expandBatchLine(text);
     if (!expanded || expanded.length < 2) return false;
@@ -23786,7 +25873,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   }
 
   function expandAllBatchLines() {
-    const lines = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n');
+    const lines = ledgerHeadLines();
     let changed = false;
     const out = [];
     lines.forEach((l) => {
@@ -23801,15 +25888,14 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       out.push(l);
     });
     if (!changed) return false;
-    S.ledgerSource = out.join('\n') + '\n';
-    S.projCache = {};
+    setLedgerHead(out);
     if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
     return true;
   }
 
   function submitExpanded(lines, rawLine, replaceLine) {
     S.canonicalOnCompile = true;
-    let out = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n')
+    let out = ledgerHeadLines()
       .filter((x, i, arr) => !(arr.length === 1 && x === ''));
     let at = -1;
     if (replaceLine && replaceLine > 0) {
@@ -23828,7 +25914,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       }
       out.splice(at, 0, ...lines);
     }
-    S.ledgerSource = out.join('\n') + '\n';
+    setLedgerHead(out);
     const lineNos = lines.map((_, i) => at + i + 1);
     S.pendingRepair = null;
     if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
@@ -24044,9 +26130,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   function syncDictSourceAndCompile() {
     if (!S.dict) return;
     S.dictSource = TV.source.dictToSource(S.dict);
-    /* 字典是 ID 图的名字层：改完按 ID 重新投影流水，简码/名称变化一起落到源码 */
-    projectEditorSource(true);
+    /* 计划行写的是简码/名字，先按新字典重新编译，再统一投影回当前模式 */
     if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
+    S.canonicalOnCompile = true;
     compileSources();
   }
 
@@ -24291,26 +26377,6 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     return r;
   }
 
-  function cancelPlan(id) {
-    const r = rulesMod.cancelPlan(S.plans, id);
-    if (r.ok) afterDataChange();
-    return r;
-  }
-
-  function resumePlan(id) {
-    const r = rulesMod.resumePlan(S.plans, id);
-    if (r.ok) afterDataChange();
-    return r;
-  }
-
-  function deletePlan(id) {
-    const i = S.plans.findIndex((p) => p.id === id);
-    if (i < 0) return { ok: false, error: '规则不存在' };
-    S.plans.splice(i, 1);
-    afterDataChange();
-    return { ok: true };
-  }
-
   function deleteRule(id) {
     const i = S.rules.findIndex((x) => x.id === id);
     if (i < 0) return { ok: false, error: '规则不存在' };
@@ -24437,6 +26503,15 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     if (bad.length) {
       return { ok: false, error: '单 TXT 回读不一致：' + bad.map((x) => x[0] + ' ' + x[1] + '/' + x[2]).join('，') };
     }
+    if (p.hasFixed) {
+      const fp = TV.source.compileFixed(p.fixedSource, r.dict, { now: new Date(), domain: 'P' });
+      if ((fp.plans || []).length !== (S.plans || []).length) {
+        return { ok: false, error: '单 TXT 固定表回读不一致：' + (fp.plans || []).length + '/' + (S.plans || []).length };
+      }
+      if ((fp.diagnostics || []).some((d) => d.severity === 'error')) {
+        return { ok: false, error: '单 TXT 固定表有错行：' + fp.diagnostics[0].message };
+      }
+    }
     return { ok: true, events: r.events.length, behaviors: r.behaviors.length, notes: a.note };
   }
 
@@ -24454,6 +26529,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     (S.behaviors || []).forEach((b) => lines.push(renderBehaviorLine(b)));
     lines.push('', '## 备注');
     (S.notes || []).forEach((n) => lines.push(renderNoteLine(n)));
+    lines.push('', '## 固定', (S.fixedSource || '').trim());
     lines.push('', '## 字典', S.dictSource.trim(), '');
     return lines.join('\n');
   }
@@ -24515,7 +26591,10 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     });
     S.ledgerSource = TV.source.normalizeDomainSyntax(p.ledgerSource);
     S.dictSource = p.dictSource;
-    adopt(r.dict, r.events, [], [], vaultId, { behaviors: r.behaviors, notes: r.notes });
+    S.fixedSource = p.fixedSource || '';
+    const fp = TV.source.compileFixed(S.fixedSource, r.dict, { now: new Date(), domain: 'P' });
+    S.fixedDiags = fp.diagnostics || [];
+    adopt(r.dict, r.events, fp.plans || [], [], vaultId, { behaviors: r.behaviors, notes: r.notes });
     S.sourceDiags = (r.dictDiagnostics || []).map((x) => Object.assign({ file: 'dict' }, x))
       .concat((r.ledgerDiagnostics || []).map((x) => Object.assign({ file: 'ledger' }, x)));
     if (editorCtl) {
@@ -24555,6 +26634,13 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       }
       const built = TV.ntBridge.fromNTState(state);
       const r = await importSingleText(built.singleText, o);
+      if (r.ok && built.fixedSource) {
+        /* 固定表也一起搬过来（独立文件，不进流水文本） */
+        S.fixedSource = built.fixedSource;
+        compilePlansOnly();
+        await saveNow();
+        if ((S.plans || []).length) r.message += '；固定表 ' + S.plans.length + ' 条';
+      }
       if (r.ok && built.errors.length) r.message += '；' + built.errors.length + ' 行未导入';
       return r;
     }
@@ -24676,6 +26762,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     return store.changePassword(oldPw, newPw, {
       vaultId: S.vaultId,
       ledgerSource: texts.ledgerSource,
+      fixedSource: texts.fixedSource,
       dictSourceP: texts.dictSourceP,
       dictSourceC: texts.dictSourceC,
       systemVersion: texts.systemVersion,
@@ -24694,6 +26781,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     applyView();
     applyLang();
     bindAutoLock();
+    /* 打开即结算：每月到期落账、每日只摆今天这一期 */
+    syncPlansDue(true);
+    renderFutureBlock(true);
     if (needsOnboarding) {
       needsOnboarding = false;
       toast('盲打一笔试试：wx1 > din 35 < 咖啡', 'ok', {
@@ -24735,7 +26825,6 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       });
       dict = r.dict;
       events = r.events || [];
-      plans = [];
       rules = [];
       behaviors = r.behaviors || [];
       notes = r.notes || [];
@@ -24743,6 +26832,24 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
         .concat((r.ledgerDiagnostics || []).map((x) => Object.assign({ file: 'ledger' }, x)));
       if (!r.ok) toast('源码有 ' + r.errors + ' 个错误；已按合法部分加载', 'error');
       if (isV3) S.dictSource = TV.source.dictToSource(dict);
+      /* 固定表：优先读独立文本；旧数据（interim plans 或流水里的 [固定] 段）一次性迁过来 */
+      S.fixedSource = String(payload.fixedSource || '');
+      const legacy = TV.source.parsePlanSection(S.ledgerSource, dict, { now: new Date(), domain: 'P' });
+      if (!S.fixedSource) {
+        if (legacy.plans.length) {
+          S.fixedSource = TV.source.fixedSourceFromPlans(legacy.plans, dict, { mode: S.mode, lang: S.lang });
+        } else if (Array.isArray(payload.plans) && payload.plans.length) {
+          S.fixedSource = TV.source.fixedSourceFromPlans(payload.plans, dict, { mode: S.mode, lang: S.lang });
+        }
+      }
+      if (legacy.plans.length) {
+        /* 把流水里的 [固定] 段剥掉：固定表是独立的 */
+        const end = TV.source.recordsEndIndex(S.ledgerSource);
+        S.ledgerSource = S.ledgerSource.split('\n').slice(0, end).join('\n') + '\n';
+      }
+      const fp = TV.source.compileFixed(S.fixedSource, dict, { now: new Date(), domain: 'P' });
+      plans = fp.plans || [];
+      S.fixedDiags = fp.diagnostics || [];
     } else {
       if (!payload.dict || !payload.ledger) throw new Error('保险库里的账本为空或格式不对');
       const dp = dictFile.parseDict(payload.dict);
@@ -24750,9 +26857,11 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       const lp = ledgerFile.parseLedger(payload.ledger, { dict: dp.dict });
       dict = dp.dict;
       events = lp.events;
-      plans = lp.plans;
+      plans = lp.plans || [];
       rules = lp.rules;
       S.ledgerSource = TV.source.ledgerToSource(dict, events, [], []);
+      S.fixedSource = String(payload.fixedSource || '')
+        || TV.source.fixedSourceFromPlans(plans, dict, { mode: 'CODE', lang: 'zh' });
       S.dictSource = TV.source.dictToSource(dict);
       S.systemVersion = payload.systemVersion || TV.systemDict.VERSION_STRING;
     }
@@ -24773,11 +26882,13 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     const vaultId = crypto.randomVaultId();
     const ex = TV.example.createExample(vaultId, new Date());
     adopt(ex.dict, ex.events, ex.plans, ex.rules, vaultId, { behaviors: ex.behaviors || [], notes: [] });
+    S.fixedSource = TV.source.fixedSourceFromPlans(ex.plans || [], ex.dict, { mode: S.mode, lang: S.lang });
     refreshSources(true);
     const texts = await buildTexts();
     await store.createVault(password, {
       vaultId,
       ledgerSource: texts.ledgerSource,
+      fixedSource: texts.fixedSource,
       dictSourceP: texts.dictSourceP,
       dictSourceC: texts.dictSourceC,
       systemVersion: texts.systemVersion,
@@ -24803,13 +26914,18 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     S.plans = [];
     S.rules = [];
     S.ledgerSource = '';
+    S.fixedSource = '';
     S.dictSource = '';
     S.systemVersion = '';
     S.sourceDiags = [];
     S.ignoredCandidates = new Set();
     S.texts = null;
+    S.planDay = '';
+    S.planDockSig = '';
     editorCtl = null;
+    fixedCtl = null;
     clear(dom.editorView);
+    clear(dom.fixedView);
     clear(dom.reportView);
     dom.input.value = '';
     dom.app.hidden = true;
@@ -24897,9 +27013,15 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       const away = hiddenAt ? Date.now() - hiddenAt : 0;
       hiddenAt = 0;
       if (away >= AUTO_LOCK_HIDDEN) lockApp();
-      else armAutoLock();
+      else { armAutoLock(); planDayTick(); }
     });
     armAutoLock();
+    /* 跨日：页面一直开着时，每分钟检查一次是否换天 */
+    if (!bindAutoLock.planTimer) {
+      bindAutoLock.planTimer = setInterval(() => {
+        if (!document.hidden) planDayTick();
+      }, 60 * 1000);
+    }
   }
 
   async function lockApp() {
@@ -24915,13 +27037,18 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     S.plans = [];
     S.rules = [];
     S.ledgerSource = '';
+    S.fixedSource = '';
     S.dictSource = '';
     S.systemVersion = '';
     S.sourceDiags = [];
     S.ignoredCandidates = new Set();
     S.texts = null;
+    S.planDay = '';
+    S.planDockSig = '';
     editorCtl = null;
+    fixedCtl = null;
     clear(dom.editorView);
+    clear(dom.fixedView);
     S.calcAll = null;
     clear(dom.reportView);
     dom.input.value = '';
@@ -25049,9 +27176,6 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     updateTag,
     deleteTag,
     countNodeRefs,
-    cancelPlan,
-    resumePlan,
-    deletePlan,
     deleteRule,
     exportMode,
     exportText,
@@ -25143,6 +27267,11 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     singleText: () => buildSingleText(),
     validateSingle: () => validateSingleText(buildSingleText()),
     hint: (file, token, before) => sourceHint(file, token, before),
+    refreshPlanDock: () => { renderFutureBlock(true); return true; },
+    realLines: () => {
+      const cm = editorCtl && editorCtl.editors ? editorCtl.editors.ledger : null;
+      return cm ? cm.lineCount() - (cm._virtualCount || 0) : 0;
+    },
     setRange: (r) => { S.range = r; renderHUD(); renderReport(); },
     setView: (v) => setView(v),
     lock: () => lockApp(),

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.4.2-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.5.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-green.svg" alt="License">
   <img src="https://img.shields.io/badge/data-100%25%20Local-black.svg" alt="Local First">
 </p>
@@ -123,7 +123,7 @@ wx1 > din 35 < 咖啡 < 拿铁
 | `wx > s zc dt 1 2 *` | 金额循环填满：1, 2, 1 |
 | `wx > s zc dt 1 2*` | 首笔 1，其余全部用 2：1, 2, 2 |
 | `wx > s zc dt 100/` | 总额均摊：33.34, 33.33, 33.33 |
-| `wx > dc 3 *m` | 当前笔 + 在固定表加月计划 |
+| `wx > dc 3 *m` | 当前笔 + 在固定表加一条「每月该日」的计划（`*d` 每日 / `*y` 每年） |
 | `sav > wx1 > din 1000 995` | 多金额链：差额 5 元自动进「损耗」池 |
 | `261110 wx1 > din 12.5` | 指定日期 |
 | `-1 wx1 > din 35` | 昨天（落盘为绝对日期，自动排到昨天） |
@@ -144,7 +144,7 @@ wx1 > din 35 < 咖啡 < 拿铁
 - **六个圆角页签**：查询 / 流水 / 字典 / 母树 / 固定 / 统计；
 - **统计页四页签**：分类 / 节点 / 备注 / 事件（行为）；左侧完整统计表、右侧对应完整列表，左右独立，右侧可拖宽，支持 1–12 月切换。
 - **查询页**：一屏三段独立查询，默认今天 / 本月 / 本年，每段独立日期、转出、转入、金额、备注条件和「清空」。
-- **固定页**：`[PLAN]` 固定收支 + `[RULES]` 自动规则，纯文本编辑；
+- **固定页**：一张独立的固定表（`[固定]` + `[分期]` 两个区域），纯文本编辑；行形同流水，末尾挂 `*m/*d/*y`。与 NT 账本同口径：每月到期自动落账；每日 / 分期在流水末尾的未来记录里点最左边的行号，选「确认」落成该期日期，删除 / 剪切 = 作废。规范见 [`docs/fixed-plans.md`](docs/fixed-plans.md)；
 - **右下角 VE 气泡**：点击展开单输入框，可拖动位置；手机不再被固定输入条占住。
 - **相对日期**：单输入框和直接文本编辑都支持 `-1` / `-2`；直接编辑在日期 token 后按空格时立即固化成 `YYMMDD`，落盘仍是绝对日期。
 - **手机输入宏**：气泡与主编辑器里，软键盘快速连按两次空格 → `>`，三次 → `<`；不依赖物理键盘 keydown。
@@ -199,7 +199,7 @@ R_101 active: keywords=(外卖)&amount<10000 -> N_001 > N_003 tags=T_05,T_02 nam
 ```
 
 - 每行一笔原子有向边；`^C_001` 是链式因果的可选标记。
-- `[PLAN]` 是周期规则；`[RULES]` 是事件规则（预测模板）。
+- `[PLAN]` / `[RULES]` 是导出用的机器格式；编辑时的固定收支在**独立的 `fixed.tv`**（`[固定]` / `[分期]` 两段，行形同流水），不并进流水文本。
 - 时间代币行金额写 `90m`（后台存 90 分钟；编辑器/报表显示 `1h30m`），`amountCents = 0`，只进时间统计。
 - 流水只写 ID；改名不会改这里。
 
@@ -394,10 +394,10 @@ TxtVein/
 │     ├─ panels.js        ← 规则/导入导出/帮助/密码
 │     └─ app.js           ← 唯一状态与编排
 ├─ vendor/codemirror/     ← CM5 + hint/lint/matchbrackets/active-line（MIT）
-├─ tests/                 ← node --test（230 条）
+├─ tests/                 ← node --test（242 条）
 ├─ tools/
 │  ├─ build.cjs           ← 把 index.html 内联成单文件
-│  ├─ check.cjs           ← 工程门禁（176 项）
+│  ├─ check.cjs           ← 工程门禁（178 项）
 │  ├─ cdp.py              ← Chrome DevTools 小助手
 │  ├─ e2e.py              ← 浏览器端到端（91 项断言）
 │  ├─ e2e_v4.py           ← v4 字典端到端（62 项断言）
@@ -421,9 +421,9 @@ TxtVein/
 ```powershell
 cd D:\myproject\TxtVein
 
-node --test tests/*.test.cjs      # 230 条核心测试
+node --test tests/*.test.cjs      # 242 条核心测试
 node tools/build.cjs              # 生成 TxtVein.html
-node tools/check.cjs              # 176 项工程门禁
+node tools/check.cjs              # 178 项工程门禁
 python serve.py 8899              # 另开一个终端（E2E 用）
 python tools/e2e.py               # 91 项浏览器断言（需先起 8899 服务）
 python tools/e2e_v4.py            # 62 项 v4 断言（导入/整页母树/点选绑定/采纳/输入流/编辑器/数字快捷键/金额）

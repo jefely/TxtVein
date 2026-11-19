@@ -61,6 +61,30 @@
     }
   }
 
+  /** 固定收支计划只留可序列化字段；老保险库没有 plans 字段时按空数组恢复。 */
+  function normalizePlans(list) {
+    return (Array.isArray(list) ? list : []).filter((p) => p && typeof p === 'object').map((p) => ({
+      id: String(p.id || ''),
+      status: p.status === 'canceled' ? 'canceled' : 'active',
+      period: ['d', 'm', 'y'].indexOf(p.period) >= 0 ? p.period : 'm',
+      day: Math.round(Number(p.day) || 0),
+      month: Math.round(Number(p.month) || 0),
+      domain: String(p.domain || 'P'),
+      from: String(p.from || ''),
+      to: String(p.to || ''),
+      amountCents: Math.round(Number(p.amountCents) || 0),
+      tagIds: (Array.isArray(p.tagIds) ? p.tagIds : []).map(String),
+      /* 底层 ID 每次编译都会重新随机；跨会话要认的是「域:源码简码」 */
+      fromRef: String(p.fromRef || ''),
+      toRef: String(p.toRef || ''),
+      tagRefs: (Array.isArray(p.tagRefs) ? p.tagRefs : []).map(String),
+      name: String(p.name || ''),
+      lastRun: /^\d{6}$/.test(String(p.lastRun || '')) ? String(p.lastRun) : '',
+      start: /^\d{6}$/.test(String(p.start || '')) ? String(p.start) : '',
+      createdAt: String(p.createdAt || ''),
+    })).filter((p) => p.id && p.from && p.to);
+  }
+
   function normalizePayload(p) {
     const o = p && typeof p === 'object' ? p : {};
     const hinted = Number(o.version) || ((o.dictSourceP != null || o.dictSourceC != null) ? 3 : 2);
@@ -70,6 +94,8 @@
       version,
       vaultId: String(o.vaultId == null ? '' : o.vaultId),
       ledgerSource: String(o.ledgerSource == null ? '' : o.ledgerSource),
+      fixedSource: String(o.fixedSource == null ? '' : o.fixedSource),
+      plans: normalizePlans(o.plans),
       updatedAt: String(o.updatedAt || ''),
     };
     if (version >= 3) {
@@ -254,6 +280,7 @@
     readHint,
     saveHint,
     normalizePayload,
+    normalizePlans,
     isUnlocked,
     createVault,
     unlockVault,

@@ -322,7 +322,8 @@ def main():
     j(sid, "document.querySelector('#btn-fixed').click()", b)
     ok("fixed editor", wait(b, sid, "!!document.querySelector('.fixed-editor .CodeMirror')", 4))
     fixed_src = j(sid, "document.querySelector('.fixed-editor .CodeMirror').CodeMirror.getValue()", b)
-    ok("fixed text source", "[PLAN]" in fixed_src or "[RULES]" in fixed_src, fixed_src[:80])
+    ok("fixed table has two areas", "[固定]" in fixed_src and "[分期]" in fixed_src, fixed_src[:120])
+    ok("fixed no raw IDs", "N_" not in fixed_src and "T_" not in fixed_src, fixed_src[:160])
     ok("top menu order",
        j(sid, "Array.from(document.querySelectorAll('.top-menu .menu-btn')).map(function(x){return x.textContent.trim();}).join('/')", b)
        == "导入/导出/设置/帮助/掩码/语言")

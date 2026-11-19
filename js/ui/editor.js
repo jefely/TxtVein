@@ -414,12 +414,37 @@
       }
       closeLineMenu();
       const menu = el('div', { class: 'cm-line-menu' });
-      const add = (label, fn, disabled) => {
-        const b = el('button', { type: 'button' }, [label]);
-        if (disabled) b.disabled = true;
+      const add = (label, fn, disabled, primary) => {
+        const b = el('button', { type: 'button', class: primary ? 'is-primary' : '' }, [label]);
+        if (disabled || !fn) b.disabled = true;
         else b.addEventListener('click', () => { closeLineMenu(); fn(); cm.focus(); });
         menu.appendChild(b);
       };
+      /* 未来区（20 行空行 + 未来记录）是只读的：编辑类动作禁用，
+       * 复制仍可用；未来记录的最后再加一个「确认」。 */
+      const tail = (cm._virtualCount || 0);
+      const realEnd = cm.lineCount() - tail;
+      const isTail = tail > 0 && line >= realEnd;
+      /* 未来记录第一行的行号在重建时算好，空行不参与下标 */
+      const vi = isTail && cm._virtualStart >= 0 ? line - cm._virtualStart : -1;
+      const futureRow = isTail && vi >= 0 && vi < virtualRows.length ? virtualRows[vi] : null;
+      if (isTail) {
+        /* 未来记录的删除 / 剪切 = 作废这一期（不改正文，NT 的 virtual delete 同义）；
+         * 粘贴 / 插入 / 上移会改正文，禁用；最后是「确认」。 */
+        add('删除', futureRow && h.onVoidVirtual ? () => h.onVoidVirtual(futureRow) : null,
+          !futureRow || !h.onVoidVirtual);
+        add('剪切', futureRow && h.onVoidVirtual
+          ? () => { copyEditorLine(cm, line); h.onVoidVirtual(futureRow); } : null,
+          !futureRow || !h.onVoidVirtual);
+        add('复制', () => copyEditorLine(cm, line));
+        add('粘贴', null, true);
+        add('插入', null, true);
+        add('上移', null, true);
+        add('确认', () => {
+          if (h.onConfirmVirtual && futureRow) h.onConfirmVirtual(futureRow);
+        }, !futureRow || !h.onConfirmVirtual, true);
+        return placeLineMenu(cm, line, x, y, menu);
+      }
       add('删除', () => removeEditorLine(cm, line));
       add('剪切', () => { copyEditorLine(cm, line); removeEditorLine(cm, line); });
       add('复制', () => copyEditorLine(cm, line));
@@ -462,6 +487,11 @@
         /* 只替换 A\nB 这两行，不吞掉 B 后面的换行，保证是交换而不是拼接 */
         cm.replaceRange(b + '\n' + a, { line: line - 1, ch: 0 }, { line, ch: b.length });
       }, line <= 0);
+      return placeLineMenu(cm, line, x, y, menu);
+    }
+
+    /** 横排菜单定位 + 选中行高亮（真实行与未来记录共用）。 */
+    function placeLineMenu(cm, line, x, y, menu) {
       document.body.appendChild(menu);
       const r = menu.getBoundingClientRect();
       const wrap = cm.getWrapperElement();
@@ -608,7 +638,8 @@
         if (ev.key !== 'Backspace' || file !== 'ledger') return;
         if (ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey || cm.somethingSelected()) return;
         const cur = cm.getCursor();
-        if (cur.line !== cm.lineCount() - 1 || cur.ch !== 0) return;
+        const lastReal = cm.lineCount() - (cm._virtualCount || 0) - 1;
+        if (cur.line !== lastReal || cur.ch !== 0) return;
         if ((cm.getLine(cur.line) || '').trim() !== '') return;
         const prev = cm.getLine(cur.line - 1) || '';
         const savedTop = cm.getScrollInfo().top;
@@ -641,12 +672,32 @@
         bindRelativeDateFix(cm);
         bindMotherHintPick(cm);
       }
-      cm.on('change', () => {
+      cm.on('changes', () => { if (cm._spacerCount !== cm.lineCount()) syncSpacer(cm); });
+      cm.on('beforeChange', () => { cm._oldLineCount = cm.lineCount(); });
+      cm.on('change', (cmx, change) => {
         if (suspended) return;
+        /* 整篇替换（setValue / 全选粘贴 / 清空）：新文本当作正文，未来区重新接在后面 */
+        const fullReplace = file === 'ledger' && change && change.from.line === 0
+          && change.from.ch === 0 && change.to.line >= Math.max(0, (cmx._oldLineCount || 1) - 1)
+          && change.text.length > 0 && (cmx._virtualCount || 0) > 0;
+        if (fullReplace) {
+          /* 整篇被替换：新文本全是正文；未来区交给 app 在下一拍重建，
+           * 不在 change 回调里 setValue（CodeMirror 不允许）。 */
+          cmx._virtualCount = 0;
+          cmx._virtualStart = -1;
+          cmx._spacerCount = -1;
+          clearTailMarks(cmx);
+          clearSemantic(file);
+          dirty[file] = true;
+          updateTab(file);
+          if (h.onChange) h.onChange('ledger', cmx.getValue());
+          setTimeout(() => { if (h.onTailDirty) h.onTailDirty(); }, 0);
+          return;
+        }
         clearSemantic(file);   /* 文本一改，语义层立即失效，等下一次编译 */
         dirty[file] = true;
         updateTab(file);
-        if (h.onChange) h.onChange(file, cm.getValue());
+        if (h.onChange) h.onChange(file, file === 'ledger' ? realTextOf(cm) : cm.getValue());
       });
       cm.on('cursorActivity', () => {
         if (file === active) renderStatus();
@@ -659,7 +710,6 @@
           if (!hint || !hint.matches(':hover')) { if (cm.closeHint) cm.closeHint(); }
         }, 220);
       });
-      cm.on('changes', () => { if (cm._tailCount !== cm.lineCount()) syncTailPad(cm); });
       cm.on('inputRead', (cmx, change) => {
         if (file !== active) return;
         const t = change.text.join('');
@@ -725,7 +775,8 @@
       renderStatus();
       if (editors[active]) setTimeout(() => {
         editors[active].refresh();
-        syncTailPad(editors[active]);
+        markTail(editors[active]);
+        syncSpacer(editors[active]);
         if (active === 'ledger') scrollToTail(editors[active]);
       }, 0);
       if (h.onActive) h.onActive(active);
@@ -864,45 +915,152 @@
       renderStatus();
     }
 
-    /* 末尾 30 行留白：只有行数变化时才重挂，避免每次编辑都触发滚动 */
-    function syncTailPad(cm) {
-      if (!cm || !cm.lineCount) return;
-      const count = cm.lineCount();
-      const h = Math.max(12, cm.defaultTextHeight() || 18) * 30;
-      if (cm._tailPad && cm._tailCount === count && cm._tailPad.node && cm._tailPad.node.isConnected) {
-        if (Math.abs((cm._tailPad.node.offsetHeight || 0) - h) > 1) {
-          cm._tailPad.node.style.height = h + 'px';
-          try { cm._tailPad.changed(); } catch (e) { /* ignore */ }
+    /* 未来记录 = 文档末尾的只读区（真正的 CodeMirror 行）：
+     * 先在最后一条正文后空 20 行，再按具体日期排未来记录。
+     * 它们有真正的行号、能点行标菜单，但不进 S.ledgerSource，也不算真实流水。 */
+    const VIRTUAL_GAP = 20;
+    let virtualRows = [];
+    let tailMarks = [];
+
+    function tailCount() {
+      return virtualRows.length ? VIRTUAL_GAP + virtualRows.length : 0;
+    }
+
+    /** 从编辑器全文里剥掉未来区，得到真正要保存 / 编译的流水文本。 */
+    function realTextOf(cm) {
+      const tail = (cm && cm._virtualCount) || 0;
+      if (!tail) return cm.getValue();
+      const n = Math.max(0, cm.lineCount() - tail);
+      const lines = [];
+      for (let i = 0; i < n; i += 1) lines.push(cm.getLine(i));
+      return lines.join('\n') + '\n';
+    }
+
+    function tailText() {
+      if (!virtualRows.length) return '';
+      return '\n'.repeat(VIRTUAL_GAP) + virtualRows.map((x) => x.text).join('\n') + '\n';
+    }
+
+    function fullText(real) {
+      const r = String(real == null ? '' : real);
+      if (!virtualRows.length) return r;
+      /* 正文尾部的空行归一，保证未来区前面正好 20 行空行 */
+      const base = r.replace(/\n+$/, '') + '\n';
+      return base + tailText();
+    }
+
+    function clearTailMarks(cm) {
+      tailMarks.forEach((m) => { try { m.clear(); } catch (e) { /* ignore */ } });
+      tailMarks = [];
+    }
+
+    function markTail(cm) {
+      if (cm !== editors.ledger) return;
+      clearTailMarks(cm);
+      const tail = tailCount();
+      if (!tail || !cm || !cm.lineCount) return;
+      const start = cm.lineCount() - tail;
+      if (start < 0) return;
+      const last = cm.lineCount() - 1;
+      try {
+        tailMarks.push(cm.markText(
+          { line: start, ch: 0 },
+          { line: last, ch: (cm.getLine(last) || '').length },
+          { readOnly: true, inclusiveLeft: true, inclusiveRight: true, handleMouseEvents: true },
+        ));
+      } catch (e) { /* ignore */ }
+    }
+
+    /** 未来记录第一行在文档里的行号（最后一条正文之后、20 行空行之后）。 */
+    function computeRowStart(cm) {
+      if (!virtualRows.length || !cm || !cm.lineCount) return -1;
+      const last = cm.getLine(cm.lineCount() - 1);
+      let start = cm.lineCount() - virtualRows.length - (String(last == null ? '' : last).trim() ? 0 : 1);
+      return Math.max(0, start);
+    }
+
+    /* 未来区下面的空高（不在正文里、没有行号）：保证「最后 10 行正文顶到视口上方」
+     * 在桌面上仍成立；没有未来记录时就是旧的 30 行留白。 */
+    const BOTTOM_ROWS = 10;
+    const EMPTY_ROWS = 30;
+
+    function syncSpacer(cm) {
+      if (!cm || !cm.lineCount || cm !== editors.ledger) return;
+      const rows = virtualRows.length ? BOTTOM_ROWS : EMPTY_ROWS;
+      const h = Math.max(12, cm.defaultTextHeight() || 18) * rows;
+      if (cm._spacer && cm._spacerCount === cm.lineCount() && cm._spacer.node && cm._spacer.node.isConnected) {
+        if (Math.abs((cm._spacer.node.offsetHeight || 0) - h) > 1) {
+          cm._spacer.node.style.height = h + 'px';
+          try { cm._spacer.changed(); } catch (e) { /* ignore */ }
         }
         return;
       }
-      if (cm._tailPad) {
-        try { cm.removeLineWidget(cm._tailPad); } catch (e) { /* ignore */ }
-        cm._tailPad = null;
+      if (cm._spacer) {
+        try { cm.removeLineWidget(cm._spacer); } catch (e) { /* ignore */ }
+        cm._spacer = null;
       }
       const pad = el('div', { class: 'cm-tail-pad', 'aria-hidden': 'true' });
       pad.style.height = h + 'px';
-      cm._tailPad = cm.addLineWidget(Math.max(0, count - 1), pad, { above: false });
-      cm._tailCount = count;
+      cm._spacer = cm.addLineWidget(Math.max(0, cm.lineCount() - 1), pad, { above: false });
+      cm._spacerCount = cm.lineCount();
+    }
+
+    /** rows: [{ text, planId, month, date, kind, periodIndex, amountCents, note }] */
+    function setVirtualRows(rows) {
+      const list = (rows || []).filter((r) => r && r.text);
+      const cm = editors.ledger;
+      if (!cm) { virtualRows = list; return; }
+      const oldCount = cm._virtualCount || 0;
+      const n = Math.max(0, cm.lineCount() - oldCount);
+      const lines = [];
+      for (let i = 0; i < n; i += 1) lines.push(cm.getLine(i));
+      const real = lines.join('\n').replace(/\n+$/, '') + '\n';
+      virtualRows = list;
+      suspended = true;
+      try {
+        const cur = cm.getCursor();
+        const info = cm.getScrollInfo();
+        const inTail = oldCount > 0 && cur.line >= Math.max(0, cm.lineCount() - oldCount);
+        cm.setValue(fullText(real));
+        cm._virtualCount = tailCount();
+        cm._virtualStart = computeRowStart(cm);
+        markTail(cm);
+        syncSpacer(cm);
+        if (inTail) {
+          cm.setCursor({ line: Math.max(0, cm.lineCount() - (cm._virtualCount || 0)), ch: 0 });
+        } else {
+          cm.setCursor({ line: Math.min(cur.line, Math.max(0, cm.lineCount() - 1)), ch: cur.ch });
+        }
+        const ni = cm.getScrollInfo();
+        cm.scrollTo(info.left, Math.min(info.top, Math.max(0, ni.height - ni.clientHeight)));
+      } finally {
+        suspended = false;
+      }
+      cm.refresh();
+    }
+
+    /** 行数 / 行号变化后重新压住未来区（只读标记跟着文本走，这里只兜底）。 */
+    function refreshVirtualRows() {
+      const cm = editors.ledger;
+      if (!cm) return;
+      markTail(cm);
     }
 
     function setTexts(ledgerText, dictText) {
       suspended = true;
       const a = editors.ledger;
       const b = editors.dict;
-      if (a && a.getValue() !== String(ledgerText == null ? '' : ledgerText)) {
-        a.setValue(String(ledgerText == null ? '' : ledgerText));
+      if (a && a.getValue() !== fullText(ledgerText)) {
+        a.setValue(fullText(ledgerText));
         a.clearHistory();
-        a._tailPad = null;
-        a._tailCount = -1;
-        syncTailPad(a);
+        a._virtualCount = tailCount();
+        a._virtualStart = computeRowStart(a);
+        markTail(a);
+        syncSpacer(a);
       }
       if (b && b.getValue() !== String(dictText == null ? '' : dictText)) {
         b.setValue(String(dictText == null ? '' : dictText));
         b.clearHistory();
-        b._tailPad = null;
-        b._tailCount = -1;
-        syncTailPad(b);
       }
       suspended = false;
       dirty.ledger = false;
@@ -916,7 +1074,7 @@
 
     function getTexts() {
       return {
-        ledger: editors.ledger ? editors.ledger.getValue() : '',
+        ledger: editors.ledger ? realTextOf(editors.ledger) : '',
         dict: editors.dict ? editors.dict.getValue() : '',
       };
     }
@@ -932,13 +1090,20 @@
       updateTab('dict');
     }
 
-    function gotoLine(file, line) {
+    function gotoLine(file, line, margin) {
       setActive(file);
       const cm = editors[active];
       if (!cm) return;
       const l = Math.max(0, Math.min((cm.lineCount() || 1) - 1, (Number(line) || 1) - 1));
       cm.setCursor({ line: l, ch: 0 });
-      cm.scrollIntoView({ line: l, ch: 0 }, 120);
+      if (margin == null) {
+        cm.scrollIntoView({ line: l, ch: 0 }, 120);
+      } else {
+        const info = cm.getScrollInfo();
+        const coords = cm.charCoords({ line: l, ch: 0 }, 'local');
+        const maxTop = Math.max(0, info.height - info.clientHeight);
+        cm.scrollTo(null, Math.max(0, Math.min(coords.top - margin, maxTop)));
+      }
       cm.focus();
     }
 
@@ -948,7 +1113,8 @@
 
     function scrollToTail(cm) {
       if (!cm || !cm.lineCount) return;
-      const last = Math.max(0, cm.lineCount() - 1);
+      /* 目标是最后一条正文；未来区（20 行空行 + 未来记录）不算正文 */
+      const last = Math.max(0, cm.lineCount() - (cm._virtualCount || 0) - 1);
       const info = cm.getScrollInfo();
       /* 正文本身不足一屏：从顶部显示，不为了最后 10 行把开头藏掉 */
       if (info.height <= info.clientHeight) {
@@ -965,7 +1131,7 @@
     }
 
     function refresh() {
-      Object.keys(editors).forEach((k) => { editors[k].refresh(); syncTailPad(editors[k]); });
+      Object.keys(editors).forEach((k) => { editors[k].refresh(); markTail(editors[k]); syncSpacer(editors[k]); });
     }
 
     setActive('ledger');
@@ -980,6 +1146,8 @@
       gotoLine,
       focus,
       refresh,
+      setVirtualRows,
+      refreshVirtualRows,
       editors,
     };
   }

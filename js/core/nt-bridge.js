@@ -178,6 +178,185 @@
     };
   }
 
+  function centsToYuan(c) {
+    return Math.round(Number(c) || 0) / 100;
+  }
+
+  function yuanToCents(v) {
+    const n = Number(String(v == null ? 0 : v).replace(/[¥￥,\s]/g, ''));
+    return Number.isFinite(n) ? Math.round(n * 100) : 0;
+  }
+
+  /** NT 的月份是 'YYYY-MM'；TxtVein 固定表用 'YYMM'。 */
+  function isoToMonthKey(m) {
+    const s = S(m).match(/^(\d{4})-(\d{2})$/);
+    return s ? s[1].slice(2) + s[2] : '';
+  }
+
+  function monthKeyToIso(k) {
+    const s = S(k);
+    return /^\d{4}$/.test(s) ? '20' + s.slice(0, 2) + '-' + s.slice(2, 4) : '';
+  }
+
+  function monthKeyOfStamp(stamp) {
+    const s = S(stamp).replace(/[^\d]/g, '');
+    if (/^\d{6}$/.test(s)) return s.slice(0, 4);
+    if (/^\d{8}$/.test(s)) return s.slice(2, 6);
+    const m = S(stamp).match(/^(\d{4})-(\d{2})/);
+    return m ? m[1].slice(2) + m[2] : '';
+  }
+
+  function dayOfPlan(plan) {
+    const d = Number(plan && plan.day);
+    return d >= 1 && d <= 31 ? d : 1;
+  }
+
+  /**
+   * TxtVein 固定表 → NT 的 scheduled（计划流水）。
+   * 字段一一对应：freq / day / from_id / to_id / amount(元) / note / inst。
+   */
+  function plansToScheduled(plans, dict, opts) {
+    const o = opts || {};
+    const tag = o.idPrefix || 'tv';
+    return (plans || []).filter(Boolean).map((p, i) => {
+      const sched = {
+        id: tag + '_sched_' + String(i + 1).padStart(3, '0'),
+        isScheduled: true,
+        freq: p.period === 'd' ? 'daily' : 'monthly',
+        day: p.period === 'd' ? 1 : dayOfPlan(p),
+        from_id: p.from || null,
+        to_id: p.to || null,
+        amount: centsToYuan(p.amountCents),
+        note: S(p.note),
+      };
+      if (p.kind === 'installment') {
+        const inst = p.inst || {};
+        sched.inst = {
+          periods: Math.max(0, Math.floor(Number(inst.periods || p.periods) || 0)),
+          firstMonth: monthKeyToIso(inst.firstMonth || p.firstMonth),
+          principal: centsToYuan(inst.principalCents != null ? inst.principalCents : p.principalCents),
+          interest: centsToYuan(inst.interestCents != null ? inst.interestCents : p.interestCents),
+        };
+      }
+      return sched;
+    });
+  }
+
+  /** NT 的 scheduled → TxtVein 固定表行（plan 对象，cents）。 */
+  function scheduledToPlans(scheduled, dict, opts) {
+    const o = opts || {};
+    const mapId = typeof o.mapId === 'function' ? o.mapId : (id) => id;
+    const out = [];
+    (scheduled || []).filter(Boolean).forEach((s, i) => {
+      if (!s.from_id || !s.to_id) return;
+      const inst = s.inst && Number(s.inst.periods) > 0 ? s.inst : null;
+      const periods = inst ? Math.max(0, Math.floor(Number(inst.periods) || 0)) : 0;
+      const firstMonth = inst ? isoToMonthKey(inst.firstMonth) : '';
+      const principalCents = inst ? yuanToCents(inst.principal) : 0;
+      const interestCents = inst ? yuanToCents(inst.interest) : 0;
+      const amountCents = yuanToCents(s.amount)
+        || (periods ? Math.round((principalCents + interestCents) / periods) : 0);
+      out.push({
+        id: 'P_' + (i + 1),
+        kind: inst ? 'installment' : 'fixed',
+        status: 'active',
+        period: s.freq === 'daily' ? 'd' : 'm',
+        day: s.freq === 'daily' ? 0 : dayOfPlan(s),
+        month: 0,
+        note: S(s.note),
+        state: { generated: [], confirmed: [], voided: [] },
+        inst: inst ? { periods, firstMonth, principalCents, interestCents } : null,
+        periods,
+        firstMonth,
+        principalCents,
+        interestCents,
+        domain: 'P',
+        from: mapId(s.from_id),
+        to: mapId(s.to_id),
+        amountCents,
+        tagIds: [],
+      });
+    });
+    return out;
+  }
+
+  /** NT 的 scheduled → 固定表文本（[固定] / [分期] 两段）。 */
+  function scheduledToFixedSource(scheduled, dict, opts) {
+    const o = opts || {};
+    const plans = scheduledToPlans(scheduled, dict, o);
+    if (!TV.source || !TV.source.fixedSourceFromPlans) return '';
+    return TV.source.fixedSourceFromPlans(plans, dict, o);
+  }
+
+  /**
+   * TxtVein → NT state（账户 / 流水 / 计划 / 作废期）。
+   * 行尾注释里带 planKey 的流水也会被还原成 NT 的 planKey。
+   */
+  function toNTState(dict, events, plans, opts) {
+    const o = opts || {};
+    const codeMap = TV.source && TV.source.sourceCodeMap ? TV.source.sourceCodeMap(dict) : null;
+    const nodes = (dict && dict.nodes) || {};
+    const accounts = [];
+    Object.keys(nodes).forEach((id) => {
+      const n = nodes[id];
+      if (!n || n.system || n.domain !== 'P') return;
+      accounts.push({
+        id,
+        type: TYPE_OUT[n.type] || n.type,
+        category: n.category || (n.parent_id && nodes[n.parent_id] ? nodes[n.parent_id].zh_name : ''),
+        code: (codeMap && codeMap.get(id)) || n.zh_code || n.en_code || id,
+        name: n.zh_name || n.en_name || id,
+        opening: 0,
+      });
+    });
+    const scheduled = plansToScheduled(plans, dict, o);
+    const keyById = new Map();
+    scheduled.forEach((s, i) => {
+      keyById.set((plans || [])[i] && plans[i].id, s.id);
+    });
+    const used = new Set();
+    const transactions = (events || []).map((e, i) => {
+      const tx = {
+        id: 'tx_' + String(i + 1).padStart(6, '0'),
+        date: e.date && e.date.length === 6
+          ? '20' + e.date.slice(0, 2) + '-' + e.date.slice(2, 4) + '-' + e.date.slice(4, 6)
+          : S(e.date),
+        from_id: e.from || null,
+        to_id: e.to || null,
+        amount: centsToYuan(e.amountCents),
+        note: S(e.note),
+      };
+      const plan = (plans || []).find((p) => p.from === e.from && p.to === e.to
+        && Math.round(p.amountCents) === Math.round(Number(e.amountCents) || 0));
+      if (plan) {
+        const mk = monthKeyOfStamp(e.date);
+        const st = plan.state || {};
+        const hit = (st.generated || []).includes(mk) || (st.confirmed || []).includes(mk)
+          || (st.confirmed || []).includes(S(e.date));
+        if (hit && !used.has(plan.id + '|' + mk)) {
+          tx.planKey = (keyById.get(plan.id) || plan.id) + '|' + monthKeyToIso(mk);
+          tx.planSourceId = keyById.get(plan.id) || plan.id;
+          used.add(plan.id + '|' + mk);
+        }
+      }
+      return tx;
+    });
+    const voidedPlans = [];
+    (plans || []).forEach((p) => {
+      const st = p.state || {};
+      const sid = keyById.get(p.id) || p.id;
+      (st.voided || []).forEach((k) => {
+        const iso = k.length === 8 ? monthKeyToIso(k.slice(0, 4)) : monthKeyToIso(k);
+        if (iso) voidedPlans.push(sid + '|' + iso);
+      });
+    });
+    return { accounts, transactions, scheduled, voidedPlans };
+  }
+
+  /**
+   * 在 NT 明文里追加固定表两段（NT 侧若还不认识这两段，可忽略；
+   * 真正无损的互通走 toNTState / fromNTState 的 JSON state）。
+   */
   function toNTText(dict, events) {
     const source = TV.source;
     const codeMap = source.sourceCodeMap(dict);
@@ -255,7 +434,43 @@
       })),
       errors: [],
     };
-    return toTxtVein(parsed);
+    const built = toTxtVein(parsed);
+    const dict = built.dict;
+    const byCode = new Map();
+    Object.keys((dict && dict.nodes) || {}).forEach((id) => {
+      const n = dict.nodes[id];
+      if (n && n.zh_code) byCode.set(String(n.zh_code).toUpperCase(), id);
+    });
+    const mapId = (ntId) => {
+      const code = idToCode[ntId] || ntId;
+      return byCode.get(String(code).toUpperCase()) || byCode.get(String(ntId).toUpperCase()) || ntId;
+    };
+    const plans = scheduledToPlans(state.scheduled || [], dict, { mapId });
+    /* NT 的状态在 transactions.planKey / voidedPlans 里；搬回计划行的 state */
+    const bySched = new Map();
+    plans.forEach((p, i) => bySched.set((state.scheduled || [])[i] && state.scheduled[i].id, p));
+    (state.transactions || []).forEach((t) => {
+      const key = S(t.planKey);
+      const m = key.match(/^(.*)\|(\d{4})-(\d{2})$/);
+      if (!m) return;
+      const plan = bySched.get(m[1]);
+      if (!plan) return;
+      const mk = m[2].slice(2) + m[3];
+      if (!plan.state.generated.includes(mk)) plan.state.generated.push(mk);
+    });
+    (state.voidedPlans || []).forEach((key) => {
+      const m = S(key).match(/^(.*)\|(\d{4})-(\d{2})$/);
+      if (!m) return;
+      const plan = bySched.get(m[1]);
+      if (!plan) return;
+      const mk = m[2].slice(2) + m[3];
+      if (!plan.state.voided.includes(mk)) plan.state.voided.push(mk);
+    });
+    let fixedSource = '';
+    if (TV.source && TV.source.fixedSourceFromPlans) {
+      fixedSource = TV.source.fixedSourceFromPlans(plans, dict, { mode: 'CODE', lang: 'zh' });
+    }
+    return Object.assign({}, built, { plans, fixedSource });
   }
 
   function detect(text) {
@@ -268,6 +483,10 @@
     return 'unknown';
   }
 
-  TV.ntBridge = { parseText, toTxtVein, toNTText, decryptBackup, fromNTState, detect, isNTBackup, isNTText };
+  TV.ntBridge = {
+    parseText, toTxtVein, toNTText, decryptBackup, fromNTState, detect, isNTBackup, isNTText,
+    plansToScheduled, scheduledToPlans, scheduledToFixedSource, toNTState,
+    isoToMonthKey, monthKeyToIso, monthKeyOfStamp,
+  };
   if (typeof module === 'object' && module.exports) module.exports = TV.ntBridge;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

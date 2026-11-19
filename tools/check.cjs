@@ -82,6 +82,7 @@ const UI = [
   'js/ui/report-view.js',
   'js/ui/input.js',
   'js/ui/panels.js',
+  'js/ui/plan-view.js',
   'js/ui/app.js',
 ];
 const CSS = ['css/base.css', 'css/ledger.css', 'css/report.css', 'css/panels.css', 'css/editor.css'];

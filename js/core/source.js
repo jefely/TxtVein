@@ -232,6 +232,320 @@
     )).join('\n');
   }
 
+  /* ---------------- 固定收支：源码里的 [固定] 段 ----------------
+   *
+   * 固定收支不建单独的“软件表单”，它仍然是源码的一部分：
+   *
+   *   每月16日 微信钱包 > 房租 1000 < 消费 上次=261116
+   *   每天 微信钱包 > 早餐 5
+   *   每年11月16日 微信钱包 > 保险 3000
+   *   停用 每月20日 微信钱包 > 餐饮 15
+   *
+   * 段在流水末尾，前面固定空 20 行；编译后得到计划对象，再投影回当前模式。
+   */
+
+  const PLAN_HEADER = '[固定]';
+  const INSTALLMENT_HEADER = '[分期]';
+  const PLAN_GAP = 20;
+  const PLAN_COMMENT = '// 与流水同形：每日 / 每月16日 / 每年11月16日 + 转出 > 转入 金额 < 标签 *d|*m|*y  // 备注';
+  const INSTALLMENT_COMMENT = '// 分期：同上 + 期数=N 首月=YYMM 本金=… 利息=…；备注后用 | 接 生成=/确认=/作废=';
+
+  function planSections(source) {
+    const lines = S(source).replace(/\r\n?/g, '\n').split('\n');
+    const out = [];
+    for (let i = 0; i < lines.length; i += 1) {
+      const t = lines[i].trim();
+      if (t !== PLAN_HEADER && t !== INSTALLMENT_HEADER) continue;
+      out.push({
+        header: t === INSTALLMENT_HEADER ? 'installment' : 'fixed',
+        head: i,
+        start: i + 1,
+        end: lines.length,
+      });
+    }
+    out.forEach((sec, i) => {
+      if (i + 1 < out.length) sec.end = out[i + 1].head;
+    });
+    return { lines, sections: out };
+  }
+
+  function planSectionRange(source) {
+    const r = planSections(source);
+    const first = r.sections[0];
+    if (!first) return { lines: r.lines, header: -1, start: r.lines.length, end: r.lines.length };
+    return { lines: r.lines, header: first.head, start: first.start, end: r.sections[r.sections.length - 1].end };
+  }
+
+  /** 流水正文的结束位置（不含 20 行空行与 [固定]/[分期] 段）。 */
+  function recordsEndIndex(source) {
+    const r = planSections(source);
+    let end = r.sections.length ? r.sections[0].head : r.lines.length;
+    while (end > 0 && !r.lines[end - 1].trim()) end -= 1;
+    return end;
+  }
+
+  function planDay(plan) {
+    const n = Number(plan && plan.day);
+    if (n >= 1 && n <= 31) return n;
+    const p = dateMod.parseDate((plan && (plan.firstDue || plan.lastRun || plan.start)) || '');
+    return p.ok ? p.day : 1;
+  }
+
+  function planMonth(plan) {
+    const n = Number(plan && plan.month);
+    if (n >= 1 && n <= 12) return n;
+    const p = dateMod.parseDate((plan && (plan.firstDue || plan.lastRun || plan.start)) || '');
+    return p.ok ? p.month : 1;
+  }
+
+  /** '2608' / '2026-08' / '2026-08-16' → '2608'（固定表的月份 key）。 */
+  function planMonthKey(raw) {
+    const s = S(raw).replace(/[^\d]/g, '');
+    if (!s) return '';
+    if (s.length >= 6 && /^(19|20)\d{2}$/.test(s.slice(0, 4))) return s.slice(2, 4);
+    if (s.length >= 4) return s.slice(0, 4);
+    return '';
+  }
+
+  function planSchedule(plan) {
+    if (!plan || plan.period === 'd') return '每日';
+    if (plan.period === 'y') return '每年' + planMonth(plan) + '月' + planDay(plan) + '日';
+    return '每月' + planDay(plan) + '日';
+  }
+
+  function planRef(dict, codeMap, id, kind) {
+    const rec = kind === 'tag' ? (dict.tags || {}) : (dict.nodes || {});
+    const x = rec[id];
+    if (!x) return '?';
+    return (codeMap && codeMap.get(id)) || S(x.zh_code) || S(x.en_code) || id;
+  }
+
+  const PLAN_STATE_LABEL = { generated: '生成', confirmed: '确认', voided: '作废' };
+
+  function planStateText(plan) {
+    const st = (plan && plan.state) || {};
+    const parts = [];
+    Object.keys(PLAN_STATE_LABEL).forEach((k) => {
+      const list = Array.isArray(st[k]) ? st[k].filter((x) => /^\d{4,8}$/.test(S(x))).map(String) : [];
+      if (list.length) parts.push(PLAN_STATE_LABEL[k] + '=' + list.join(','));
+    });
+    return parts.join(' ');
+  }
+
+  function parsePlanState(text, out) {
+    const st = out || { generated: [], confirmed: [], voided: [] };
+    S(text).split(/[\s\u3000]+/).filter(Boolean).forEach((tok) => {
+      const m = tok.match(/^(生成|确认|作废|generated|confirmed|voided)=(.+)$/i);
+      if (!m) return;
+      const key = m[1] === '生成' || /^generated$/i.test(m[1]) ? 'generated'
+        : m[1] === '确认' || /^confirmed$/i.test(m[1]) ? 'confirmed' : 'voided';
+      m[2].split(',').map((x) => x.trim()).filter((x) => /^\d{4,8}$/.test(x))
+        .forEach((x) => { if (!st[key].includes(x)) st[key].push(x); });
+    });
+    return st;
+  }
+
+  function planLineText(plan, dict, opts) {
+    const o = opts || {};
+    const mode = o.mode === 'PLAIN' ? 'PLAIN' : 'CODE';
+    const lang = o.lang === 'en' ? 'en' : 'zh';
+    const codeMap = sourceCodeMap(dict);
+    const name = (kind, id) => {
+      if (!kind || !id) return '?';
+      const rec = kind === 'tag' ? (dict.tags || {}) : (dict.nodes || {});
+      if (!rec[id]) return '?';
+      if (mode === 'CODE') return planRef(dict, codeMap, id, kind);
+      return kind === 'tag'
+        ? dictMod.renderTag(dict, id, 'PLAIN', lang)
+        : dictMod.renderNode(dict, id, 'PLAIN', lang);
+    };
+    let from = name('node', plan.from);
+    let to = name('node', plan.to);
+    const fn = dict.nodes && dict.nodes[plan.from];
+    const tn = dict.nodes && dict.nodes[plan.to];
+    if (mode === 'CODE' && fn && tn && fn.domain !== tn.domain) {
+      from = fn.domain + ':' + from;
+      to = tn.domain + ':' + to;
+    }
+    const tags = (plan.tagIds || []).map((id) => ' < ' + name('tag', id)).join('');
+    let head = (plan.status === 'canceled' ? '停用 ' : '')
+      + planSchedule(plan) + ' ' + from + ' > ' + to + ' ' + formatYuanExact(plan.amountCents) + tags
+      + ' *' + (plan.period || 'm');
+    if (plan.kind === 'installment') {
+      const inst = plan.inst || {};
+      const periods = Number(inst.periods) || Number(plan.periods) || 0;
+      const firstMonth = planMonthKey(inst.firstMonth || plan.firstMonth || '');
+      head += ' 期数=' + periods;
+      if (firstMonth) head += ' 首月=' + firstMonth;
+      head += ' 本金=' + formatYuanExact(inst.principalCents || plan.principalCents || 0);
+      head += ' 利息=' + formatYuanExact(inst.interestCents || plan.interestCents || 0);
+    }
+    const note = S(plan.note).trim();
+    const state = planStateText(plan);
+    const comment = note ? (state ? note + ' | ' + state : note) : state;
+    return head + (comment ? ' // ' + comment : '');
+  }
+
+  function parsePlanLineText(raw, dict, opts, lineNo, kind) {
+    const o = opts || {};
+    const type = kind === 'installment' ? 'installment' : 'fixed';
+    let text = S(raw).trim();
+    if (!text) return null;
+    let note = '';
+    let state = { generated: [], confirmed: [], voided: [] };
+    const ci = text.indexOf('//');
+    if (ci >= 0) {
+      const comment = text.slice(ci + 2).trim();
+      text = text.slice(0, ci).trim();
+      const bar = comment.indexOf('|');
+      if (bar >= 0) {
+        note = comment.slice(0, bar).trim();
+        state = parsePlanState(comment.slice(bar + 1), state);
+      } else {
+        const only = parsePlanState(comment, { generated: [], confirmed: [], voided: [] });
+        const hasState = only.generated.length || only.confirmed.length || only.voided.length;
+        if (hasState) state = only;
+        else note = comment.trim();
+      }
+    } else {
+      text = stripComment(text).trim();
+    }
+    if (!text) return null;
+    let status = 'active';
+    if (/^停用(\s|$)/.test(text)) { status = 'canceled'; text = text.replace(/^停用\s*/, ''); }
+    const sm = text.match(/^(每日|每月\s*(\d{1,2})\s*日|每年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日)\s+(.+)$/);
+    if (!sm) return { error: '固定收支行格式：每月16日 微信 > 房租 1000 *m', line: lineNo };
+    let period = 'm';
+    let day = 0;
+    let month = 0;
+    if (sm[1] === '每日') period = 'd';
+    else if (sm[2]) { period = 'm'; day = Number(sm[2]); }
+    else { period = 'y'; month = Number(sm[3]); day = Number(sm[4]); }
+    let rest = sm[5];
+    let periods = 0;
+    let firstMonth = '';
+    let principalCents = 0;
+    let interestCents = 0;
+    const pm = rest.match(/(^|\s)\*([dmy])(?=\s|$)/i);
+    if (pm) {
+      period = pm[2].toLowerCase();
+      rest = rest.replace(pm[0], ' ');
+    }
+    if (type === 'installment') {
+      const take = (re, apply) => {
+        const m = rest.match(re);
+        if (!m) return;
+        rest = rest.replace(m[0], ' ');
+        apply(m);
+      };
+      take(/(^|\s)期数=(\d{1,3})(?=\s|$)/, (m) => { periods = Number(m[2]); });
+      take(/(^|\s)首月=(\d{4}|\d{4}-\d{2})(?=\s|$)/, (m) => { firstMonth = planMonthKey(m[2]); });
+      take(/(^|\s)本金=(\d+(?:\.\d{1,2})?[kK]?)(?=\s|$)/, (m) => {
+        const q = amount.parseAmount(m[2]);
+        principalCents = q.ok ? q.cents : 0;
+      });
+      take(/(^|\s)利息=(\d+(?:\.\d{1,2})?[kK]?)(?=\s|$)/, (m) => {
+        const q = amount.parseAmount(m[2]);
+        interestCents = q.ok ? q.cents : 0;
+      });
+      /* 兼容旧写法：共N期 / 首期=YYMMDD */
+      if (!(periods >= 1)) {
+        take(/(^|\s)共\s*(\d{1,3})\s*期(?=\s|$)/, (m) => { periods = Number(m[2]); });
+        take(/(^|\s)(\d{1,3})\s*期(?=\s|$)/, (m) => { periods = Number(m[2]); });
+      }
+      if (!firstMonth) {
+        take(/(^|\s)首期=(\d{6})(?=\s|$)/, (m) => { firstMonth = planMonthKey(m[2]); });
+      }
+      if (!(periods >= 1)) return { error: '分期缺少 期数=N', line: lineNo };
+      if (periods > 360) return { error: '分期期数不能超过 360', line: lineNo };
+      if (!/^\d{4}$/.test(firstMonth)) return { error: '分期缺少 首月=YYMM', line: lineNo };
+      if (principalCents < 0 || interestCents < 0) return { error: '分期本金 / 利息不能为负', line: lineNo };
+    }
+    rest = rest.replace(/\s+/g, ' ').trim();
+    if (!rest) return { error: '固定收支缺 转出 > 转入 金额', line: lineNo };
+    const today = dateMod.todayStamp(o.now || new Date());
+    const compiled = compileLedgerSource(today + ' ' + rest, dict, {
+      now: o.now, domain: o.domain || 'P', autoCreateBehaviors: false,
+    });
+    const ev = (compiled.events || [])[0];
+    if (!ev || ev.kind !== 'account') {
+      const d = (compiled.diagnostics || []).find((x) => x.severity === 'error') || (compiled.diagnostics || [])[0];
+      return { error: '固定收支认不出：' + (d ? d.message : rest), line: lineNo };
+    }
+    if (!(ev.amountCents > 0)) return { error: '固定收支金额必须大于 0', line: lineNo };
+    if (type === 'installment' && period === 'd') return { error: '分期不能按天', line: lineNo };
+    return {
+      ok: true,
+      id: 'P_' + lineNo,
+      kind: type,
+      status,
+      period,
+      day,
+      month,
+      note,
+      state,
+      periods: type === 'installment' ? periods : 0,
+      firstMonth: type === 'installment' ? firstMonth : '',
+      principalCents: type === 'installment' ? principalCents : 0,
+      interestCents: type === 'installment' ? interestCents : 0,
+      inst: type === 'installment'
+        ? { periods, firstMonth, principalCents, interestCents }
+        : null,
+      domain: ev.domain || 'P',
+      from: ev.from,
+      to: ev.to,
+      amountCents: ev.amountCents,
+      tagIds: (ev.tagIds || []).slice(),
+      line: lineNo,
+      raw: S(raw).trim(),
+    };
+  }
+
+  function parsePlanSection(source, dict, opts) {
+    const r = planSections(source);
+    const plans = [];
+    const diagnostics = [];
+    r.sections.forEach((sec) => {
+      for (let i = sec.start; i < sec.end; i += 1) {
+        const line = S(r.lines[i]).trim();
+        if (!line || line.startsWith('//')) continue;
+        const p = parsePlanLineText(r.lines[i], dict, opts, i + 1, sec.header);
+        if (!p) continue;
+        if (p.error) { diagnostics.push(diag(i + 1, p.error)); continue; }
+        plans.push(p);
+      }
+    });
+    return { plans, diagnostics };
+  }
+
+  /** [固定] + [分期] 两段（含前面 20 行空行）；没有计划时返回空数组。 */
+  function planSectionBlock(plans, dict, opts) {
+    const list = plans || [];
+    if (!list.length) return [];
+    const fixed = list.filter((p) => p.kind !== 'installment');
+    const inst = list.filter((p) => p.kind === 'installment');
+    const out = [];
+    for (let i = 0; i < PLAN_GAP; i += 1) out.push('');
+    out.push(PLAN_HEADER);
+    out.push(PLAN_COMMENT);
+    fixed.forEach((p) => out.push(planLineText(p, dict, opts)));
+    out.push('');
+    out.push(INSTALLMENT_HEADER);
+    out.push(INSTALLMENT_COMMENT);
+    inst.forEach((p) => out.push(planLineText(p, dict, opts)));
+    return out;
+  }
+
+  /** 用 [固定]/[分期] 段重建整份流水文本（正文 + 20 空行 + 计划）。 */
+  function withPlanSection(source, plans, dict, opts) {
+    const end = recordsEndIndex(source);
+    const lines = S(source).replace(/\r\n?/g, '\n').replace(/\n+$/, '').split('\n');
+    const head = lines.slice(0, end);
+    const block = planSectionBlock(plans, dict, opts);
+    const all = block.length ? head.concat(block) : head;
+    return all.join('\n') + '\n';
+  }
+
   function ledgerToSource(dict, events, behaviors, notes) {
     const codeMap = sourceCodeMap(dict);
     const lines = [];
@@ -244,7 +558,8 @@
       const to = (cross ? tn.domain + ':' : '') + (codeMap.get(e.to) || '?');
       const amt = e.minutes > 0 ? amount.formatTime(e.minutes) : formatYuanExact(e.amountCents);
       const tags = (e.tagIds || []).map((id) => codeMap.get(id)).filter(Boolean).map((c) => ' < ' + c).join('');
-      lines.push(domainPrefix(e.domain) + e.date + ' ' + from + ' > ' + to + ' ' + amt + tags);
+      const note = S(e.note).trim() ? ' // ' + S(e.note).trim().replace(/\/\//g, '/ /') : '';
+      lines.push(domainPrefix(e.domain) + e.date + ' ' + from + ' > ' + to + ' ' + amt + tags + note);
     });
     (behaviors || []).forEach((b) => {
       const from = codeMap.get(b.from) || '?';
@@ -263,6 +578,29 @@
       lines.push(domainPrefix(n.domain) + n.date + ' ' + (amt ? amt + ' ' : '') + '< ' + cat + (kws ? ' < ' + kws : ''));
     });
     return lines.join('\n') + '\n';
+  }
+
+  /** 独立的固定表文本（[固定] + [分期] 两个区域，不需要前面的 20 行空行）。 */
+  function fixedSourceFromPlans(plans, dict, opts) {
+    const list = plans || [];
+    const fixed = list.filter((p) => p.kind !== 'installment');
+    const inst = list.filter((p) => p.kind === 'installment');
+    const out = [];
+    out.push(PLAN_HEADER);
+    out.push(PLAN_COMMENT);
+    fixed.forEach((p) => out.push(planLineText(p, dict, opts)));
+    out.push('');
+    out.push(INSTALLMENT_HEADER);
+    out.push(INSTALLMENT_COMMENT);
+    inst.forEach((p) => out.push(planLineText(p, dict, opts)));
+    return out.join('\n') + '\n';
+  }
+
+  /** 编译独立的固定表：返回计划对象 + 行级诊断。 */
+  function compileFixed(fixedSource, dict, opts) {
+    const r = parsePlanSection(S(fixedSource), dict, opts);
+    const errors = r.diagnostics.filter((d) => d.severity === 'error').length;
+    return { ok: errors === 0, plans: r.plans, diagnostics: r.diagnostics, errors };
   }
 
   function parseNames(text) {
@@ -1068,6 +1406,7 @@
             amountCents: q.unit === 'money' ? q.cents : 0,
             minutes: q.unit === 'time' ? q.minutes : 0,
             tagIds: tagIds.slice(), chainId: '', sourceLine: lineNo, raw: rawSeg,
+            period: period || '',
             crossDomain: !!(dict.nodes[a.account] && dict.nodes[b.account]
               && dict.nodes[a.account].domain !== dict.nodes[b.account].domain),
           });
@@ -1174,6 +1513,7 @@
           amountCents: q.unit === 'money' ? q.cents : 0,
           minutes: q.unit === 'time' ? q.minutes : 0,
           tagIds: tagIds.slice(), chainId, sourceLine: lineNo, raw: rawSeg,
+          period: period || '',
           crossDomain: !!(dict.nodes[resolved[i].account] && dict.nodes[resolved[i + 1].account]
             && dict.nodes[resolved[i].account].domain !== dict.nodes[resolved[i + 1].account].domain),
         });
@@ -1218,10 +1558,14 @@
     if (!work.behaviors) work.behaviors = {};
     const usedIds = new Set(Object.keys(work.nodes || {}).concat(Object.keys(work.tags || {}), Object.keys(work.behaviors || {})));
     const lines = S(text).replace(/\r\n?/g, '\n').split('\n');
+    let inPlan = false;
     lines.forEach((raw, idx) => {
       const lineNo = idx + 1;
       const line = S(raw).trim();
       if (!line) return;
+      if (line === PLAN_HEADER || line === INSTALLMENT_HEADER) { inPlan = true; return; }
+      if (inPlan && /^\[[^\]]+\]$/.test(line)) inPlan = false;
+      if (inPlan) return; /* [固定] 段由 parsePlanSection 单独编译 */
       if (/^\[(PLAN|RULES?)\]$/i.test(line)) {
         diagnostics.push(diag(lineNo, 'PLAN/RULES 暂由规则面板管理', 'warning'));
         return;
@@ -1234,8 +1578,13 @@
       r.autoTags.forEach((t) => { if (!autoTags.some((x) => x.id === t.id)) autoTags.push(t); });
       (r.autoBehaviors || []).forEach((t) => { if (!autoBehaviors.some((x) => x.id === t.id)) autoBehaviors.push(t); });
     });
+    const planParse = parsePlanSection(S(text), work, { now, domain: o.domain || 'P', lang: o.lang });
+    planParse.diagnostics.forEach((d) => diagnostics.push(d));
     const errors = diagnostics.filter((x) => x.severity === 'error').length;
-    return { ok: errors === 0, dict: work, events, behaviors, notes, autoTags, autoBehaviors, diagnostics, errors, lines: lines.length };
+    return {
+      ok: errors === 0, dict: work, events, behaviors, notes,
+      plans: planParse.plans, autoTags, autoBehaviors, diagnostics, errors, lines: lines.length,
+    };
   }
 
   function compileAll(dictSource, ledgerSource, opts) {
@@ -1248,6 +1597,7 @@
       events: l.events,
       behaviors: l.behaviors,
       notes: l.notes,
+      plans: l.plans || [],
       autoTags: l.autoTags,
       autoBehaviors: l.autoBehaviors,
       diagnostics: d.diagnostics.concat(l.diagnostics),
@@ -1261,19 +1611,22 @@
   /** 单 TXT 导出格式：## 统计 / ## 流水 / ## 行为 / ## 备注 / ## 字典 */
   function parseSingleTxt(text) {
     const lines = S(text).replace(/\r\n?/g, '\n').split('\n');
-    const sec = { flow: [], behavior: [], notes: [], dict: [] };
+    const sec = { flow: [], behavior: [], notes: [], fixed: [], dict: [] };
     let cur = '';
     let sawDict = false;
     let sawFlow = false;
+    let sawFixed = false;
     lines.forEach((line) => {
-      const m = line.match(/^##\s*(统计|流水|行为|备注|字典)\s*$/);
+      const m = line.match(/^##\s*(统计|流水|固定|行为|备注|字典)\s*$/);
       if (m) {
         cur = m[1];
         if (cur === '字典') sawDict = true;
         if (cur === '流水') sawFlow = true;
+        if (cur === '固定') sawFixed = true;
         return;
       }
       if (cur === '流水') sec.flow.push(line);
+      else if (cur === '固定') sec.fixed.push(line);
       else if (cur === '行为') sec.behavior.push(line);
       else if (cur === '备注') sec.notes.push(line);
       else if (cur === '字典') sec.dict.push(line);
@@ -1283,16 +1636,31 @@
     const dictSource = sec.dict.join('\n').trim() + '\n';
     const ledgerSource = [sec.flow.join('\n'), sec.behavior.join('\n'), sec.notes.join('\n')]
       .map((x) => x.trim()).filter(Boolean).join('\n') + '\n';
-    return { ok: true, dictSource, ledgerSource };
+    const fixedSource = sawFixed ? sec.fixed.join('\n').trim() + '\n' : '';
+    return { ok: true, dictSource, ledgerSource, fixedSource, hasFixed: sawFixed };
   }
 
   TV.source = {
     TAG_KINDS,
+    PLAN_HEADER,
+    INSTALLMENT_HEADER,
+    PLAN_GAP,
+    PLAN_COMMENT,
     formatYuanExact,
     sourceCodeMap,
     dictToSource,
     ledgerToSource,
     normalizeDomainSyntax,
+    planSectionRange,
+    recordsEndIndex,
+    planSchedule,
+    planLineText,
+    parsePlanLineText,
+    parsePlanSection,
+    planSectionBlock,
+    withPlanSection,
+    fixedSourceFromPlans,
+    compileFixed,
     compileDictSource,
     compileLedgerSource,
     compileAll,

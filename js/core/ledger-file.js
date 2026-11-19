@@ -42,7 +42,8 @@
     ];
     (event.tagIds || []).forEach((id) => parts.push(id));
     if (event.chainId) parts.push('^' + event.chainId);
-    return parts.join(' ');
+    const note = S(event.note).trim();
+    return parts.join(' ') + (note ? ' // ' + note.replace(/\/\//g, '/ /') : '');
   }
 
   function serializeLedger(state) {

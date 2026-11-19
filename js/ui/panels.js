@@ -9,7 +9,6 @@
   const amount = TV.amount;
   const dictMod = TV.dict;
   const dateMod = TV.date;
-  const rulesMod = TV.rules;
 
   const PREFS_KEY = 'txtvein.prefs.v1';
   const COLOR_DEFS = [
@@ -173,39 +172,18 @@
         const from = dictMod.renderNode(s.dict, p.from, s.mode, s.lang);
         const to = dictMod.renderNode(s.dict, p.to, s.mode, s.lang);
         const tags = (p.tagIds || []).map((id) => dictMod.renderTag(s.dict, id, s.mode, s.lang)).filter(Boolean);
-        const due = rulesMod.nextDue(p, new Date());
         return el('div', { class: 'plan-card' + (p.status !== 'active' ? ' is-canceled' : '') }, [
           el('div', { class: 'plan-top' }, [
-            el('span', { class: 'plan-id' }, [p.id]),
             el('span', { class: 'plan-status' + (p.status !== 'active' ? ' is-off' : '') }, [p.status === 'active' ? 'ACTIVE' : 'CANCELED']),
-            el('span', { class: 'plan-meta' }, [
-              '从 ' + (p.start || '—') + ' 起',
-              p.lastRun ? '上次 ' + p.lastRun : '未执行',
-              due ? '下次 ' + due : '不再生成',
-            ]),
           ]),
           el('div', { class: 'plan-text' }, [
             from + ' > ' + to + '  ' + amount.formatPlain(p.amountCents)
               + '  *' + p.period + (tags.length ? '  < ' + tags.join(' < ') : ''),
           ]),
           el('div', { class: 'plan-actions' }, [
-            p.status === 'active'
-              ? mini('取消未来', 'is-danger', () => {
-                app.cancelPlan(p.id);
-                toast('已取消 ' + p.id + '；历史流水未动', 'ok');
-                showRules(app);
-              })
-              : mini('恢复', 'is-accent', () => {
-                app.resumePlan(p.id);
-                toast('已恢复 ' + p.id, 'ok');
-                showRules(app);
-              }),
-            mini('删除规则', '', () => {
-              confirm(app, '删除规则', '删除 ' + p.id + '？只删规则，不删已经生成的流水。', () => {
-                app.deletePlan(p.id);
-                toast('已删除规则 ' + p.id, 'ok');
-                showRules(app);
-              });
+            mini('到固定表里改', '', () => {
+              close();
+              app.setView('fixed');
             }),
           ]),
         ]);
@@ -1218,7 +1196,8 @@
             el('li', {}, [el('code', {}, ['sav > wx1 > din 1000 995']), ' 链式转移，差额进损耗']),
             el('li', {}, [el('code', {}, ['261110 wx1 > din 12.5']), ' 指定日期']),
             el('li', {}, [el('code', {}, ['-1 wx1 > din 35']), ' 昨天（落盘固化）']),
-            el('li', {}, [el('code', {}, ['wx1 > rent 1000*m']), ' 周期规则']),
+            el('li', {}, [el('code', {}, ['wx1 > rent 1000*m']), ' 固定收支：每月（自动落账）']),
+            el('li', {}, [el('code', {}, ['wx1 > din 5*d']), ' 固定收支：每日（确认才落账）']),
             el('li', {}, [el('code', {}, ['P:wx1 > C:cbiz 1000 < 垫付']), ' 跨域']),
             el('li', {}, [el('code', {}, ['wx1 > din 60m < 时间']), ' 时间代币']),
           ]),
@@ -1233,7 +1212,7 @@
           shortcut('Ctrl+Z', '撤销刚固化的别名'),
           shortcut('Delete', '删除选中的流水'),
           shortcut('Ctrl+S', '立即保存'),
-          shortcut('Ctrl+R', '规则面板'),
+          shortcut('Ctrl+R', '跳到固定收支段'),
           shortcut('Ctrl+Shift+P', '简码 / 明文'),
           shortcut('Ctrl+Shift+L', '中文 / 英文'),
           shortcut('Ctrl+Shift+K', '锁定'),
