@@ -549,3 +549,465 @@
   pointer-events: none;
   z-index: 2;
 }
+
+/* ===== 液态玻璃：代码生成位移贴图，backdrop-filter 折射背景 ===== */
+.liquid-glass {
+  isolation: isolate;
+  background-color: rgba(255, 255, 255, var(--lg-alpha, 0.10)) !important;
+  background-image:
+    radial-gradient(120% 100% at 28% 14%, rgba(255, 255, 255, var(--lg-highlight, 0.55)), rgba(255, 255, 255, 0) 46%),
+    linear-gradient(135deg, rgba(255, 255, 255, calc(var(--lg-highlight, 0.55) * 0.4)), rgba(255, 255, 255, 0) 42%) !important;
+  border: 0 !important;
+  -webkit-backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.25) brightness(1.03) !important;
+  backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.25) brightness(1.03) !important;
+  box-shadow:
+    0 0 0 1.5px rgba(30, 40, 50, 0.30),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 3px rgba(30, 40, 50, 0.06),
+    inset 0 1px 1px rgba(255, 255, 255, 0.65),
+    inset 0 -8px 18px rgba(0, 0, 0, 0.16),
+    0 8px 22px rgba(0, 0, 0, var(--lg-shadow, 0.34)) !important;
+  color: var(--text) !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.liquid-glass-fallback {
+  background: rgba(255, 255, 255, 0.12) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+.composer-toggle.liquid-glass,
+.composer.open .composer-toggle.liquid-glass {
+  border-radius: 12px !important;
+}
+.entry-row.liquid-glass {
+  border-radius: 8px !important;
+}
+.composer.open .entry-row.liquid-glass {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55),
+    0 8px 22px rgba(0, 0, 0, 0.3) !important;
+}
+.composer .entry-row.liquid-glass:focus-within {
+  border-color: rgba(255, 255, 255, 0.62) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 8px 22px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ===== 电纸书主题：暖纸底 / 墨色字 / 无发光 =====
+ * 深色主题继续用 :root 的默认变量；这里只在 html[data-theme="paper"] 下覆盖。
+ * 很多组件写死了 #050505 / #0b0b0b，所以关键面用 !important 压住。 */
+html[data-theme="paper"] {
+  --bg: #f3efe3;
+  --bg-1: #f7f3e8;
+  --bg-2: #efeadc;
+  --bg-3: #e9e3d4;
+  --line: rgba(70, 62, 48, 0.16);
+  --line-strong: rgba(70, 62, 48, 0.32);
+  --text: #111111;
+  --text-2: #33322d;
+  --text-3: #55524a;
+  --dim: #8a8273;
+  --date: #8a8375;
+  --a: #2f5d50;
+  --b: #8a5a32;
+  --op: #6b6558;
+  --tag: #5f5a4e;
+  --accent: #3f6b52;
+  --accent-dim: rgba(63, 107, 82, 0.12);
+  --err: #8a3f3f;
+  --err-dim: rgba(138, 63, 63, 0.1);
+  --shadow: none;
+}
+html[data-theme="paper"] body {
+  background-color: #f3efe3 !important;
+  background-image: radial-gradient(rgba(90, 80, 60, 0.035) 1px, transparent 1px) !important;
+  background-size: 3px 3px !important;
+  color: var(--text) !important;
+}
+html[data-theme="paper"] body::before { display: none !important; }
+html[data-theme="paper"] ::selection { background: #d9d0bb !important; color: #2b2924 !important; }
+
+/* 顶栏 / 页签 / HUD */
+html[data-theme="paper"] .topbar,
+html[data-theme="paper"] .tabs,
+html[data-theme="paper"] .hud {
+  background: #f3efe3 !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .brand,
+html[data-theme="paper"] .topbar b,
+html[data-theme="paper"] .hud b { color: var(--text) !important; }
+html[data-theme="paper"] .topbar .btn,
+html[data-theme="paper"] .tabs .tab,
+html[data-theme="paper"] .chip,
+html[data-theme="paper"] .btn,
+html[data-theme="paper"] .btn-ghost {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+html[data-theme="paper"] .page-tabs {
+  background: #f3efe3 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .page-tab,
+html[data-theme="paper"] .report-mode-btn,
+html[data-theme="paper"] .stats-clear {
+  background: #f3efe3 !important;
+  color: #4a463d !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .page-tab.is-active,
+html[data-theme="paper"] .report-mode-btn.is-active {
+  background: #e9e3d4 !important;
+  color: #1f1e1a !important;
+  border-color: #8a8273 !important;
+}
+html[data-theme="paper"] .top-menu .menu-btn { color: #2b2924 !important; }
+html[data-theme="paper"] .feedback {
+  background: #f3efe3 !important;
+  color: #4a463d !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .tab.is-active,
+html[data-theme="paper"] .btn:hover,
+html[data-theme="paper"] .chip:hover {
+  background: #e9e3d4 !important;
+  color: #1f1e1a !important;
+  border-color: #8a8273 !important;
+}
+
+/* 编辑器 / CodeMirror */
+html[data-theme="paper"] .editor-pane,
+html[data-theme="paper"] .CodeMirror,
+html[data-theme="paper"] .cm-s-txtvein.CodeMirror {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+}
+html[data-theme="paper"] .cm-s-txtvein .CodeMirror-gutters {
+  background: #efeada !important;
+  border-right: 1px solid #d8d1c1 !important;
+}
+html[data-theme="paper"] .cm-s-txtvein .CodeMirror-linenumber { color: #8a8273 !important; }
+html[data-theme="paper"] .cm-s-txtvein .CodeMirror-cursor { border-left-color: #2b2924 !important; }
+html[data-theme="paper"] .cm-s-txtvein .CodeMirror-selected { background: #ddd5c2 !important; }
+html[data-theme="paper"] .cm-s-txtvein .CodeMirror-activeline-background { background: rgba(90, 80, 60, 0.05) !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-comment { color: #6b6558 !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-number,
+html[data-theme="paper"] .cm-s-txtvein .cm-atom { color: #7a4a20 !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-variable,
+html[data-theme="paper"] .cm-s-txtvein .cm-variable-2,
+html[data-theme="paper"] .cm-s-txtvein .cm-def,
+html[data-theme="paper"] .cm-s-txtvein .cm-tag { color: #2f5d50 !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-keyword,
+html[data-theme="paper"] .cm-s-txtvein .cm-string,
+html[data-theme="paper"] .cm-s-txtvein .cm-meta { color: #6a4f2a !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-operator { color: #4a463d !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-error { color: #8a3f3f !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-def { color: #2b2924 !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-link { color: #2f5d50 !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-unknown { color: #8a3f3f !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-error { color: #8a3f3f !important; background: rgba(138, 63, 63, 0.08) !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-invalid-line { background: rgba(138, 63, 63, 0.06) !important; }
+
+/* 单输入气泡 / 展开条：纸墨按钮，关闭玻璃 */
+html[data-theme="paper"] .composer,
+html[data-theme="paper"] .composer-inner { background: transparent !important; }
+html[data-theme="paper"] .composer .entry-row,
+html[data-theme="paper"] .entry-row,
+html[data-theme="paper"] .entry-row.liquid-glass {
+  background: #efeada !important;
+  background-image: none !important;
+  border-color: #b9b09c !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  color: #2b2924 !important;
+}
+html[data-theme="paper"] .entry-row:focus-within {
+  border-color: #3f6b52 !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .composer-toggle,
+html[data-theme="paper"] .composer-toggle.liquid-glass,
+html[data-theme="paper"] .composer-toggle.liquid-glass-fallback,
+html[data-theme="paper"] .composer.open .composer-toggle {
+  background: #e9e3d3 !important;
+  background-image: none !important;
+  border: 1px solid #b9b09c !important;
+  border-radius: 12px !important;
+  color: #2b2924 !important;
+  box-shadow: 0 1px 3px rgba(40, 35, 25, 0.12) !important;
+  text-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.liquid-glass-fallback {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* 模态 / 面板 / 设置 */
+html[data-theme="paper"] .modal-backdrop { background: rgba(60, 55, 45, 0.28) !important; }
+html[data-theme="paper"] .modal-panel,
+html[data-theme="paper"] .modal-head,
+html[data-theme="paper"] .modal-body,
+html[data-theme="paper"] .modal-foot {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .modal-close { color: #6c665a !important; border-color: #b9b09c !important; }
+html[data-theme="paper"] .settings-row,
+html[data-theme="paper"] .form-row { color: #2b2924 !important; border-color: #d8d1c1 !important; }
+html[data-theme="paper"] input,
+html[data-theme="paper"] select,
+html[data-theme="paper"] textarea {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .toast {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+  box-shadow: 0 2px 8px rgba(40, 35, 25, 0.14) !important;
+}
+
+/* 统计 / 固定 / 报表 */
+html[data-theme="paper"] .stats-page,
+html[data-theme="paper"] .stats-left,
+html[data-theme="paper"] .stats-right,
+html[data-theme="paper"] .stats-top,
+html[data-theme="paper"] .stats-tabs-wrap,
+html[data-theme="paper"] .report-inner,
+html[data-theme="paper"] .fixed-view,
+html[data-theme="paper"] .fixed-inner {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+}
+html[data-theme="paper"] .stats-tab,
+html[data-theme="paper"] .stats-month,
+html[data-theme="paper"] .range-chip,
+html[data-theme="paper"] .stats-year-input {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .stats-tab.is-active,
+html[data-theme="paper"] .stats-month.is-active,
+html[data-theme="paper"] .range-chip.is-active {
+  background: #e9e3d4 !important;
+  border-color: #8a8273 !important;
+}
+html[data-theme="paper"] .lst-group,
+html[data-theme="paper"] .stats-table,
+html[data-theme="paper"] .sd-row,
+html[data-theme="paper"] .stats-right-head,
+html[data-theme="paper"] .stats-left-head,
+html[data-theme="paper"] .stats-right-empty {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .sd-row.is-head { color: #6c665a !important; }
+html[data-theme="paper"] .sd-num,
+html[data-theme="paper"] .sd-row .sd-num,
+html[data-theme="paper"] .hud b,
+html[data-theme="paper"] .rtable-num,
+html[data-theme="paper"] .kpi-value,
+html[data-theme="paper"] .stats-money { color: #2b2924 !important; }
+html[data-theme="paper"] .sd-row.is-total .sd-num { color: #1f1e1a !important; }
+html[data-theme="paper"] .hud .hud-ok { color: #3f6b52 !important; }
+html[data-theme="paper"] .hud .hud-bad { color: #8a3f3f !important; }
+html[data-theme="paper"] .sd-row.is-total {
+  background: #efeada !important;
+  color: #1f1e1a !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .sd-row.is-active { background: #e9e3d4 !important; box-shadow: none !important; }
+html[data-theme="paper"] .fixed-editor .CodeMirror,
+html[data-theme="paper"] .fixed-editor .CodeMirror-gutters {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .fixed-errors,
+html[data-theme="paper"] .fixed-summary {
+  background: #f3efe3 !important;
+  color: #6c665a !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .report-card,
+html[data-theme="paper"] .rtable,
+html[data-theme="paper"] .rtable-row,
+html[data-theme="paper"] .kpi {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .rtable-row.is-head,
+html[data-theme="paper"] .rtable-row.is-total { background: #efeada !important; }
+
+/* ===== 融合输入胶囊：圆钮和展开条是同一个 .composer（照 NT 的做法） ===== */
+.composer {
+  position: fixed;
+  left: auto;
+  right: 16px;
+  bottom: 44px;
+  z-index: 300;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  overflow: visible;
+  box-sizing: border-box;
+  transition: width 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    padding 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    gap 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-radius 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 0.24s ease, box-shadow 0.24s ease;
+}
+.composer.open {
+  width: min(340px, calc(100vw - 24px));
+  height: 40px;
+  padding: 2px 4px 2px 10px;
+  gap: 2px;
+  justify-content: flex-start;
+  border-radius: 14px;
+}
+.composer-inner {
+  position: static;
+  display: none;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.composer.open .composer-inner { display: block; }
+.composer .entry-row {
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.composer .entry-row:focus-within { border: 0; box-shadow: none; }
+.composer .entry {
+  height: 100%;
+  font-size: 13.5px;
+  color: #f7fbf8 !important;
+  caret-color: #f7fbf8;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.composer .entry::placeholder { color: rgba(247, 251, 248, 0.66) !important; }
+.composer-toggle,
+.composer.open .composer-toggle {
+  position: static;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  box-shadow: none;
+  text-shadow: none;
+  cursor: grab;
+}
+.composer.open .composer-toggle { cursor: pointer; }
+.composer.dragging .composer-toggle { cursor: grabbing; }
+/* 玻璃只在胶囊上：收起用圆贴图，展开换宽条贴图 */
+.composer.liquid-glass.open {
+  -webkit-backdrop-filter: var(--lg-filter-open, var(--lg-filter)) blur(var(--lg-blur, 0px)) saturate(1.25) brightness(1.03) !important;
+  backdrop-filter: var(--lg-filter-open, var(--lg-filter)) blur(var(--lg-blur, 0px)) saturate(1.25) brightness(1.03) !important;
+}
+.composer.liquid-glass-fallback {
+  background: rgba(255, 255, 255, 0.12) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+}
+/* 电纸书：胶囊是纸墨按钮，内部完全透明 */
+html[data-theme="paper"] .composer {
+  background: #fffdf7 !important;
+  border: 2px solid #2b2924 !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html[data-theme="paper"] .composer-inner,
+html[data-theme="paper"] .composer .entry-row,
+html[data-theme="paper"] .composer .entry-row:focus-within {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .composer-toggle,
+html[data-theme="paper"] .composer.open .composer-toggle {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: #111111 !important;
+  text-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html[data-theme="paper"] .composer .entry { color: #111111 !important; }
+html[data-theme="paper"] .composer .entry::placeholder { color: #5f5a4e !important; }
+
+/* 统计表第一列：隐藏拖动黑线；内容居中；可缩到更窄 */
+.col-grip::after { background: transparent !important; width: 0 !important; }
+.col-grip:hover::after { background: transparent !important; width: 0 !important; }
+.stats-left .sd-row > span:first-child {
+  text-align: center;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stats-left .sd-row > span:first-child .col-grip { right: -10px; }
+
+/* 不透明度拉到 0：彻底透明，只保留折射与文字 */
+.liquid-glass.lg-clear {
+  background: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow:
+    0 0 0 1.5px rgba(30, 40, 50, 0.30),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 3px rgba(30, 40, 50, 0.06),
+    0 8px 22px rgba(0, 0, 0, 0.20) !important;
+}

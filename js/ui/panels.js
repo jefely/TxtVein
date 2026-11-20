@@ -21,9 +21,14 @@
     ['amount', '金额', '--tv-amount', '#B5CEA8'],
     ['note', '备注', '--tv-note', '#6A9955'],
   ];
+  const PAPER_COLORS = {
+    invalid: '#8a3f3f', linenumber: '#8a8273', lineerror: '#a04a2a', date: '#7a4a20',
+    node: '#2f5d50', operator: '#4a463d', amount: '#3f5f3f', note: '#6b6558',
+  };
   const DEFAULT_PREFS = {
     colors: COLOR_DEFS.reduce((m, x) => { m[x[0]] = x[3]; return m; }, {}),
     fontSize: 13,
+    theme: 'dark',
   };
 
   function loadPrefs() {
@@ -33,6 +38,7 @@
       const p = raw ? JSON.parse(raw) : null;
       if (p && p.colors) Object.keys(out.colors).forEach((k) => { if (p.colors[k]) out.colors[k] = p.colors[k]; });
       if (p && Number(p.fontSize)) out.fontSize = Math.max(11, Math.min(22, Number(p.fontSize)));
+      if (p && (p.theme === 'paper' || p.theme === 'dark')) out.theme = p.theme;
     } catch (e) { /* ignore */ }
     return out;
   }
@@ -40,8 +46,13 @@
   function applyPrefs(p) {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    COLOR_DEFS.forEach((x) => root.style.setProperty(x[2], p.colors[x[0]] || x[3]));
+    const paper = p.theme === 'paper';
+    root.dataset.theme = paper ? 'paper' : 'dark';
+    const colors = paper ? PAPER_COLORS : p.colors;
+    COLOR_DEFS.forEach((x) => root.style.setProperty(x[2], colors[x[0]] || x[3]));
     root.style.setProperty('--tv-editor-font-size', p.fontSize + 'px');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', paper ? '#f3efe3' : '#050505');
   }
 
   function savePrefs(p) {
@@ -1590,11 +1601,64 @@
           el('code', {}, [x[3]]),
         ]);
       });
+      const themeSel = el('select', { class: 'input pv-select', style: 'min-width:120px' }, [
+        el('option', { value: 'dark' }, ['深色']),
+        el('option', { value: 'paper' }, ['电纸书']),
+      ]);
+      themeSel.value = p.theme || 'dark';
+      themeSel.addEventListener('change', () => {
+        p.theme = themeSel.value === 'paper' ? 'paper' : 'dark';
+        savePrefs(p);
+        if (app.refreshEditors) app.refreshEditors();
+      });
+      const glassSection = [];
+      if (TV.glass && TV.glass.getParams) {
+        const gp = TV.glass.getParams();
+        const defs = [
+          ['不透明度', 'opacity', 0, 40, 1, '%'],
+          ['位移强度', 'scale', 0, 40, 1, ''],
+          ['高光', 'highlight', 0, 100, 1, '%'],
+          ['阴影', 'shadow', 0, 100, 1, '%'],
+          ['背景模糊', 'blur', 0, 20, 1, 'px'],
+        ];
+        glassSection.push(el('h3', { class: 'settings-h' }, ['液态玻璃']));
+        glassSection.push(el('p', { class: 'help-text' }, ['拖动即时生效；不透明度现在控制主题色叠加的强度，0 = 完全透明。']));
+        defs.forEach(([label, key, min, max, step, unit]) => {
+          const range = el('input', {
+            type: 'range', min: String(min), max: String(max), step: String(step),
+            value: String(gp[key]),
+          });
+          const val = el('span', { class: 'help-text' }, [String(gp[key]) + unit]);
+          range.addEventListener('input', () => {
+            const patch = {};
+            patch[key] = Number(range.value);
+            TV.glass.setParams(patch);
+            val.textContent = range.value + unit;
+          });
+          glassSection.push(el('div', { class: 'settings-row' }, [
+            el('span', {}, [label]), range, val,
+          ]));
+        });
+        glassSection.push(el('div', { class: 'settings-row' }, [
+          button('视频参考值', '', () => {
+            TV.glass.setParams({ opacity: 20, scale: 12, highlight: 55, shadow: 75, blur: 0 });
+            close();
+            showSettings(app);
+          }),
+          el('span', { class: 'help-text' }, ['不透明度 20 / scale 12 / 高光 55 / 阴影 75 / 模糊 0']),
+        ]));
+      }
       open('设置', [
         el('h3', { class: 'settings-h' }, ['修改密码']),
         el('div', { class: 'form-row' }, [
           button('修改密码', '', () => { close(); showPassword(app); }),
         ]),
+        el('h3', { class: 'settings-h' }, ['主题']),
+        el('div', { class: 'settings-row' }, [
+          el('span', {}, ['界面主题']), themeSel,
+          el('span', { class: 'help-text' }, ['电纸书：暖纸底 / 墨色字 / 关闭发光与玻璃']),
+        ]),
+        ...glassSection,
         el('h3', { class: 'settings-h' }, ['字号']),
         el('div', { class: 'settings-row' }, [
           el('span', {}, ['编辑器字号']), font, el('span', { class: 'help-text' }, ['11–22 px']),
@@ -1608,7 +1672,7 @@
           close();
           showSettings(app);
         })]),
-      ], closeFoot([button('关闭', '', close)]));
+      ]);
     }
 
     function confirm(app, title, text, onOk, danger) {      const ok = button('确认', danger === false ? 'btn-primary' : 'btn-danger', () => {

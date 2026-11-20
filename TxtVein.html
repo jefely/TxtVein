@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-ve.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="TxtVein">
-<meta name="app-version" content="2.6.0">
+<meta name="app-version" content="2.7.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1078,6 +1078,468 @@ a { color: var(--a); text-decoration: none; }
   text-overflow: ellipsis;
   pointer-events: none;
   z-index: 2;
+}
+
+/* ===== 液态玻璃：代码生成位移贴图，backdrop-filter 折射背景 ===== */
+.liquid-glass {
+  isolation: isolate;
+  background-color: rgba(255, 255, 255, var(--lg-alpha, 0.10)) !important;
+  background-image:
+    radial-gradient(120% 100% at 28% 14%, rgba(255, 255, 255, var(--lg-highlight, 0.55)), rgba(255, 255, 255, 0) 46%),
+    linear-gradient(135deg, rgba(255, 255, 255, calc(var(--lg-highlight, 0.55) * 0.4)), rgba(255, 255, 255, 0) 42%) !important;
+  border: 0 !important;
+  -webkit-backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.25) brightness(1.03) !important;
+  backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.25) brightness(1.03) !important;
+  box-shadow:
+    0 0 0 1.5px rgba(30, 40, 50, 0.30),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 3px rgba(30, 40, 50, 0.06),
+    inset 0 1px 1px rgba(255, 255, 255, 0.65),
+    inset 0 -8px 18px rgba(0, 0, 0, 0.16),
+    0 8px 22px rgba(0, 0, 0, var(--lg-shadow, 0.34)) !important;
+  color: var(--text) !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.liquid-glass-fallback {
+  background: rgba(255, 255, 255, 0.12) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+.composer-toggle.liquid-glass,
+.composer.open .composer-toggle.liquid-glass {
+  border-radius: 12px !important;
+}
+.entry-row.liquid-glass {
+  border-radius: 8px !important;
+}
+.composer.open .entry-row.liquid-glass {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.55),
+    0 8px 22px rgba(0, 0, 0, 0.3) !important;
+}
+.composer .entry-row.liquid-glass:focus-within {
+  border-color: rgba(255, 255, 255, 0.62) !important;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 8px 22px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ===== 电纸书主题：暖纸底 / 墨色字 / 无发光 =====
+ * 深色主题继续用 :root 的默认变量；这里只在 html[data-theme="paper"] 下覆盖。
+ * 很多组件写死了 #050505 / #0b0b0b，所以关键面用 !important 压住。 */
+html[data-theme="paper"] {
+  --bg: #f3efe3;
+  --bg-1: #f7f3e8;
+  --bg-2: #efeadc;
+  --bg-3: #e9e3d4;
+  --line: rgba(70, 62, 48, 0.16);
+  --line-strong: rgba(70, 62, 48, 0.32);
+  --text: #111111;
+  --text-2: #33322d;
+  --text-3: #55524a;
+  --dim: #8a8273;
+  --date: #8a8375;
+  --a: #2f5d50;
+  --b: #8a5a32;
+  --op: #6b6558;
+  --tag: #5f5a4e;
+  --accent: #3f6b52;
+  --accent-dim: rgba(63, 107, 82, 0.12);
+  --err: #8a3f3f;
+  --err-dim: rgba(138, 63, 63, 0.1);
+  --shadow: none;
+}
+html[data-theme="paper"] body {
+  background-color: #f3efe3 !important;
+  background-image: radial-gradient(rgba(90, 80, 60, 0.035) 1px, transparent 1px) !important;
+  background-size: 3px 3px !important;
+  color: var(--text) !important;
+}
+html[data-theme="paper"] body::before { display: none !important; }
+html[data-theme="paper"] ::selection { background: #d9d0bb !important; color: #2b2924 !important; }
+
+/* 顶栏 / 页签 / HUD */
+html[data-theme="paper"] .topbar,
+html[data-theme="paper"] .tabs,
+html[data-theme="paper"] .hud {
+  background: #f3efe3 !important;
+  color: var(--text) !important;
+  border-color: var(--line) !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .brand,
+html[data-theme="paper"] .topbar b,
+html[data-theme="paper"] .hud b { color: var(--text) !important; }
+html[data-theme="paper"] .topbar .btn,
+html[data-theme="paper"] .tabs .tab,
+html[data-theme="paper"] .chip,
+html[data-theme="paper"] .btn,
+html[data-theme="paper"] .btn-ghost {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+html[data-theme="paper"] .page-tabs {
+  background: #f3efe3 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .page-tab,
+html[data-theme="paper"] .report-mode-btn,
+html[data-theme="paper"] .stats-clear {
+  background: #f3efe3 !important;
+  color: #4a463d !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .page-tab.is-active,
+html[data-theme="paper"] .report-mode-btn.is-active {
+  background: #e9e3d4 !important;
+  color: #1f1e1a !important;
+  border-color: #8a8273 !important;
+}
+html[data-theme="paper"] .top-menu .menu-btn { color: #2b2924 !important; }
+html[data-theme="paper"] .feedback {
+  background: #f3efe3 !important;
+  color: #4a463d !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .tab.is-active,
+html[data-theme="paper"] .btn:hover,
+html[data-theme="paper"] .chip:hover {
+  background: #e9e3d4 !important;
+  color: #1f1e1a !important;
+  border-color: #8a8273 !important;
+}
+
+/* 编辑器 / CodeMirror */
+html[data-theme="paper"] .editor-pane,
+html[data-theme="paper"] .CodeMirror,
+html[data-theme="paper"] .cm-s-txtvein.CodeMirror {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+}
+html[data-theme="paper"] .cm-s-txtvein .CodeMirror-gutters {
+  background: #efeada !important;
+  border-right: 1px solid #d8d1c1 !important;
+}
+html[data-theme="paper"] .cm-s-txtvein .CodeMirror-linenumber { color: #8a8273 !important; }
+html[data-theme="paper"] .cm-s-txtvein .CodeMirror-cursor { border-left-color: #2b2924 !important; }
+html[data-theme="paper"] .cm-s-txtvein .CodeMirror-selected { background: #ddd5c2 !important; }
+html[data-theme="paper"] .cm-s-txtvein .CodeMirror-activeline-background { background: rgba(90, 80, 60, 0.05) !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-comment { color: #6b6558 !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-number,
+html[data-theme="paper"] .cm-s-txtvein .cm-atom { color: #7a4a20 !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-variable,
+html[data-theme="paper"] .cm-s-txtvein .cm-variable-2,
+html[data-theme="paper"] .cm-s-txtvein .cm-def,
+html[data-theme="paper"] .cm-s-txtvein .cm-tag { color: #2f5d50 !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-keyword,
+html[data-theme="paper"] .cm-s-txtvein .cm-string,
+html[data-theme="paper"] .cm-s-txtvein .cm-meta { color: #6a4f2a !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-operator { color: #4a463d !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-error { color: #8a3f3f !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-def { color: #2b2924 !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-link { color: #2f5d50 !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-unknown { color: #8a3f3f !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-error { color: #8a3f3f !important; background: rgba(138, 63, 63, 0.08) !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-invalid-line { background: rgba(138, 63, 63, 0.06) !important; }
+
+/* 单输入气泡 / 展开条：纸墨按钮，关闭玻璃 */
+html[data-theme="paper"] .composer,
+html[data-theme="paper"] .composer-inner { background: transparent !important; }
+html[data-theme="paper"] .composer .entry-row,
+html[data-theme="paper"] .entry-row,
+html[data-theme="paper"] .entry-row.liquid-glass {
+  background: #efeada !important;
+  background-image: none !important;
+  border-color: #b9b09c !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  color: #2b2924 !important;
+}
+html[data-theme="paper"] .entry-row:focus-within {
+  border-color: #3f6b52 !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .composer-toggle,
+html[data-theme="paper"] .composer-toggle.liquid-glass,
+html[data-theme="paper"] .composer-toggle.liquid-glass-fallback,
+html[data-theme="paper"] .composer.open .composer-toggle {
+  background: #e9e3d3 !important;
+  background-image: none !important;
+  border: 1px solid #b9b09c !important;
+  border-radius: 12px !important;
+  color: #2b2924 !important;
+  box-shadow: 0 1px 3px rgba(40, 35, 25, 0.12) !important;
+  text-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.liquid-glass-fallback {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* 模态 / 面板 / 设置 */
+html[data-theme="paper"] .modal-backdrop { background: rgba(60, 55, 45, 0.28) !important; }
+html[data-theme="paper"] .modal-panel,
+html[data-theme="paper"] .modal-head,
+html[data-theme="paper"] .modal-body,
+html[data-theme="paper"] .modal-foot {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .modal-close { color: #6c665a !important; border-color: #b9b09c !important; }
+html[data-theme="paper"] .settings-row,
+html[data-theme="paper"] .form-row { color: #2b2924 !important; border-color: #d8d1c1 !important; }
+html[data-theme="paper"] input,
+html[data-theme="paper"] select,
+html[data-theme="paper"] textarea {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .toast {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+  box-shadow: 0 2px 8px rgba(40, 35, 25, 0.14) !important;
+}
+
+/* 统计 / 固定 / 报表 */
+html[data-theme="paper"] .stats-page,
+html[data-theme="paper"] .stats-left,
+html[data-theme="paper"] .stats-right,
+html[data-theme="paper"] .stats-top,
+html[data-theme="paper"] .stats-tabs-wrap,
+html[data-theme="paper"] .report-inner,
+html[data-theme="paper"] .fixed-view,
+html[data-theme="paper"] .fixed-inner {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+}
+html[data-theme="paper"] .stats-tab,
+html[data-theme="paper"] .stats-month,
+html[data-theme="paper"] .range-chip,
+html[data-theme="paper"] .stats-year-input {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .stats-tab.is-active,
+html[data-theme="paper"] .stats-month.is-active,
+html[data-theme="paper"] .range-chip.is-active {
+  background: #e9e3d4 !important;
+  border-color: #8a8273 !important;
+}
+html[data-theme="paper"] .lst-group,
+html[data-theme="paper"] .stats-table,
+html[data-theme="paper"] .sd-row,
+html[data-theme="paper"] .stats-right-head,
+html[data-theme="paper"] .stats-left-head,
+html[data-theme="paper"] .stats-right-empty {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .sd-row.is-head { color: #6c665a !important; }
+html[data-theme="paper"] .sd-num,
+html[data-theme="paper"] .sd-row .sd-num,
+html[data-theme="paper"] .hud b,
+html[data-theme="paper"] .rtable-num,
+html[data-theme="paper"] .kpi-value,
+html[data-theme="paper"] .stats-money { color: #2b2924 !important; }
+html[data-theme="paper"] .sd-row.is-total .sd-num { color: #1f1e1a !important; }
+html[data-theme="paper"] .hud .hud-ok { color: #3f6b52 !important; }
+html[data-theme="paper"] .hud .hud-bad { color: #8a3f3f !important; }
+html[data-theme="paper"] .sd-row.is-total {
+  background: #efeada !important;
+  color: #1f1e1a !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .sd-row.is-active { background: #e9e3d4 !important; box-shadow: none !important; }
+html[data-theme="paper"] .fixed-editor .CodeMirror,
+html[data-theme="paper"] .fixed-editor .CodeMirror-gutters {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .fixed-errors,
+html[data-theme="paper"] .fixed-summary {
+  background: #f3efe3 !important;
+  color: #6c665a !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .report-card,
+html[data-theme="paper"] .rtable,
+html[data-theme="paper"] .rtable-row,
+html[data-theme="paper"] .kpi {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .rtable-row.is-head,
+html[data-theme="paper"] .rtable-row.is-total { background: #efeada !important; }
+
+/* ===== 融合输入胶囊：圆钮和展开条是同一个 .composer（照 NT 的做法） ===== */
+.composer {
+  position: fixed;
+  left: auto;
+  right: 16px;
+  bottom: 44px;
+  z-index: 300;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  overflow: visible;
+  box-sizing: border-box;
+  transition: width 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    padding 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    gap 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-radius 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 0.24s ease, box-shadow 0.24s ease;
+}
+.composer.open {
+  width: min(340px, calc(100vw - 24px));
+  height: 40px;
+  padding: 2px 4px 2px 10px;
+  gap: 2px;
+  justify-content: flex-start;
+  border-radius: 14px;
+}
+.composer-inner {
+  position: static;
+  display: none;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.composer.open .composer-inner { display: block; }
+.composer .entry-row {
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.composer .entry-row:focus-within { border: 0; box-shadow: none; }
+.composer .entry {
+  height: 100%;
+  font-size: 13.5px;
+  color: #f7fbf8 !important;
+  caret-color: #f7fbf8;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.composer .entry::placeholder { color: rgba(247, 251, 248, 0.66) !important; }
+.composer-toggle,
+.composer.open .composer-toggle {
+  position: static;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  box-shadow: none;
+  text-shadow: none;
+  cursor: grab;
+}
+.composer.open .composer-toggle { cursor: pointer; }
+.composer.dragging .composer-toggle { cursor: grabbing; }
+/* 玻璃只在胶囊上：收起用圆贴图，展开换宽条贴图 */
+.composer.liquid-glass.open {
+  -webkit-backdrop-filter: var(--lg-filter-open, var(--lg-filter)) blur(var(--lg-blur, 0px)) saturate(1.25) brightness(1.03) !important;
+  backdrop-filter: var(--lg-filter-open, var(--lg-filter)) blur(var(--lg-blur, 0px)) saturate(1.25) brightness(1.03) !important;
+}
+.composer.liquid-glass-fallback {
+  background: rgba(255, 255, 255, 0.12) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+}
+/* 电纸书：胶囊是纸墨按钮，内部完全透明 */
+html[data-theme="paper"] .composer {
+  background: #fffdf7 !important;
+  border: 2px solid #2b2924 !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html[data-theme="paper"] .composer-inner,
+html[data-theme="paper"] .composer .entry-row,
+html[data-theme="paper"] .composer .entry-row:focus-within {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .composer-toggle,
+html[data-theme="paper"] .composer.open .composer-toggle {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: #111111 !important;
+  text-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html[data-theme="paper"] .composer .entry { color: #111111 !important; }
+html[data-theme="paper"] .composer .entry::placeholder { color: #5f5a4e !important; }
+
+/* 统计表第一列：隐藏拖动黑线；内容居中；可缩到更窄 */
+.col-grip::after { background: transparent !important; width: 0 !important; }
+.col-grip:hover::after { background: transparent !important; width: 0 !important; }
+.stats-left .sd-row > span:first-child {
+  text-align: center;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stats-left .sd-row > span:first-child .col-grip { right: -10px; }
+
+/* 不透明度拉到 0：彻底透明，只保留折射与文字 */
+.liquid-glass.lg-clear {
+  background: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow:
+    0 0 0 1.5px rgba(30, 40, 50, 0.30),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
+    inset 0 0 0 3px rgba(30, 40, 50, 0.06),
+    0 8px 22px rgba(0, 0, 0, 0.20) !important;
 }
 
 </style>
@@ -3768,6 +4230,486 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   .pvf-row .pv-amt { margin-left: auto; }
 }
 
+/* 统计表层级：标题行更重，金额合计行回归普通行 */
+.stats-left .sd-row.is-head {
+  background: #141414 !important;
+  color: #f2f2f2 !important;
+  font-weight: 700 !important;
+}
+.stats-left .sd-row.is-total {
+  background: transparent !important;
+  color: var(--text-2) !important;
+  font-weight: 400 !important;
+  align-items: end !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid #2a2a2a !important;
+  cursor: default;
+}
+.stats-left .sd-row.is-total:hover { background: transparent !important; }
+.stats-left .sd-row.is-total .sd-num { color: var(--text-2) !important; }
+
+/* 统计表：标题行字号跟正文一致；合计行金额小一号 */
+.stats-left .sd-row.is-head { font-size: 11.5px !important; }
+.stats-left .sd-row.is-total .sd-num { font-size: 10.5px !important; }
+
+/* 合计行：文字真的落到底部，而不是看起来还在行中 */
+.stats-left .sd-row.is-total {
+  align-items: end !important;
+  padding-top: 10px !important;
+  padding-bottom: 2px !important;
+}
+.stats-left .sd-row.is-total > span {
+  align-self: end !important;
+  line-height: 1.1;
+}
+
+/* 统计层级最终版：分类副标题弱化；收入/负债/权益主标题黑色、居中 */
+.stats-left .sd-row.is-head {
+  color: #9a9a9a !important;
+  font-weight: 400 !important;
+}
+.stats-left .sd-row.is-total {
+  color: var(--text) !important;
+  font-weight: 600 !important;
+  align-items: center !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+.stats-left .sd-row.is-total > span {
+  align-self: center !important;
+  line-height: normal !important;
+}
+.stats-left .sd-row.is-total .sd-num { color: var(--text) !important; }
+
+/* 统计页最终层级：主标题只加粗标签；合计金额不加粗、不居中、贴底 */
+.stats-left .sd-row.is-head {
+  font-weight: 600 !important;
+}
+.stats-left .sd-row.is-total {
+  align-items: center !important;
+  padding-top: 6px !important;
+  padding-bottom: 0 !important;
+}
+.stats-left .sd-row.is-total > span:first-child {
+  align-self: center !important;
+  font-weight: 700 !important;
+}
+.stats-left .sd-row.is-total .sd-num {
+  align-self: end !important;
+  font-weight: 400 !important;
+  line-height: 1;
+  padding-bottom: 1px;
+  text-align: right !important;
+}
+
+/* 统计：主标题单独一行居中；金额另起一行，普通字重、贴底 */
+.stats-left .sd-row.is-total-title {
+  align-items: center !important;
+  min-height: 30px !important;
+  padding: 6px 7px !important;
+  color: var(--text) !important;
+  font-weight: 700 !important;
+  background: transparent !important;
+}
+.stats-left .sd-total-title {
+  grid-column: 1 / -1;
+  align-self: center;
+  line-height: normal;
+}
+.stats-left .sd-row.is-total:not(.is-total-title) {
+  align-items: end !important;
+  min-height: 28px !important;
+  padding: 0 7px 2px !important;
+}
+.stats-left .sd-row.is-total:not(.is-total-title) .sd-num {
+  align-self: end !important;
+  font-weight: 400 !important;
+  font-size: 10.5px !important;
+  line-height: 1;
+  text-align: right !important;
+}
+.stats-left .sd-total-blank { min-height: 1px; }
+
+</style>
+<style>
+/* css/paper.css */
+/* TxtVein · 电纸书主题收尾层
+ * 必须最后加载：editor.css 里有一批 later 的 #050505 规则，
+ * 这里用 html[data-theme="paper"] + !important 统一压住。
+ */
+html[data-theme="paper"] .app,
+html[data-theme="paper"] .main,
+html[data-theme="paper"] .editor-view,
+html[data-theme="paper"] .query-view,
+html[data-theme="paper"] .fixed-view,
+html[data-theme="paper"] .report-view {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+}
+html[data-theme="paper"] .topbar,
+html[data-theme="paper"] .page-tabs {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .page-tab {
+  background: #f3efe3 !important;
+  color: #4a463d !important;
+  border-color: #d8d1c1 !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .composer-toggle,
+html[data-theme="paper"] .composer.open .composer-toggle { color: #111111 !important; }
+html[data-theme="paper"] .page-tab.is-active {
+  /* 选中的页签和页面底色一致 */
+  background: #f7f3e8 !important;
+  color: #1f1e1a !important;
+  border-color: #b9b09c !important;
+  border-bottom-color: #f7f3e8 !important;
+}
+html[data-theme="paper"] .page-tab:hover { background: #e9e3d4 !important; color: #1f1e1a !important; }
+
+/* 编辑页底部留白（未来区下面的 30 行空高） */
+html[data-theme="paper"] .editor-pane,
+html[data-theme="paper"] .CodeMirror,
+html[data-theme="paper"] .editor-pane .CodeMirror { background: #f7f3e8 !important; color: #2b2924 !important; }
+html[data-theme="paper"] .editor-pane .cm-tail-pad {
+  background: #f7f3e8 !important;
+}
+html[data-theme="paper"] .feedback {
+  background: #f3efe3 !important;
+  color: #4a463d !important;
+  border-color: #d8d1c1 !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .feedback .feedback-action,
+html[data-theme="paper"] .feedback button {
+  background: #e9e3d3 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+}
+
+/* 查询页 */
+html[data-theme="paper"] .query-inner { background: #f3efe3 !important; }
+html[data-theme="paper"] .query-title { color: #2b2924 !important; }
+html[data-theme="paper"] .query-meta,
+html[data-theme="paper"] .query-field label,
+html[data-theme="paper"] .query-empty { color: #6c665a !important; }
+html[data-theme="paper"] .query-filters,
+html[data-theme="paper"] .query-row.is-head { background: #efeada !important; }
+html[data-theme="paper"] .query-table {
+  background: #f7f3e8 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .query-row {
+  background: #f7f3e8 !important;
+  border-color: #d8d1c1 !important;
+  color: #2b2924 !important;
+}
+html[data-theme="paper"] .query-row:not(.is-head):hover { background: #efeada !important; }
+html[data-theme="paper"] .query-cell.num { color: #2b2924 !important; }
+html[data-theme="paper"] .query-cell.muted { color: #6c665a !important; }
+html[data-theme="paper"] .query-field input,
+html[data-theme="paper"] .query-field select {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .query-reset {
+  background: #e9e3d3 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+}
+
+/* 统计页：中间分隔条不能是粗黑线 */
+html[data-theme="paper"] .stats-page,
+html[data-theme="paper"] .stats-left,
+html[data-theme="paper"] .stats-right,
+html[data-theme="paper"] .stats-top,
+html[data-theme="paper"] .stats-tabs-wrap { background: #f3efe3 !important; }
+html[data-theme="paper"] .stats-gutter {
+  background: #d8d1c1 !important;
+  border-right: 1px solid #d8d1c1 !important;
+}
+html[data-theme="paper"] .stats-gutter:hover { background: #b9b09c !important; }
+html[data-theme="paper"] .stats-split { background: #f3efe3 !important; }
+html[data-theme="paper"] .stats-right-head,
+html[data-theme="paper"] .stats-left-head,
+html[data-theme="paper"] .stats-right-empty { background: #f3efe3 !important; color: #2b2924 !important; }
+html[data-theme="paper"] .stats-left .sd-row,
+html[data-theme="paper"] .stats-right .sd-row {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-head,
+html[data-theme="paper"] .stats-right .sd-row.is-head { background: #efeada !important; color: #6c665a !important; }
+html[data-theme="paper"] .stats-left .sd-row.is-total,
+html[data-theme="paper"] .stats-right .sd-row.is-total { background: #efeada !important; color: #1f1e1a !important; }
+html[data-theme="paper"] .sd-num { color: #2b2924 !important; }
+html[data-theme="paper"] .sd-row.is-total .sd-num { color: #1f1e1a !important; }
+
+/* 固定页 / 报表页 / 模态框兜底 */
+html[data-theme="paper"] .fixed-inner,
+html[data-theme="paper"] .fixed-head,
+html[data-theme="paper"] .fixed-note,
+html[data-theme="paper"] .fixed-summary,
+html[data-theme="paper"] .fixed-errors { background: #f3efe3 !important; color: #2b2924 !important; border-color: #d8d1c1 !important; }
+html[data-theme="paper"] .fixed-editor .CodeMirror { background: #f7f3e8 !important; color: #2b2924 !important; }
+html[data-theme="paper"] .report-inner,
+html[data-theme="paper"] .report-card,
+html[data-theme="paper"] .kpi { background: #f7f3e8 !important; color: #2b2924 !important; border-color: #d8d1c1 !important; box-shadow: none !important; }
+html[data-theme="paper"] .modal-panel,
+html[data-theme="paper"] .modal-head,
+html[data-theme="paper"] .modal-body,
+html[data-theme="paper"] .modal-foot { background: #f7f3e8 !important; color: #2b2924 !important; border-color: #d8d1c1 !important; }
+
+/* 电纸书也要玻璃：白纸磨砂 + 白边高光，而不是实心白块。
+ * 必须写在 .liquid-glass 的纸主题禁用规则之后。 */
+html[data-theme="paper"] .composer.liquid-glass,
+html[data-theme="paper"] .composer.liquid-glass-fallback {
+  background: rgba(255, 253, 247, var(--lg-alpha, 0.42)) !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  box-shadow:
+    0 0 0 1.5px rgba(43, 41, 36, 0.28),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.60),
+    inset 0 0 0 3px rgba(43, 41, 36, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 6px 18px rgba(40, 35, 25, 0.18) !important;
+  -webkit-backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.06) !important;
+  backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.06) !important;
+}
+
+/* 纸主题：只有标题行保留浅色底；合计行与普通行同色、不加粗、文字靠下 */
+html[data-theme="paper"] .stats-left .sd-row.is-head {
+  background: #efeada !important;
+  color: #1f1e1a !important;
+  font-weight: 700 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+  font-weight: 400 !important;
+  align-items: end !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid #d8d1c1 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total .sd-num { color: #2b2924 !important; }
+
+/* 锁屏 / 密码页：整页和卡片都换成纸色，不能留黑卡 */
+html[data-theme="paper"] .gate {
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(120, 110, 90, 0.08), transparent 65%),
+    radial-gradient(700px 500px at 80% 110%, rgba(120, 110, 90, 0.05), transparent 65%),
+    #f3efe3 !important;
+  color: #111111 !important;
+}
+html[data-theme="paper"] .gate::before {
+  background-image:
+    linear-gradient(rgba(70, 62, 48, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(70, 62, 48, 0.04) 1px, transparent 1px) !important;
+}
+html[data-theme="paper"] .gate-panel {
+  background: #fffdf7 !important;
+  border: 1px solid #b9b09c !important;
+  box-shadow: 0 8px 24px rgba(40, 35, 25, 0.12) !important;
+  color: #111111 !important;
+}
+html[data-theme="paper"] .gate-brand { color: #111111 !important; }
+html[data-theme="paper"] .gate-brand span { color: #3f6b52 !important; }
+html[data-theme="paper"] .gate-tag,
+html[data-theme="paper"] .gate p,
+html[data-theme="paper"] .gate-foot,
+html[data-theme="paper"] .gate-hint { color: #6c665a !important; }
+html[data-theme="paper"] .gate h2 { color: #111111 !important; }
+html[data-theme="paper"] .gate input {
+  background: #f7f3e8 !important;
+  color: #111111 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .gate .btn-primary {
+  background: #2b2924 !important;
+  color: #fffdf7 !important;
+  border-color: #2b2924 !important;
+}
+html[data-theme="paper"] .gate .btn-primary:hover {
+  background: #111111 !important;
+}
+html[data-theme="paper"] .gate-foot { border-top-color: #d8d1c1 !important; }
+
+/* 流水查询页（Q 面板 A/B） */
+html[data-theme="paper"] .query-view,
+html[data-theme="paper"] .q-grid,
+html[data-theme="paper"] .q-panel,
+html[data-theme="paper"] .q-table { background: #f3efe3 !important; color: #111111 !important; }
+html[data-theme="paper"] .q-panel { border-color: #d8d1c1 !important; }
+html[data-theme="paper"] .q-head,
+html[data-theme="paper"] .q-filters { background: #efeada !important; border-color: #d8d1c1 !important; }
+html[data-theme="paper"] .q-title { color: #111111 !important; }
+html[data-theme="paper"] .q-clear {
+  background: #e9e3d3 !important;
+  color: #111111 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .q-total { color: #3f6b52 !important; }
+html[data-theme="paper"] .q-field > span { color: #6c665a !important; }
+html[data-theme="paper"] .q-input {
+  background: #f7f3e8 !important;
+  color: #111111 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .q-row {
+  background: #f3efe3 !important;
+  color: #111111 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .q-row.is-head { background: #efeada !important; color: #6c665a !important; }
+html[data-theme="paper"] .q-row:not(.is-head):hover { background: #efeada !important; }
+html[data-theme="paper"] .q-cell { color: #111111 !important; }
+html[data-theme="paper"] .q-empty { color: #6c665a !important; }
+html[data-theme="paper"] .stats-left .sd-row.is-head { font-size: 11.5px !important; }
+html[data-theme="paper"] .stats-left .sd-row.is-total .sd-num { font-size: 10.5px !important; }
+
+/* 统计页标题/小字提高纸面对比度 */
+html[data-theme="paper"] .stats-left-head b,
+html[data-theme="paper"] .stats-title,
+html[data-theme="paper"] .stats-tab,
+html[data-theme="paper"] .stats-left .sd-row.is-head,
+html[data-theme="paper"] .stats-left .sd-row.is-total > span { color: #111111 !important; }
+html[data-theme="paper"] .stats-left-head span,
+html[data-theme="paper"] .stats-left .sd-row.is-head .sd-num { color: #55524a !important; }
+html[data-theme="paper"] .stats-left .sd-row.is-total {
+  align-items: end !important;
+  padding-top: 10px !important;
+  padding-bottom: 2px !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total > span {
+  align-self: end !important;
+  line-height: 1.1;
+}
+
+/* 纸主题最终版：分类行弱化，合计/主标题黑色并上下居中 */
+html[data-theme="paper"] .stats-left .sd-row.is-head {
+  background: #efeada !important;
+  color: #6c665a !important;
+  font-weight: 400 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total {
+  background: #f3efe3 !important;
+  color: #111111 !important;
+  font-weight: 600 !important;
+  align-items: center !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total > span {
+  align-self: center !important;
+  line-height: normal !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total .sd-num {
+  color: #111111 !important;
+  font-size: 10.5px !important;
+}
+
+/* 查询页：去掉输入框上方的小标签；表头整行居中 */
+.q-field > span { display: none !important; }
+.q-row.is-head > span { text-align: center !important; }
+
+/* 纸主题：副标题保持弱化色但加粗；主标题标签加粗居中，金额普通贴底 */
+html[data-theme="paper"] .stats-left .sd-row.is-head {
+  color: #6c665a !important;
+  font-weight: 600 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total {
+  align-items: center !important;
+  padding-top: 6px !important;
+  padding-bottom: 0 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total > span:first-child {
+  align-self: center !important;
+  font-weight: 700 !important;
+  color: #111111 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total .sd-num {
+  align-self: end !important;
+  font-weight: 400 !important;
+  color: #111111 !important;
+  font-size: 10.5px !important;
+  line-height: 1;
+  padding-bottom: 1px;
+  text-align: right !important;
+}
+
+/* 纸主题：主标题独立行；金额行普通字重贴底 */
+html[data-theme="paper"] .stats-left .sd-row.is-total-title {
+  color: #111111 !important;
+  font-weight: 700 !important;
+  background: transparent !important;
+  align-items: center !important;
+  min-height: 30px !important;
+  padding: 6px 7px !important;
+}
+html[data-theme="paper"] .stats-left .sd-total-title {
+  grid-column: 1 / -1;
+  align-self: center;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total:not(.is-total-title) {
+  background: #f3efe3 !important;
+  align-items: end !important;
+  min-height: 28px !important;
+  padding: 0 7px 2px !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total:not(.is-total-title) .sd-num {
+  align-self: end !important;
+  color: #111111 !important;
+  font-weight: 400 !important;
+  font-size: 10.5px !important;
+  line-height: 1;
+  text-align: right !important;
+}
+
+/* 电纸书展开态也沿用宽条位移贴图 */
+html[data-theme="paper"] .composer.liquid-glass.open {
+  -webkit-backdrop-filter: var(--lg-filter-open, var(--lg-filter)) blur(var(--lg-blur, 0px)) saturate(1.06) !important;
+  backdrop-filter: var(--lg-filter-open, var(--lg-filter)) blur(var(--lg-blur, 0px)) saturate(1.06) !important;
+}
+
+/* 纸主题：页签整行与行序号列同色；悬停介于「激活标签」和「序号列」之间 */
+html[data-theme="paper"] .page-tabs {
+  background: #efeada !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .page-tab {
+  background: #efeada !important;
+  color: #4a463d !important;
+  border-color: transparent !important;
+}
+html[data-theme="paper"] .page-tab.is-active {
+  background: #f7f3e8 !important;
+  color: #1f1e1a !important;
+  border-color: #b9b09c !important;
+  border-bottom-color: #f7f3e8 !important;
+}
+html[data-theme="paper"] .page-tab:hover {
+  /* 比激活标签暗、比行序号列亮 */
+  background: #f2eddf !important;
+  color: #1f1e1a !important;
+  border-color: #c9c0ae !important;
+}
+
+/* 纸主题下悬浮胶囊必须是 fixed；防止任何纸色规则把它带回 top-left */
+html[data-theme="paper"] .composer {
+  position: fixed !important;
+  top: auto !important;
+}
+
+/* 纸主题也允许完全透明：压过纸色胶囊的 background/border/shadow */
+html[data-theme="paper"] .composer.liquid-glass.lg-clear {
+  background-color: transparent !important;
+}
+
 </style>
 </head>
 <body>
@@ -3860,7 +4802,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   'use strict';
 
   const TV = (root.TxtVein = root.TxtVein || {});
-  const APP_VER = 'txtvein-v2.6.0';
+  const APP_VER = 'txtvein-v2.7.0';
 
   function parseVer(v) {
     const m = String(v || '').match(/v?(\d+)\.(\d+)\.(\d+)/);
@@ -21731,9 +22673,14 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     ['amount', '金额', '--tv-amount', '#B5CEA8'],
     ['note', '备注', '--tv-note', '#6A9955'],
   ];
+  const PAPER_COLORS = {
+    invalid: '#8a3f3f', linenumber: '#8a8273', lineerror: '#a04a2a', date: '#7a4a20',
+    node: '#2f5d50', operator: '#4a463d', amount: '#3f5f3f', note: '#6b6558',
+  };
   const DEFAULT_PREFS = {
     colors: COLOR_DEFS.reduce((m, x) => { m[x[0]] = x[3]; return m; }, {}),
     fontSize: 13,
+    theme: 'dark',
   };
 
   function loadPrefs() {
@@ -21743,6 +22690,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
       const p = raw ? JSON.parse(raw) : null;
       if (p && p.colors) Object.keys(out.colors).forEach((k) => { if (p.colors[k]) out.colors[k] = p.colors[k]; });
       if (p && Number(p.fontSize)) out.fontSize = Math.max(11, Math.min(22, Number(p.fontSize)));
+      if (p && (p.theme === 'paper' || p.theme === 'dark')) out.theme = p.theme;
     } catch (e) { /* ignore */ }
     return out;
   }
@@ -21750,8 +22698,13 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   function applyPrefs(p) {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    COLOR_DEFS.forEach((x) => root.style.setProperty(x[2], p.colors[x[0]] || x[3]));
+    const paper = p.theme === 'paper';
+    root.dataset.theme = paper ? 'paper' : 'dark';
+    const colors = paper ? PAPER_COLORS : p.colors;
+    COLOR_DEFS.forEach((x) => root.style.setProperty(x[2], colors[x[0]] || x[3]));
     root.style.setProperty('--tv-editor-font-size', p.fontSize + 'px');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', paper ? '#f3efe3' : '#050505');
   }
 
   function savePrefs(p) {
@@ -23300,11 +24253,64 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
           el('code', {}, [x[3]]),
         ]);
       });
+      const themeSel = el('select', { class: 'input pv-select', style: 'min-width:120px' }, [
+        el('option', { value: 'dark' }, ['深色']),
+        el('option', { value: 'paper' }, ['电纸书']),
+      ]);
+      themeSel.value = p.theme || 'dark';
+      themeSel.addEventListener('change', () => {
+        p.theme = themeSel.value === 'paper' ? 'paper' : 'dark';
+        savePrefs(p);
+        if (app.refreshEditors) app.refreshEditors();
+      });
+      const glassSection = [];
+      if (TV.glass && TV.glass.getParams) {
+        const gp = TV.glass.getParams();
+        const defs = [
+          ['不透明度', 'opacity', 0, 40, 1, '%'],
+          ['位移强度', 'scale', 0, 40, 1, ''],
+          ['高光', 'highlight', 0, 100, 1, '%'],
+          ['阴影', 'shadow', 0, 100, 1, '%'],
+          ['背景模糊', 'blur', 0, 20, 1, 'px'],
+        ];
+        glassSection.push(el('h3', { class: 'settings-h' }, ['液态玻璃']));
+        glassSection.push(el('p', { class: 'help-text' }, ['拖动即时生效；不透明度现在控制主题色叠加的强度，0 = 完全透明。']));
+        defs.forEach(([label, key, min, max, step, unit]) => {
+          const range = el('input', {
+            type: 'range', min: String(min), max: String(max), step: String(step),
+            value: String(gp[key]),
+          });
+          const val = el('span', { class: 'help-text' }, [String(gp[key]) + unit]);
+          range.addEventListener('input', () => {
+            const patch = {};
+            patch[key] = Number(range.value);
+            TV.glass.setParams(patch);
+            val.textContent = range.value + unit;
+          });
+          glassSection.push(el('div', { class: 'settings-row' }, [
+            el('span', {}, [label]), range, val,
+          ]));
+        });
+        glassSection.push(el('div', { class: 'settings-row' }, [
+          button('视频参考值', '', () => {
+            TV.glass.setParams({ opacity: 20, scale: 12, highlight: 55, shadow: 75, blur: 0 });
+            close();
+            showSettings(app);
+          }),
+          el('span', { class: 'help-text' }, ['不透明度 20 / scale 12 / 高光 55 / 阴影 75 / 模糊 0']),
+        ]));
+      }
       open('设置', [
         el('h3', { class: 'settings-h' }, ['修改密码']),
         el('div', { class: 'form-row' }, [
           button('修改密码', '', () => { close(); showPassword(app); }),
         ]),
+        el('h3', { class: 'settings-h' }, ['主题']),
+        el('div', { class: 'settings-row' }, [
+          el('span', {}, ['界面主题']), themeSel,
+          el('span', { class: 'help-text' }, ['电纸书：暖纸底 / 墨色字 / 关闭发光与玻璃']),
+        ]),
+        ...glassSection,
         el('h3', { class: 'settings-h' }, ['字号']),
         el('div', { class: 'settings-row' }, [
           el('span', {}, ['编辑器字号']), font, el('span', { class: 'help-text' }, ['11–22 px']),
@@ -23318,7 +24324,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
           close();
           showSettings(app);
         })]),
-      ], closeFoot([button('关闭', '', close)]));
+      ]);
     }
 
     function confirm(app, title, text, onOk, danger) {      const ok = button('确认', danger === false ? 'btn-primary' : 'btn-danger', () => {
@@ -23436,6 +24442,356 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   };
 
   if (typeof module === 'object' && module.exports) module.exports = TV.planView;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+/* js/ui/glass.js */
+/* TxtVein · 液态玻璃（代码实现，无图片资源）
+ *
+ * 原理与 NT 教程一致：
+ *   1. 生成一张「法线 / 位移贴图」：R/G 通道存横向/纵向偏移，128 = 不偏移；
+ *   2. 把贴图塞进 SVG feImage，交给 feDisplacementMap 折射背景；
+ *   3. 元素用 backdrop-filter: url(#...) 把折射结果当背景。
+ *
+ * 只给小型悬浮按钮用（40–54px），贴图 96×96、只生成一次；
+ * 低端设备 / 不支持 backdrop-filter 时退回普通毛玻璃，不跑 SVG 滤镜。
+ */
+(function (root) {
+  'use strict';
+
+  const TV = (root.TxtVein = root.TxtVein || {});
+  const NS = 'http://www.w3.org/2000/svg';
+  const XLINK = 'http://www.w3.org/1999/xlink';
+  const MAP_CACHE = new Map();
+  const HEIGHT_CACHE = new Map();
+  const PARAMS_KEY = 'txtvein.glass.v1';
+  const DEFAULT_PARAMS = { opacity: 12, scale: 14, highlight: 60, shadow: 80, blur: 0, ring: 1, ringAlpha: 58 };
+
+  function loadParams() {
+    const out = Object.assign({}, DEFAULT_PARAMS);
+    try {
+      const raw = JSON.parse(localStorage.getItem(PARAMS_KEY) || 'null');
+      if (raw) {
+        ['opacity', 'scale', 'highlight', 'shadow', 'blur', 'ring', 'ringAlpha'].forEach((k) => {
+          const n = Number(raw[k]);
+          if (Number.isFinite(n)) out[k] = n;
+        });
+      }
+    } catch (e) { /* ignore */ }
+    return out;
+  }
+
+  function applyTo(el, params) {
+    if (!el) return;
+    const p = params || loadParams();
+    el.style.setProperty('--lg-alpha', String(Math.max(0, Math.min(1, p.opacity / 100))));
+    el.style.setProperty('--lg-highlight', String(Math.max(0, Math.min(1, p.highlight / 100))));
+    el.style.setProperty('--lg-shadow', String(Math.max(0, Math.min(1, p.shadow / 100))));
+    el.style.setProperty('--lg-blur', String(Math.max(0, Number(p.blur) || 0)) + 'px');
+    el.style.setProperty('--lg-ring-width', String(Math.max(0, Number(p.ring) || 0)) + 'px');
+    el.style.setProperty('--lg-ring-alpha', String(Math.max(0, Math.min(1, p.ringAlpha / 100))));
+    el.classList.toggle('lg-clear', Number(p.opacity) <= 0);
+    const ids = [el.dataset.lgId, el.dataset.lgOpenId].filter(Boolean);
+    ids.forEach((id) => {
+      const disp = document.querySelector('#' + id + ' feDisplacementMap');
+      if (disp) disp.setAttribute('scale', String(Math.max(0, Number(p.scale) || 0)));
+    });
+  }
+
+  function setParams(patch) {
+    const next = Object.assign(loadParams(), patch || {});
+    try { localStorage.setItem(PARAMS_KEY, JSON.stringify(next)); } catch (e) { /* ignore */ }
+    document.querySelectorAll('[data-liquid-glass="1"]').forEach((el) => applyTo(el, next));
+    return next;
+  }
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function sdfRoundRect(px, py, w, h, r) {
+    const qx = Math.abs(px - w / 2) - (w / 2 - r);
+    const qy = Math.abs(py - h / 2) - (h / 2 - r);
+    const ox = Math.max(qx, 0);
+    const oy = Math.max(qy, 0);
+    return Math.hypot(ox, oy) + Math.min(Math.max(qx, qy), 0) - r;
+  }
+
+  /** 生成位移贴图（data URL）。w/h 是元素 CSS 像素，贴图只关心比例。 */
+  function buildMap(w, h, radius, opts) {
+    const o = opts || {};
+    const key = ['v1', w, h, radius, o.strength || 1].join('|');
+    if (MAP_CACHE.has(key)) return MAP_CACHE.get(key);
+    /* 256 的贴图：96 在 54px 上放大后边缘会一圈锯齿；贴图只生成一次，
+     * 256² 的生成成本可以忽略，换来的边缘平滑是肉眼可见的。 */
+    const maxSide = 96;
+    const mw = Math.max(32, Math.round(maxSide * (w / Math.max(w, h))));
+    const mh = Math.max(48, Math.round(maxSide * (h / Math.max(w, h))));
+    const canvas = document.createElement('canvas');
+    canvas.width = mw;
+    canvas.height = mh;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    const img = ctx.createImageData(mw, mh);
+    const data = img.data;
+    const bevel = Math.max(3, Math.min(w, h) * 0.34);
+    const strength = Number(o.strength) || 1;
+    /* 法线用「一个贴图像素」做中心差分：低分辨率时固定 0.6 会在环上产生台阶 */
+    const eps = Math.max(0.18, Math.min(w / mw, h / mh) * 0.55);
+
+    for (let y = 0; y < mh; y += 1) {
+      const py = ((y + 0.5) / mh) * h;
+      for (let x = 0; x < mw; x += 1) {
+        const px = ((x + 0.5) / mw) * w;
+        const d = -sdfRoundRect(px, py, w, h, radius); // 正 = 内部
+        let r = 128;
+        let g = 128;
+        if (d > 0) {
+          const gx = (sdfRoundRect(px + eps, py, w, h, radius)
+            - sdfRoundRect(px - eps, py, w, h, radius)) / (2 * eps);
+          const gy = (sdfRoundRect(px, py + eps, w, h, radius)
+            - sdfRoundRect(px, py - eps, w, h, radius)) / (2 * eps);
+          const len = Math.hypot(gx, gy) || 1;
+          const t = clamp(d / bevel, 0, 1);
+          /* sin 曲线在边缘和中心都为 0、中段为 1：只折射边缘一圈，中心保持清楚，
+           * 比 4t(1-t) 的导数更平滑，放大后没有折线 */
+          const slope = Math.sin(Math.PI * t);
+          const k = 127 * strength * slope;
+          r = clamp(Math.round(128 + (gx / len) * k), 0, 255);
+          g = clamp(Math.round(128 + (gy / len) * k), 0, 255);
+        }
+        const i = (y * mw + x) * 4;
+        data[i] = r;
+        data[i + 1] = g;
+        data[i + 2] = 128;
+        data[i + 3] = 255;
+      }
+    }
+
+    /* R/G 各做一次 3×3 高斯模糊（256 上约 0.3px）：把贴图量化留下的
+     * 锯齿磨掉；B/A 不动，128 = 不偏移的语义保持不变。 */
+    const src = new Uint8ClampedArray(data);
+    const at = (x, y, c) => ((y * mw + x) * 4 + c);
+    for (let y = 0; y < mh; y += 1) {
+      for (let x = 0; x < mw; x += 1) {
+        for (let c = 0; c < 2; c += 1) {
+          let sum = 0;
+          let wsum = 0;
+          for (let dy = -1; dy <= 1; dy += 1) {
+            const yy = y + dy;
+            if (yy < 0 || yy >= mh) continue;
+            for (let dx = -1; dx <= 1; dx += 1) {
+              const xx = x + dx;
+              if (xx < 0 || xx >= mw) continue;
+              const wgt = (dx === 0 ? 2 : 1) * (dy === 0 ? 2 : 1);
+              sum += src[at(xx, yy, c)] * wgt;
+              wsum += wgt;
+            }
+          }
+          data[at(x, y, c)] = Math.round(sum / wsum);
+        }
+      }
+    }
+
+    ctx.putImageData(img, 0, 0);
+    const url = canvas.toDataURL('image/png');
+    MAP_CACHE.set(key, url);
+    return url;
+  }
+
+  /** 高度图：给 feSpecularLighting 算真正的边缘高光。
+   * 中心平、边缘降到 0；alpha = 高度，RGB 白色。 */
+  function buildHeightMap(w, h, radius) {
+    const key = ['h', w, h, radius].join('|');
+    if (HEIGHT_CACHE.has(key)) return HEIGHT_CACHE.get(key);
+    const maxSide = 96;
+    const mw = Math.max(32, Math.round(maxSide * (w / Math.max(w, h))));
+    const mh = Math.max(32, Math.round(maxSide * (h / Math.max(w, h))));
+    const canvas = document.createElement('canvas');
+    canvas.width = mw;
+    canvas.height = mh;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    const img = ctx.createImageData(mw, mh);
+    const data = img.data;
+    const bevel = Math.max(2.5, Math.min(w, h) * 0.22);
+    for (let y = 0; y < mh; y += 1) {
+      const py = ((y + 0.5) / mh) * h;
+      for (let x = 0; x < mw; x += 1) {
+        const px = ((x + 0.5) / mw) * w;
+        const d = -sdfRoundRect(px, py, w, h, radius);
+        let a = 0;
+        if (d > 0) {
+          const t = clamp(d / bevel, 0, 1);
+          a = t * t * (3 - 2 * t);
+        }
+        const i = (y * mw + x) * 4;
+        data[i] = 255;
+        data[i + 1] = 255;
+        data[i + 2] = 255;
+        data[i + 3] = Math.round(a * 255);
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    const url = canvas.toDataURL('image/png');
+    HEIGHT_CACHE.set(key, url);
+    return url;
+  }
+
+  function defsRoot() {
+    let svg = document.getElementById('tv-glass-defs');
+    if (!svg) {
+      svg = document.createElementNS(NS, 'svg');
+      svg.id = 'tv-glass-defs';
+      svg.setAttribute('aria-hidden', 'true');
+      svg.setAttribute('width', '0');
+      svg.setAttribute('height', '0');
+      svg.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;overflow:hidden';
+      document.body.appendChild(svg);
+    }
+    return svg;
+  }
+
+  function makeFilter(id, mapUrl, scale, heightUrl) {
+    const svg = defsRoot();
+    const old = document.getElementById(id);
+    if (old) old.remove();
+    const filter = document.createElementNS(NS, 'filter');
+    filter.id = id;
+    filter.setAttribute('x', '-30%');
+    filter.setAttribute('y', '-30%');
+    filter.setAttribute('width', '160%');
+    filter.setAttribute('height', '160%');
+    filter.setAttribute('color-interpolation-filters', 'sRGB');
+
+    const img = document.createElementNS(NS, 'feImage');
+    img.setAttribute('href', mapUrl);
+    img.setAttributeNS(XLINK, 'xlink:href', mapUrl);
+    img.setAttribute('preserveAspectRatio', 'none');
+    img.setAttribute('result', 'map');
+    filter.appendChild(img);
+
+    const disp = document.createElementNS(NS, 'feDisplacementMap');
+    disp.setAttribute('in', 'SourceGraphic');
+    disp.setAttribute('in2', 'map');
+    disp.setAttribute('scale', String(scale));
+    disp.setAttribute('xChannelSelector', 'R');
+    disp.setAttribute('yChannelSelector', 'G');
+    disp.setAttribute('result', 'refracted');
+    filter.appendChild(disp);
+
+    const blur = document.createElementNS(NS, 'feGaussianBlur');
+    blur.setAttribute('in', 'refracted');
+    blur.setAttribute('stdDeviation', '0.22');
+    blur.setAttribute('result', 'refractedBlur');
+    filter.appendChild(blur);
+
+    if (heightUrl) {
+      const hm = document.createElementNS(NS, 'feImage');
+      hm.setAttribute('href', heightUrl);
+      hm.setAttributeNS(XLINK, 'xlink:href', heightUrl);
+      hm.setAttribute('preserveAspectRatio', 'none');
+      hm.setAttribute('result', 'heightMap');
+      filter.appendChild(hm);
+
+      const spec = document.createElementNS(NS, 'feSpecularLighting');
+      spec.setAttribute('in', 'heightMap');
+      spec.setAttribute('surfaceScale', '2.2');
+      spec.setAttribute('specularConstant', '0.9');
+      spec.setAttribute('specularExponent', '20');
+      spec.setAttribute('lighting-color', '#ffffff');
+      spec.setAttribute('result', 'specular');
+      const light = document.createElementNS(NS, 'feDistantLight');
+      light.setAttribute('azimuth', '225');
+      light.setAttribute('elevation', '55');
+      spec.appendChild(light);
+      filter.appendChild(spec);
+
+      const clip = document.createElementNS(NS, 'feComposite');
+      clip.setAttribute('in', 'specular');
+      clip.setAttribute('in2', 'SourceAlpha');
+      clip.setAttribute('operator', 'in');
+      clip.setAttribute('result', 'specularClip');
+      filter.appendChild(clip);
+
+      const blend = document.createElementNS(NS, 'feBlend');
+      blend.setAttribute('in', 'refractedBlur');
+      blend.setAttribute('in2', 'specularClip');
+      blend.setAttribute('mode', 'screen');
+      filter.appendChild(blend);
+    }
+
+    svg.appendChild(filter);
+    return id;
+  }
+
+  function supportsLiquid() {
+    if (typeof CSS === 'undefined' || !CSS.supports) return false;
+    if (!CSS.supports('backdrop-filter', 'blur(1px)')) return false;
+    /* Chromium 支持 backdrop-filter: url(#filter)；不支持时会退回毛玻璃 */
+    if (!CSS.supports('backdrop-filter', 'url(#tv-glass-probe)')) return false;
+    const cores = Number(navigator.hardwareConcurrency) || 8;
+    if (cores <= 4) return false;
+    try {
+      if (window.matchMedia('(prefers-reduced-transparency: reduce)').matches) return false;
+    } catch (e) { /* ignore */ }
+    return true;
+  }
+
+  /**
+   * 给一个元素装液态玻璃。
+   * @param {HTMLElement} el
+   * @param {{width?:number,height?:number,radius?:number,scale?:number,id?:string,strength?:number}} opts
+   */
+  function install(el, opts) {
+    if (!el || el.dataset.liquidGlass === '1') return false;
+    const o = opts || {};
+    const rect = el.getBoundingClientRect();
+    const w = Math.round(o.width || rect.width || 40);
+    const h = Math.round(o.height || rect.height || 40);
+    const radius = o.radius == null ? Math.min(w, h) / 2 : o.radius;
+
+    if (!supportsLiquid()) {
+      el.classList.add('liquid-glass-fallback');
+      return false;
+    }
+
+    try {
+      const map = buildMap(w, h, radius, { strength: o.strength || 1 });
+      if (!map) { el.classList.add('liquid-glass-fallback'); return false; }
+      const id = o.id || ('tv-glass-' + Math.random().toString(36).slice(2, 8));
+      makeFilter(id, map, Number(o.scale) || 14);
+      el.dataset.liquidGlass = '1';
+      el.dataset.lgId = id;
+      el.classList.add('liquid-glass');
+      el.style.setProperty('--lg-filter', 'url(#' + id + ')');
+      applyTo(el, loadParams());
+      el.style.setProperty('--lg-radius', radius + 'px');
+      /* 展开态（宽条）单独一张贴图：同一个元素宽度变化时不会被拉伸 */
+      const ow = Number(o.openWidth) || 0;
+      const oh = Number(o.openHeight) || 0;
+      if (ow > 0 && oh > 0) {
+        const orad = o.openRadius == null ? Math.min(ow, oh) / 2 : o.openRadius;
+        const omap = buildMap(ow, oh, orad, { strength: o.strength || 1 });
+        if (omap) {
+          const oid = o.openId || (id + '-open');
+          makeFilter(oid, omap, Number(o.openScale) || Number(o.scale) || 14);
+          el.dataset.lgOpenId = oid;
+          el.style.setProperty('--lg-filter-open', 'url(#' + oid + ')');
+          applyTo(el, loadParams());
+        }
+      }
+      return true;
+    } catch (e) {
+      el.classList.add('liquid-glass-fallback');
+      return false;
+    }
+  }
+
+  TV.glass = { install, buildMap, getParams: loadParams, setParams, defaults: DEFAULT_PARAMS };
+
+  if (typeof module === 'object' && module.exports) module.exports = TV.glass;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 </script>
@@ -25193,8 +26549,23 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     const nums = o.numCols || [];
     const wrap = el('div', { class: 'stats-table' });
     if (o.total) {
+      // 收入/负债/权益这些是**单独一行**的主标题，上下居中；
+      // 合计金额另起一行靠右贴底，避免同一个格子里互相拉扯。
+      const title = el('div', {
+        class: 'sd-row is-total is-total-title',
+        style: 'grid-template-columns:' + template,
+      });
+      title.appendChild(el('span', { class: 'sd-total-title' }, [o.total[0]]));
+      wrap.appendChild(title);
+
       const tr = el('div', { class: 'sd-row is-total', style: 'grid-template-columns:' + template });
-      o.total.forEach((v, i) => tr.appendChild(el('span', { class: nums.includes(i) ? 'sd-num' : '' }, [v])));
+      o.total.forEach((v, i) => {
+        if (i === 0) {
+          tr.appendChild(el('span', { class: 'sd-total-blank' }, ['']));
+          return;
+        }
+        tr.appendChild(el('span', { class: nums.includes(i) ? 'sd-num' : '' }, [v]));
+      });
       wrap.appendChild(tr);
     }
     const head = el('div', { class: 'sd-row is-head', style: 'grid-template-columns:' + template });
@@ -25211,7 +26582,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
           const startX = ev.clientX;
           const start = Number(S.stats.first) || 80;
           const move = (e) => {
-            const w = Math.max(50, Math.min(260, start + e.clientX - startX));
+            const w = Math.max(28, Math.min(260, start + e.clientX - startX));
             S.stats.first = Math.round(w);
             if (page) page.style.setProperty('--stats-first', S.stats.first + 'px');
           };
@@ -25466,7 +26837,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
     if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', split: 380 };
     if (!S.stats.first) {
       const savedFirst = Number(localStorage.getItem('txtvein:stats-first'));
-      S.stats.first = Number.isFinite(savedFirst) && savedFirst >= 50 ? savedFirst : 80;
+      S.stats.first = Number.isFinite(savedFirst) && savedFirst >= 24 ? savedFirst : 80;
     }
     const range = statsMonthRange();
     const groups = statsGroups(S.stats.tab === 'category' ? 'category' : 'node');
@@ -27373,6 +28744,15 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 
   function bindComposer() {
     const POS_KEY = 'txtvein:composer-pos';
+    /* 悬浮单输入气泡：代码生成的液态玻璃（低端设备自动退回毛玻璃） */
+    /* 收起的圆钮和展开的输入条是**同一个胶囊**（和 NT 一样）：
+     * 玻璃只装在 .composer 上，按钮/输入框透明；展开时换宽条贴图。 */
+    if (TV.glass && dom.composer) {
+      TV.glass.install(dom.composer, {
+        width: 40, height: 40, radius: 14, scale: 14, id: 'tv-lg-composer',
+        openWidth: 340, openHeight: 40, openRadius: 14, openId: 'tv-lg-composer-open', openScale: 12,
+      });
+    }
     let right = 16;
     let bottom = 44;
     try {

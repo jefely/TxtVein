@@ -1753,3 +1753,103 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   .pvf-row { gap: 6px; }
   .pvf-row .pv-amt { margin-left: auto; }
 }
+
+/* 统计表层级：标题行更重，金额合计行回归普通行 */
+.stats-left .sd-row.is-head {
+  background: #141414 !important;
+  color: #f2f2f2 !important;
+  font-weight: 700 !important;
+}
+.stats-left .sd-row.is-total {
+  background: transparent !important;
+  color: var(--text-2) !important;
+  font-weight: 400 !important;
+  align-items: end !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid #2a2a2a !important;
+  cursor: default;
+}
+.stats-left .sd-row.is-total:hover { background: transparent !important; }
+.stats-left .sd-row.is-total .sd-num { color: var(--text-2) !important; }
+
+/* 统计表：标题行字号跟正文一致；合计行金额小一号 */
+.stats-left .sd-row.is-head { font-size: 11.5px !important; }
+.stats-left .sd-row.is-total .sd-num { font-size: 10.5px !important; }
+
+/* 合计行：文字真的落到底部，而不是看起来还在行中 */
+.stats-left .sd-row.is-total {
+  align-items: end !important;
+  padding-top: 10px !important;
+  padding-bottom: 2px !important;
+}
+.stats-left .sd-row.is-total > span {
+  align-self: end !important;
+  line-height: 1.1;
+}
+
+/* 统计层级最终版：分类副标题弱化；收入/负债/权益主标题黑色、居中 */
+.stats-left .sd-row.is-head {
+  color: #9a9a9a !important;
+  font-weight: 400 !important;
+}
+.stats-left .sd-row.is-total {
+  color: var(--text) !important;
+  font-weight: 600 !important;
+  align-items: center !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+.stats-left .sd-row.is-total > span {
+  align-self: center !important;
+  line-height: normal !important;
+}
+.stats-left .sd-row.is-total .sd-num { color: var(--text) !important; }
+
+/* 统计页最终层级：主标题只加粗标签；合计金额不加粗、不居中、贴底 */
+.stats-left .sd-row.is-head {
+  font-weight: 600 !important;
+}
+.stats-left .sd-row.is-total {
+  align-items: center !important;
+  padding-top: 6px !important;
+  padding-bottom: 0 !important;
+}
+.stats-left .sd-row.is-total > span:first-child {
+  align-self: center !important;
+  font-weight: 700 !important;
+}
+.stats-left .sd-row.is-total .sd-num {
+  align-self: end !important;
+  font-weight: 400 !important;
+  line-height: 1;
+  padding-bottom: 1px;
+  text-align: right !important;
+}
+
+/* 统计：主标题单独一行居中；金额另起一行，普通字重、贴底 */
+.stats-left .sd-row.is-total-title {
+  align-items: center !important;
+  min-height: 30px !important;
+  padding: 6px 7px !important;
+  color: var(--text) !important;
+  font-weight: 700 !important;
+  background: transparent !important;
+}
+.stats-left .sd-total-title {
+  grid-column: 1 / -1;
+  align-self: center;
+  line-height: normal;
+}
+.stats-left .sd-row.is-total:not(.is-total-title) {
+  align-items: end !important;
+  min-height: 28px !important;
+  padding: 0 7px 2px !important;
+}
+.stats-left .sd-row.is-total:not(.is-total-title) .sd-num {
+  align-self: end !important;
+  font-weight: 400 !important;
+  font-size: 10.5px !important;
+  line-height: 1;
+  text-align: right !important;
+}
+.stats-left .sd-total-blank { min-height: 1px; }

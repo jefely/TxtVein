@@ -1,0 +1,376 @@
+/* TxtVein · 电纸书主题收尾层
+ * 必须最后加载：editor.css 里有一批 later 的 #050505 规则，
+ * 这里用 html[data-theme="paper"] + !important 统一压住。
+ */
+html[data-theme="paper"] .app,
+html[data-theme="paper"] .main,
+html[data-theme="paper"] .editor-view,
+html[data-theme="paper"] .query-view,
+html[data-theme="paper"] .fixed-view,
+html[data-theme="paper"] .report-view {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+}
+html[data-theme="paper"] .topbar,
+html[data-theme="paper"] .page-tabs {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .page-tab {
+  background: #f3efe3 !important;
+  color: #4a463d !important;
+  border-color: #d8d1c1 !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .composer-toggle,
+html[data-theme="paper"] .composer.open .composer-toggle { color: #111111 !important; }
+html[data-theme="paper"] .page-tab.is-active {
+  /* 选中的页签和页面底色一致 */
+  background: #f7f3e8 !important;
+  color: #1f1e1a !important;
+  border-color: #b9b09c !important;
+  border-bottom-color: #f7f3e8 !important;
+}
+html[data-theme="paper"] .page-tab:hover { background: #e9e3d4 !important; color: #1f1e1a !important; }
+
+/* 编辑页底部留白（未来区下面的 30 行空高） */
+html[data-theme="paper"] .editor-pane,
+html[data-theme="paper"] .CodeMirror,
+html[data-theme="paper"] .editor-pane .CodeMirror { background: #f7f3e8 !important; color: #2b2924 !important; }
+html[data-theme="paper"] .editor-pane .cm-tail-pad {
+  background: #f7f3e8 !important;
+}
+html[data-theme="paper"] .feedback {
+  background: #f3efe3 !important;
+  color: #4a463d !important;
+  border-color: #d8d1c1 !important;
+  box-shadow: none !important;
+}
+html[data-theme="paper"] .feedback .feedback-action,
+html[data-theme="paper"] .feedback button {
+  background: #e9e3d3 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+}
+
+/* 查询页 */
+html[data-theme="paper"] .query-inner { background: #f3efe3 !important; }
+html[data-theme="paper"] .query-title { color: #2b2924 !important; }
+html[data-theme="paper"] .query-meta,
+html[data-theme="paper"] .query-field label,
+html[data-theme="paper"] .query-empty { color: #6c665a !important; }
+html[data-theme="paper"] .query-filters,
+html[data-theme="paper"] .query-row.is-head { background: #efeada !important; }
+html[data-theme="paper"] .query-table {
+  background: #f7f3e8 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .query-row {
+  background: #f7f3e8 !important;
+  border-color: #d8d1c1 !important;
+  color: #2b2924 !important;
+}
+html[data-theme="paper"] .query-row:not(.is-head):hover { background: #efeada !important; }
+html[data-theme="paper"] .query-cell.num { color: #2b2924 !important; }
+html[data-theme="paper"] .query-cell.muted { color: #6c665a !important; }
+html[data-theme="paper"] .query-field input,
+html[data-theme="paper"] .query-field select {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .query-reset {
+  background: #e9e3d3 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+}
+
+/* 统计页：中间分隔条不能是粗黑线 */
+html[data-theme="paper"] .stats-page,
+html[data-theme="paper"] .stats-left,
+html[data-theme="paper"] .stats-right,
+html[data-theme="paper"] .stats-top,
+html[data-theme="paper"] .stats-tabs-wrap { background: #f3efe3 !important; }
+html[data-theme="paper"] .stats-gutter {
+  background: #d8d1c1 !important;
+  border-right: 1px solid #d8d1c1 !important;
+}
+html[data-theme="paper"] .stats-gutter:hover { background: #b9b09c !important; }
+html[data-theme="paper"] .stats-split { background: #f3efe3 !important; }
+html[data-theme="paper"] .stats-right-head,
+html[data-theme="paper"] .stats-left-head,
+html[data-theme="paper"] .stats-right-empty { background: #f3efe3 !important; color: #2b2924 !important; }
+html[data-theme="paper"] .stats-left .sd-row,
+html[data-theme="paper"] .stats-right .sd-row {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-head,
+html[data-theme="paper"] .stats-right .sd-row.is-head { background: #efeada !important; color: #6c665a !important; }
+html[data-theme="paper"] .stats-left .sd-row.is-total,
+html[data-theme="paper"] .stats-right .sd-row.is-total { background: #efeada !important; color: #1f1e1a !important; }
+html[data-theme="paper"] .sd-num { color: #2b2924 !important; }
+html[data-theme="paper"] .sd-row.is-total .sd-num { color: #1f1e1a !important; }
+
+/* 固定页 / 报表页 / 模态框兜底 */
+html[data-theme="paper"] .fixed-inner,
+html[data-theme="paper"] .fixed-head,
+html[data-theme="paper"] .fixed-note,
+html[data-theme="paper"] .fixed-summary,
+html[data-theme="paper"] .fixed-errors { background: #f3efe3 !important; color: #2b2924 !important; border-color: #d8d1c1 !important; }
+html[data-theme="paper"] .fixed-editor .CodeMirror { background: #f7f3e8 !important; color: #2b2924 !important; }
+html[data-theme="paper"] .report-inner,
+html[data-theme="paper"] .report-card,
+html[data-theme="paper"] .kpi { background: #f7f3e8 !important; color: #2b2924 !important; border-color: #d8d1c1 !important; box-shadow: none !important; }
+html[data-theme="paper"] .modal-panel,
+html[data-theme="paper"] .modal-head,
+html[data-theme="paper"] .modal-body,
+html[data-theme="paper"] .modal-foot { background: #f7f3e8 !important; color: #2b2924 !important; border-color: #d8d1c1 !important; }
+
+/* 电纸书也要玻璃：白纸磨砂 + 白边高光，而不是实心白块。
+ * 必须写在 .liquid-glass 的纸主题禁用规则之后。 */
+html[data-theme="paper"] .composer.liquid-glass,
+html[data-theme="paper"] .composer.liquid-glass-fallback {
+  background: rgba(255, 253, 247, var(--lg-alpha, 0.42)) !important;
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  box-shadow:
+    0 0 0 1.5px rgba(43, 41, 36, 0.28),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.60),
+    inset 0 0 0 3px rgba(43, 41, 36, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 6px 18px rgba(40, 35, 25, 0.18) !important;
+  -webkit-backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.06) !important;
+  backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.06) !important;
+}
+
+/* 纸主题：只有标题行保留浅色底；合计行与普通行同色、不加粗、文字靠下 */
+html[data-theme="paper"] .stats-left .sd-row.is-head {
+  background: #efeada !important;
+  color: #1f1e1a !important;
+  font-weight: 700 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total {
+  background: #f3efe3 !important;
+  color: #2b2924 !important;
+  font-weight: 400 !important;
+  align-items: end !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid #d8d1c1 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total .sd-num { color: #2b2924 !important; }
+
+/* 锁屏 / 密码页：整页和卡片都换成纸色，不能留黑卡 */
+html[data-theme="paper"] .gate {
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(120, 110, 90, 0.08), transparent 65%),
+    radial-gradient(700px 500px at 80% 110%, rgba(120, 110, 90, 0.05), transparent 65%),
+    #f3efe3 !important;
+  color: #111111 !important;
+}
+html[data-theme="paper"] .gate::before {
+  background-image:
+    linear-gradient(rgba(70, 62, 48, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(70, 62, 48, 0.04) 1px, transparent 1px) !important;
+}
+html[data-theme="paper"] .gate-panel {
+  background: #fffdf7 !important;
+  border: 1px solid #b9b09c !important;
+  box-shadow: 0 8px 24px rgba(40, 35, 25, 0.12) !important;
+  color: #111111 !important;
+}
+html[data-theme="paper"] .gate-brand { color: #111111 !important; }
+html[data-theme="paper"] .gate-brand span { color: #3f6b52 !important; }
+html[data-theme="paper"] .gate-tag,
+html[data-theme="paper"] .gate p,
+html[data-theme="paper"] .gate-foot,
+html[data-theme="paper"] .gate-hint { color: #6c665a !important; }
+html[data-theme="paper"] .gate h2 { color: #111111 !important; }
+html[data-theme="paper"] .gate input {
+  background: #f7f3e8 !important;
+  color: #111111 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .gate .btn-primary {
+  background: #2b2924 !important;
+  color: #fffdf7 !important;
+  border-color: #2b2924 !important;
+}
+html[data-theme="paper"] .gate .btn-primary:hover {
+  background: #111111 !important;
+}
+html[data-theme="paper"] .gate-foot { border-top-color: #d8d1c1 !important; }
+
+/* 流水查询页（Q 面板 A/B） */
+html[data-theme="paper"] .query-view,
+html[data-theme="paper"] .q-grid,
+html[data-theme="paper"] .q-panel,
+html[data-theme="paper"] .q-table { background: #f3efe3 !important; color: #111111 !important; }
+html[data-theme="paper"] .q-panel { border-color: #d8d1c1 !important; }
+html[data-theme="paper"] .q-head,
+html[data-theme="paper"] .q-filters { background: #efeada !important; border-color: #d8d1c1 !important; }
+html[data-theme="paper"] .q-title { color: #111111 !important; }
+html[data-theme="paper"] .q-clear {
+  background: #e9e3d3 !important;
+  color: #111111 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .q-total { color: #3f6b52 !important; }
+html[data-theme="paper"] .q-field > span { color: #6c665a !important; }
+html[data-theme="paper"] .q-input {
+  background: #f7f3e8 !important;
+  color: #111111 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .q-row {
+  background: #f3efe3 !important;
+  color: #111111 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .q-row.is-head { background: #efeada !important; color: #6c665a !important; }
+html[data-theme="paper"] .q-row:not(.is-head):hover { background: #efeada !important; }
+html[data-theme="paper"] .q-cell { color: #111111 !important; }
+html[data-theme="paper"] .q-empty { color: #6c665a !important; }
+html[data-theme="paper"] .stats-left .sd-row.is-head { font-size: 11.5px !important; }
+html[data-theme="paper"] .stats-left .sd-row.is-total .sd-num { font-size: 10.5px !important; }
+
+/* 统计页标题/小字提高纸面对比度 */
+html[data-theme="paper"] .stats-left-head b,
+html[data-theme="paper"] .stats-title,
+html[data-theme="paper"] .stats-tab,
+html[data-theme="paper"] .stats-left .sd-row.is-head,
+html[data-theme="paper"] .stats-left .sd-row.is-total > span { color: #111111 !important; }
+html[data-theme="paper"] .stats-left-head span,
+html[data-theme="paper"] .stats-left .sd-row.is-head .sd-num { color: #55524a !important; }
+html[data-theme="paper"] .stats-left .sd-row.is-total {
+  align-items: end !important;
+  padding-top: 10px !important;
+  padding-bottom: 2px !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total > span {
+  align-self: end !important;
+  line-height: 1.1;
+}
+
+/* 纸主题最终版：分类行弱化，合计/主标题黑色并上下居中 */
+html[data-theme="paper"] .stats-left .sd-row.is-head {
+  background: #efeada !important;
+  color: #6c665a !important;
+  font-weight: 400 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total {
+  background: #f3efe3 !important;
+  color: #111111 !important;
+  font-weight: 600 !important;
+  align-items: center !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total > span {
+  align-self: center !important;
+  line-height: normal !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total .sd-num {
+  color: #111111 !important;
+  font-size: 10.5px !important;
+}
+
+/* 查询页：去掉输入框上方的小标签；表头整行居中 */
+.q-field > span { display: none !important; }
+.q-row.is-head > span { text-align: center !important; }
+
+/* 纸主题：副标题保持弱化色但加粗；主标题标签加粗居中，金额普通贴底 */
+html[data-theme="paper"] .stats-left .sd-row.is-head {
+  color: #6c665a !important;
+  font-weight: 600 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total {
+  align-items: center !important;
+  padding-top: 6px !important;
+  padding-bottom: 0 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total > span:first-child {
+  align-self: center !important;
+  font-weight: 700 !important;
+  color: #111111 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total .sd-num {
+  align-self: end !important;
+  font-weight: 400 !important;
+  color: #111111 !important;
+  font-size: 10.5px !important;
+  line-height: 1;
+  padding-bottom: 1px;
+  text-align: right !important;
+}
+
+/* 纸主题：主标题独立行；金额行普通字重贴底 */
+html[data-theme="paper"] .stats-left .sd-row.is-total-title {
+  color: #111111 !important;
+  font-weight: 700 !important;
+  background: transparent !important;
+  align-items: center !important;
+  min-height: 30px !important;
+  padding: 6px 7px !important;
+}
+html[data-theme="paper"] .stats-left .sd-total-title {
+  grid-column: 1 / -1;
+  align-self: center;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total:not(.is-total-title) {
+  background: #f3efe3 !important;
+  align-items: end !important;
+  min-height: 28px !important;
+  padding: 0 7px 2px !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total:not(.is-total-title) .sd-num {
+  align-self: end !important;
+  color: #111111 !important;
+  font-weight: 400 !important;
+  font-size: 10.5px !important;
+  line-height: 1;
+  text-align: right !important;
+}
+
+/* 电纸书展开态也沿用宽条位移贴图 */
+html[data-theme="paper"] .composer.liquid-glass.open {
+  -webkit-backdrop-filter: var(--lg-filter-open, var(--lg-filter)) blur(var(--lg-blur, 0px)) saturate(1.06) !important;
+  backdrop-filter: var(--lg-filter-open, var(--lg-filter)) blur(var(--lg-blur, 0px)) saturate(1.06) !important;
+}
+
+/* 纸主题：页签整行与行序号列同色；悬停介于「激活标签」和「序号列」之间 */
+html[data-theme="paper"] .page-tabs {
+  background: #efeada !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .page-tab {
+  background: #efeada !important;
+  color: #4a463d !important;
+  border-color: transparent !important;
+}
+html[data-theme="paper"] .page-tab.is-active {
+  background: #f7f3e8 !important;
+  color: #1f1e1a !important;
+  border-color: #b9b09c !important;
+  border-bottom-color: #f7f3e8 !important;
+}
+html[data-theme="paper"] .page-tab:hover {
+  /* 比激活标签暗、比行序号列亮 */
+  background: #f2eddf !important;
+  color: #1f1e1a !important;
+  border-color: #c9c0ae !important;
+}
+
+/* 纸主题下悬浮胶囊必须是 fixed；防止任何纸色规则把它带回 top-left */
+html[data-theme="paper"] .composer {
+  position: fixed !important;
+  top: auto !important;
+}
+
+/* 纸主题也允许完全透明：压过纸色胶囊的 background/border/shadow */
+html[data-theme="paper"] .composer.liquid-glass.lg-clear {
+  background-color: transparent !important;
+}

@@ -1,6 +1,6 @@
 # 统计口径 · 与 NT账本完全对齐
 
-> 状态：v2.6.0 已实现
+> 状态：v2.7.0 已实现（统计口径未变）
 > 对应 NT 账本：`nt/js/core/ledger-stats.js`（单账户汇总）、
 > `nt/js/core/stats-panels.js`（六类 × 四列）、`nt/UI-SPEC.md` §2。
 > TxtVein 实现：`js/core/stats.js`；测试：`tests/stats.test.cjs`。

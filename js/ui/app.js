@@ -1750,8 +1750,23 @@
     const nums = o.numCols || [];
     const wrap = el('div', { class: 'stats-table' });
     if (o.total) {
+      // 收入/负债/权益这些是**单独一行**的主标题，上下居中；
+      // 合计金额另起一行靠右贴底，避免同一个格子里互相拉扯。
+      const title = el('div', {
+        class: 'sd-row is-total is-total-title',
+        style: 'grid-template-columns:' + template,
+      });
+      title.appendChild(el('span', { class: 'sd-total-title' }, [o.total[0]]));
+      wrap.appendChild(title);
+
       const tr = el('div', { class: 'sd-row is-total', style: 'grid-template-columns:' + template });
-      o.total.forEach((v, i) => tr.appendChild(el('span', { class: nums.includes(i) ? 'sd-num' : '' }, [v])));
+      o.total.forEach((v, i) => {
+        if (i === 0) {
+          tr.appendChild(el('span', { class: 'sd-total-blank' }, ['']));
+          return;
+        }
+        tr.appendChild(el('span', { class: nums.includes(i) ? 'sd-num' : '' }, [v]));
+      });
       wrap.appendChild(tr);
     }
     const head = el('div', { class: 'sd-row is-head', style: 'grid-template-columns:' + template });
@@ -1768,7 +1783,7 @@
           const startX = ev.clientX;
           const start = Number(S.stats.first) || 80;
           const move = (e) => {
-            const w = Math.max(50, Math.min(260, start + e.clientX - startX));
+            const w = Math.max(28, Math.min(260, start + e.clientX - startX));
             S.stats.first = Math.round(w);
             if (page) page.style.setProperty('--stats-first', S.stats.first + 'px');
           };
@@ -2023,7 +2038,7 @@
     if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', split: 380 };
     if (!S.stats.first) {
       const savedFirst = Number(localStorage.getItem('txtvein:stats-first'));
-      S.stats.first = Number.isFinite(savedFirst) && savedFirst >= 50 ? savedFirst : 80;
+      S.stats.first = Number.isFinite(savedFirst) && savedFirst >= 24 ? savedFirst : 80;
     }
     const range = statsMonthRange();
     const groups = statsGroups(S.stats.tab === 'category' ? 'category' : 'node');
@@ -3930,6 +3945,15 @@
 
   function bindComposer() {
     const POS_KEY = 'txtvein:composer-pos';
+    /* 悬浮单输入气泡：代码生成的液态玻璃（低端设备自动退回毛玻璃） */
+    /* 收起的圆钮和展开的输入条是**同一个胶囊**（和 NT 一样）：
+     * 玻璃只装在 .composer 上，按钮/输入框透明；展开时换宽条贴图。 */
+    if (TV.glass && dom.composer) {
+      TV.glass.install(dom.composer, {
+        width: 40, height: 40, radius: 14, scale: 14, id: 'tv-lg-composer',
+        openWidth: 340, openHeight: 40, openRadius: 14, openId: 'tv-lg-composer-open', openScale: 12,
+      });
+    }
     let right = 16;
     let bottom = 44;
     try {
