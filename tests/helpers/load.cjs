@@ -22,6 +22,7 @@ const FILES = [
   'js/core/ids.js',
   'js/core/parser.js',
   'js/core/calc.js',
+  'js/core/stats.js',
   'js/core/domain.js',
   'js/core/rules.js',
   'js/core/report.js',

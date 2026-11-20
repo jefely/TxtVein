@@ -130,13 +130,15 @@
     const needsOpening = parsed.accounts.some((a) => a.openingCents !== 0);
     let openingId = '';
     if (needsOpening) {
+      /* NT 的期初虚拟账户是隐藏账户：它只提供期初那一笔真实流水，
+       * 本身不进统计行；期初只体现在各账户第 1 列。 */
       const g = D.addNode(d, {
         zh_name: '期初', en_name: 'Opening', zh_code: 'ntg_open', en_code: 'ntg_open',
-        type: '权益', domain: 'P', weight: 100, sort: 1,
+        type: '权益', domain: 'P', weight: 100, sort: 1, system: true,
       });
       const n = D.addNode(d, {
         zh_name: '期初权益', en_name: 'Opening Equity', zh_code: 'nt_open', en_code: 'nt_open',
-        type: '权益', domain: 'P', parent_id: g.ok ? g.id : '', weight: 100, sort: 10,
+        type: '权益', domain: 'P', parent_id: g.ok ? g.id : '', weight: 100, sort: 10, system: true,
       });
       openingId = n.ok ? n.id : '';
     }

@@ -1301,6 +1301,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .stats-table .sd-row:not(.is-head) { cursor: pointer; }
 .stats-table .sd-row:not(.is-head):hover { background: #121212; }
 .stats-table .sd-row.is-active { background: #1d1d1d; box-shadow: inset 2px 0 0 #4daafc; }
+.stats-table .sd-row.is-total { font-weight: 600; color: #f2f2f2; background: #141414; border-top: 1px solid #2a2a2a; border-bottom: 1px solid #2a2a2a; cursor: default; }
+.stats-table .sd-row.is-total:hover { background: #141414; }
+.stats-table .sd-row.is-total .sd-num { color: #f2f2f2; }
 .stats-right-empty { padding: 26px 14px; color: #8a8a8a; font-size: 12px; text-align: center; line-height: 1.8; }
 .stats-right-empty small { color: #666; font-size: 10px; }
 .stats-right-head span { font-family: var(--mono); font-size: 9px; color: #888; white-space: nowrap; }

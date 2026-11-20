@@ -53,6 +53,8 @@
 
     (calc.rows || []).forEach((row) => {
       const node = row.node || {};
+      /* 期初权益等虚拟账户：不进公共统计（与 NT 一样，它是隐藏账户） */
+      if (TV.stats && TV.stats.isHiddenAccount(node)) return;
       privateTotal += Number(row.closing) || 0;
       const anchor = S(node.anchor_id).trim();
       if (!anchor) {

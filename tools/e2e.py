@@ -295,7 +295,7 @@ def main():
     ok("stats year aligns month 12", j(sid, "Math.abs(document.querySelector('.stats-year-input').getBoundingClientRect().right - document.querySelectorAll('.stats-month')[11].getBoundingClientRect().right) < 1", b) is True)
     ok("stats items", j(sid, "document.querySelectorAll('.lst-group').length", b) >= 4)
     ok("stats detail", j(sid, "document.querySelectorAll('.stats-left .sd-row:not(.is-head)').length", b) >= 2)
-    j(sid, "Array.from(document.querySelectorAll('.stats-left .sd-row')).find(function(r){return !r.classList.contains('is-head');}).click()", b)
+    j(sid, "Array.from(document.querySelectorAll('.stats-left .sd-row')).find(function(r){return !r.classList.contains('is-head') && !r.classList.contains('is-total');}).click()", b)
     time.sleep(0.3)
     ok("stats right list", j(sid, "document.querySelectorAll('.stats-right .sd-row:not(.is-head)').length", b) >= 1)
     for _ in range(4):

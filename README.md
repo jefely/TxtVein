@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.5.1-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.6.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-green.svg" alt="License">
   <img src="https://img.shields.io/badge/data-100%25%20Local-black.svg" alt="Local First">
 </p>
@@ -142,7 +142,7 @@ wx1 > din 35 < 咖啡 < 拿铁
 - **代码页内** `ledger.tv` / `dict.tv` 两个 CM5 编辑器，行号、语法高亮、单波浪线、补全、运算符工具条。
 - **顶栏菜单**：导入 / 导出 / 设置 / 帮助 / 掩码 / 语言，放在 logo 后面；
 - **六个圆角页签**：查询 / 流水 / 字典 / 母树 / 固定 / 统计；
-- **统计页四页签**：分类 / 节点 / 备注 / 事件（行为）；左侧完整统计表、右侧对应完整列表，左右独立，右侧可拖宽，支持 1–12 月切换。
+- **统计页四页签**：分类 / 节点 / 备注 / 事件（行为）；分类与节点都是 NT 同款的 **六类 × 四列**（收入 / 负债 / 权益 / 资产 / 费用 / 成本），每类合计逐列相加；转出 / 转入永远是正数，期初虚拟账户隐藏；左侧完整统计表、右侧对应完整列表，左右独立，右侧可拖宽，支持 1–12 月切换。规范见 [`docs/stats.md`](docs/stats.md)
 - **查询页**：一屏三段独立查询，默认今天 / 本月 / 本年，每段独立日期、转出、转入、金额、备注条件和「清空」。
 - **固定页**：一张独立的固定表（`[固定]` + `[分期]` 两个区域），纯文本编辑；行形同流水，末尾挂 `*m/*d/*y`。与 NT 账本同口径：每月到期自动落账；每日 / 分期在流水末尾的未来记录里点最左边的行号，选「确认」落成该期日期，删除 / 剪切 = 作废。规范见 [`docs/fixed-plans.md`](docs/fixed-plans.md)；
 - **右下角 VE 气泡**：点击展开单输入框，可拖动位置；手机不再被固定输入条占住。
@@ -394,10 +394,10 @@ TxtVein/
 │     ├─ panels.js        ← 规则/导入导出/帮助/密码
 │     └─ app.js           ← 唯一状态与编排
 ├─ vendor/codemirror/     ← CM5 + hint/lint/matchbrackets/active-line（MIT）
-├─ tests/                 ← node --test（242 条）
+├─ tests/                 ← node --test（260 条）
 ├─ tools/
 │  ├─ build.cjs           ← 把 index.html 内联成单文件
-│  ├─ check.cjs           ← 工程门禁（178 项）
+│  ├─ check.cjs           ← 工程门禁（181 项）
 │  ├─ cdp.py              ← Chrome DevTools 小助手
 │  ├─ e2e.py              ← 浏览器端到端（91 项断言）
 │  ├─ e2e_v4.py           ← v4 字典端到端（62 项断言）
@@ -421,9 +421,9 @@ TxtVein/
 ```powershell
 cd D:\myproject\TxtVein
 
-node --test tests/*.test.cjs      # 242 条核心测试
+node --test tests/*.test.cjs      # 260 条核心测试
 node tools/build.cjs              # 生成 TxtVein.html
-node tools/check.cjs              # 178 项工程门禁
+node tools/check.cjs              # 181 项工程门禁
 python serve.py 8899              # 另开一个终端（E2E 用）
 python tools/e2e.py               # 91 项浏览器断言（需先起 8899 服务）
 python tools/e2e_v4.py            # 62 项 v4 断言（导入/整页母树/点选绑定/采纳/输入流/编辑器/数字快捷键/金额）

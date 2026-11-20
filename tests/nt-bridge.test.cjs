@@ -179,3 +179,22 @@ test('互通：fromNTState 带回固定表文本与状态', () => {
   assert.equal(built.plans.length, 2);
   assert.deepEqual(built.plans[0].state.voided, ['2612']);
 });
+
+
+test('互通：NT 期初虚拟账户是隐藏账户，统计只看到账户期初', () => {
+  const state = {
+    accounts: [
+      { id: 'a1', type: '资产类', category: '现金', code: 'XJ', name: '现金', opening: 10 },
+      { id: 'a2', type: '费用类', category: '日常', code: 'CY', name: '餐饮', opening: 0 },
+    ],
+    transactions: [],
+    scheduled: [],
+  };
+  const built = TV.ntBridge.fromNTState(state);
+  const open = Object.values(built.dict.nodes).find((n) => n.zh_code === 'nt_open');
+  assert.ok(open && open.system, '期初权益必须是 system（统计行隐藏）');
+  const groups = TV.stats.groupStats(built.dict.nodes, built.events, { start: '260101', end: '261231' });
+  assert.ok(!groups.some((g) => g.type === '权益'), '期初虚拟账户不应出权益表');
+  const asset = groups.find((g) => g.type === '资产');
+  assert.equal(asset.rows[0].c1, 1000, '期初 10 元 = 1000 分');
+});

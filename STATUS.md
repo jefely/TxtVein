@@ -7,7 +7,7 @@
 
 ## 一、这是什么
 
-**TxtVein（文脉）v2.5.1**：纯文本、无分录、双极图论账本，外加备注层和行为层。
+**TxtVein（文脉）v2.6.0**：纯文本、无分录、双极图论账本，外加备注层和行为层。
 
 - 会计层：`N_` 节点 + `E_` 原子边，进 A/B 余额。
 - 备注层：`T_` 标签 + `X_` 备注/错误/注释，两级统计，不进余额。
@@ -34,7 +34,7 @@ D:\myproject\TxtVein\
 ├─ js/browser/ (2)       store / files
 ├─ js/ui/ (8)            dom/gate/editor/panes/report-view/input/panels/app
 ├─ vendor/codemirror/    CM5 + hint/lint/matchbrackets/active-line
-├─ tests/ (21 个文件)     205 条 node --test
+├─ tests/ (23 个文件)     260 条 node --test
 ├─ tools/                build / check / cdp / e2e / smoke_file
 ├─ docs/screens/         01-editor / 02-report / 03-invalid / 04-mobile /
 │                        06-tree / 07-candidates / 08-tree-edit
@@ -70,18 +70,19 @@ D:\myproject\TxtVein\
 | 树编辑 | 报表行为树/备注树节点可点：重挂父级、合并；合并后引用改指目标，旧 code 保留别名 |
 | 明文单文件校验 | 导出前重读并比对流水/行为/节点/标签/行为项/备注/错误行数量；检查段落齐全、无后台 ID 泄露 |
 | 自动生成 | 备注标签自动；行为项自动（另一端已是行为项，或会计节点补行为角色）；会计节点只提议 |
+| 统计 | **照搬 NT 六类 × 四列**：收入/负债/权益/资产/费用/成本；分类按 `category_key`、节点按节点；费用第 1 列本期累计、第 4 列本期净出；期初虚拟账户隐藏；转出/转入永远正数 |
 | 固定收支 | **独立固定表**（`fixed.tv`，`[固定]` + `[分期]` 两段）；行形同流水，末尾挂 `*m/*d/*y`；每月到期自动落账，每日 / 分期在流水末尾的只读未来行里点行号确认（落成该期日期）或作废；与 NT 的 `scheduled` / `planKey` / `voidedPlans` 互通 |
 | 报表 | 双极四列 + 能量审计 + 时间 + 链式因果 + 顶部行为/备注统计 + 行为树/备注树 |
 | 存储 | localStorage 加密保险库；PBKDF2 150k → AES-GCM-256；CAS 防多标签覆盖 |
-| 测试 | **242** Node · **178** 门禁 · **91 + 62** E2E · 单文件冒烟通过 |
+| 测试 | **260** Node · **181** 门禁 · **91 + 62** E2E · 单文件冒烟通过 |
 | 字典 v4 | **已实施**：节点级固定绑定 / 无损转换 / 整页母树（点选绑定） / 同支推荐 / 语义校验 / 语义染色 / 录入流（编辑器同源 / 修正模式按波浪线启用 / 输入框收窄 / 自动别名不落盘 / v4 不自动建行为项 / 颜色与字号可配 / 改字典按 ID 重投影流水）；待打磨拖拽与状态栏计数 |
 
 最近验证（2026-11-19，v2.5.0）：
 
 ```text
-node --test tests/*.test.cjs             242 pass / 0 fail
-node tools/build.cjs                     TxtVein.html 1,314.4 KB
-node tools/check.cjs                     178 pass / 0 fail
+node --test tests/*.test.cjs             260 pass / 0 fail
+node tools/build.cjs                     TxtVein.html 1,324.5 KB
+node tools/check.cjs                     181 pass / 0 fail
 python tools/e2e.py    (file://)         E2E PASSED
 python tools/e2e_v4.py (file://)         E2E v4 PASSED
 ```

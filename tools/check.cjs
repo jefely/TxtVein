@@ -62,6 +62,7 @@ const CORE = [
   'js/core/source.js',
   'js/core/dict-v4.js',
   'js/core/calc.js',
+  'js/core/stats.js',
   'js/core/domain.js',
   'js/core/rules.js',
   'js/core/report.js',

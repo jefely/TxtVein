@@ -1697,16 +1697,7 @@
     dom.reportView.appendChild(grid);
   }
 
-  const STAT_TYPE_COLS = {
-    收入: [['期初累计', 'opening'], ['本期收入', 'inc'], ['本期退回', 'dec'], ['期末累计', 'closing']],
-    负债: [['期初余额', 'opening'], ['本期新增', 'inc'], ['本期偿还', 'dec'], ['期末余额', 'closing']],
-    权益: [['期初余额', 'opening'], ['本期增加', 'inc'], ['本期减少', 'dec'], ['期末余额', 'closing']],
-    资产: [['期初余额', 'opening'], ['本期流入', 'inc'], ['本期流出', 'dec'], ['期末余额', 'closing']],
-    费用: [['本期累计', 'closing'], ['本期支出', 'inc'], ['本期退回', 'dec'], ['本期净出', 'net']],
-    成本: [['期初净值', 'opening'], ['本期新增', 'inc'], ['本期消耗', 'dec'], ['期末净值', 'closing']],
-  };
   const STAT_TYPE_EN = { 收入: 'Income', 负债: 'Liabilities', 权益: 'Equity', 资产: 'Assets', 费用: 'Expenses', 成本: 'Cost' };
-  const STAT_COL_EN = { opening: 'Opening', inc: 'In', dec: 'Out', closing: 'Closing', net: 'Net' };
   const STAT_TABS = [
     { id: 'category', label: 'category' },
     { id: 'node', label: 'node' },
@@ -1723,10 +1714,23 @@
     return { start: yy + mm + '01', end: yy + mm + queryMonthEnd(yy, mm), all: false };
   }
   function statsDateIn(date, range) { return String(date) >= range.start && String(date) <= range.end; }
-  function statsCalc() { return calcMod.compute(S.dict, S.events, { range: statsMonthRange() }); }
-  function statsTypeValue(row, key) {
-    if (key === 'net') return (Number(row.closing) || 0) - (Number(row.opening) || 0);
-    return Number(row[key]) || 0;
+  function statsGroups(kind) {
+    return TV.stats.groupStats(S.dict.nodes || {}, S.events || [], statsMonthRange(), {
+      keyOf: kind === 'category'
+        ? (n) => n.category_key || ''
+        : (n) => n.id,
+    });
+  }
+  function statsCategoryLabel(key) {
+    return TV.stats.categoryLabel(S.dict.categories || [], key, S.lang);
+  }
+  function statsCellMoney(cents, type, field) {
+    return TV.stats.statMoney(cents, type, field);
+  }
+  function statsColLabel(type, idx) {
+    const zh = (TV.stats.STAT_COLS[type] || [])[idx] || ('c' + (idx + 1));
+    const en = (TV.stats.STAT_COLS_EN[type] || [])[idx] || zh;
+    return S.lang === 'en' ? en : zh;
   }
   function statsMoney(cents) {
     const n = Math.round(Number(cents) || 0);
@@ -1740,12 +1744,16 @@
   function statsTagLabel(id) { return TV.dict.renderTag(S.dict, id, S.mode, S.lang); }
   function statsNodeLabel(id) { return TV.dict.renderNode(S.dict, id, S.mode, S.lang); }
   function statsTypeLabel(type) { return S.lang === 'en' ? (STAT_TYPE_EN[type] || type) : type; }
-  function statsColLabel(col) { return S.lang === 'en' ? (STAT_COL_EN[col[1]] || col[0]) : col[0]; }
 
   function statsTable(headers, rows, template, opts) {
     const o = opts || {};
     const nums = o.numCols || [];
     const wrap = el('div', { class: 'stats-table' });
+    if (o.total) {
+      const tr = el('div', { class: 'sd-row is-total', style: 'grid-template-columns:' + template });
+      o.total.forEach((v, i) => tr.appendChild(el('span', { class: nums.includes(i) ? 'sd-num' : '' }, [v])));
+      wrap.appendChild(tr);
+    }
     const head = el('div', { class: 'sd-row is-head', style: 'grid-template-columns:' + template });
     headers.forEach((h, i) => {
       const cell = el('span', {
@@ -1796,39 +1804,33 @@
     return wrap;
   }
 
-  function statsLeftCategory(host, calc) {
-    const order = ['收入', '负债', '权益', '资产', '费用', '成本'];
-    order.forEach((type) => {
-      const cols = STAT_TYPE_COLS[type] || STAT_TYPE_COLS['资产'];
-      const rows = (calc.rows || []).filter((r) => r.node && r.node.type === type);
-      if (!rows.length) return;
-      const group = el('section', { class: 'lst-group' });
-      const total = rows.reduce((s, r) => s + (Number(r.closing) || 0), 0);
-      group.appendChild(el('div', { class: 'lst-group-head' }, [
-        el('b', {}, [statsTypeLabel(type)]),
-        el('span', {}, [statsMoney(total)]),
-      ]));
-      const lineRows = rows.map((r) => ({
-        id: r.id,
-        cells: [statsNodeLabel(r.id)].concat(cols.map((c) => statsMoney(statsTypeValue(r, c[1])))),
-      }));
-      group.appendChild(statsTable([S.lang === 'en' ? 'Category' : '分类'].concat(cols.map((c) => statsColLabel(c))), lineRows,
-        'var(--stats-first, 80px) repeat(4,minmax(0,1fr))',
-        { numCols: [1, 2, 3, 4], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.pane = 'detail'; renderStatsPage(); } }));
-      host.appendChild(group);
-    });
+  function statsGroupTable(host, group, firstLabel, kind) {
+    const fields = TV.stats.FIELDS;
+    const headers = [firstLabel].concat(fields.map((f, i) => statsColLabel(group.type, i)));
+    const total = [statsTypeLabel(group.type)]
+      .concat(fields.map((f) => statsCellMoney(group.total[f], group.type, f)));
+    const rows = group.rows.map((r) => ({
+      id: kind === 'category' ? 'cat:' + r.key : r.key,
+      cells: [(kind === 'category' ? statsCategoryLabel(r.key) : statsNodeLabel(r.key))]
+        .concat(fields.map((f) => statsCellMoney(r[f], group.type, f))),
+    }));
+    const section = el('section', { class: 'lst-group' });
+    section.appendChild(statsTable(headers, rows, 'var(--stats-first, 80px) repeat(4,minmax(0,1fr))', {
+      numCols: [1, 2, 3, 4],
+      resizable: true,
+      selected: S.stats.selected,
+      total,
+      onClick: (row) => { S.stats.selected = row.id; S.stats.pane = 'detail'; renderStatsPage(); },
+    }));
+    host.appendChild(section);
   }
 
-  function statsLeftNode(host, calc) {
-    const rows = (calc.rows || []).filter((r) => r.node).map((r) => ({
-      id: r.id,
-      cells: [r.node.type || '', statsNodeLabel(r.id),
-        statsMoney(r.opening || 0), statsMoney(r.inc || 0),
-        statsMoney(r.dec || 0), statsMoney(r.closing || 0)],
-    }));
-    host.appendChild(statsTable(S.lang === 'en' ? ['Type', 'Node', 'Opening', 'In', 'Out', 'Closing'] : ['类型', '节点', '期初', '流入', '流出', '期末'], rows,
-      'var(--stats-first, 80px) minmax(58px,1.1fr) repeat(4,minmax(0,1fr))',
-      { numCols: [2, 3, 4, 5], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.pane = 'detail'; renderStatsPage(); } }));
+  function statsLeftCategory(host, groups) {
+    groups.forEach((g) => statsGroupTable(host, g, S.lang === 'en' ? 'Category' : '分类', 'category'));
+  }
+
+  function statsLeftNode(host, groups) {
+    groups.forEach((g) => statsGroupTable(host, g, S.lang === 'en' ? 'Node' : '节点', 'node'));
   }
 
   function statsLeftNote(host, range) {
@@ -1870,7 +1872,17 @@
   }
 
   function statsRightEvents(selected, range) {
-    const evs = (S.events || []).filter((e) => (e.from === selected || e.to === selected) && statsDateIn(e.date, range));
+    const isCat = String(selected).startsWith('cat:');
+    const rawCat = isCat ? String(selected).slice(4) : '';
+    const isUncat = rawCat === '未分类' || rawCat === '';
+    const evs = (S.events || []).filter((e) => {
+      if (!statsDateIn(e.date, range)) return false;
+      if (!isCat) return e.from === selected || e.to === selected;
+      const f = S.dict.nodes[e.from];
+      const t = S.dict.nodes[e.to];
+      const hit = (n) => (isUncat ? !(n && n.category_key) : !!(n && n.category_key === rawCat));
+      return hit(f) || hit(t);
+    });
     const rows = evs.slice().reverse().map((e, i) => ({
       id: e.id || String(i),
       cells: [String(i + 1), e.date,
@@ -2014,7 +2026,7 @@
       S.stats.first = Number.isFinite(savedFirst) && savedFirst >= 50 ? savedFirst : 80;
     }
     const range = statsMonthRange();
-    const calc = statsCalc();
+    const groups = statsGroups(S.stats.tab === 'category' ? 'category' : 'node');
     clear(dom.reportView);
     const page = el('div', { class: 'stats-page' });
     page.appendChild(reportModeToggle());
@@ -2075,15 +2087,17 @@
       el('b', {}, [t(S.stats.tab) + (S.lang === 'en' ? '' : '统计')]),
       el('span', {}, [t('statsSelect')]),
     ]));
-    if (S.stats.tab === 'category') statsLeftCategory(left, calc);
-    else if (S.stats.tab === 'node') statsLeftNode(left, calc);
+    if (S.stats.tab === 'category') statsLeftCategory(left, groups);
+    else if (S.stats.tab === 'node') statsLeftNode(left, groups);
     else if (S.stats.tab === 'note') statsLeftNote(left, range);
     else statsLeftEvent(left, range);
 
     const selectedName = S.stats.selected
       ? (S.stats.tab === 'note' ? statsTagLabel(S.stats.selected)
         : S.stats.tab === 'event' ? TV.dict.renderBehavior(S.dict, S.stats.selected, S.mode, S.lang)
-          : statsNodeLabel(S.stats.selected))
+          : S.stats.tab === 'category' && String(S.stats.selected).startsWith('cat:')
+            ? statsCategoryLabel(String(S.stats.selected).slice(4))
+            : statsNodeLabel(S.stats.selected))
       : '';
     const rh = el('div', { class: 'stats-right-head' });
     const back = el('button', { class: 'stats-back', type: 'button' }, ['‹ 返回']);
