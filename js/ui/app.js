@@ -1,4 +1,4 @@
-/* TxtVein · 应用外壳
+﻿/* TxtVein · 应用外壳
  * 唯一状态：dict + events + plans + rules（全部可序列化成两份纯文本）。
  * 所有视图都从这里派生；这里不做业务计算，只做编排。
  */
@@ -3943,15 +3943,32 @@
 
   /* ---------------- 事件绑定 ---------------- */
 
+  /* 把元素吸附到物理像素格：125% 缩放下 bottom:44px 会落在 1037.5 物理像素，
+   * 1px 的边线卡在半格上被抗锯齿劈成两条灰线，看着就是毛刺。
+   * 用 translate 做视觉补偿，不动布局。拖动中跳过（会抖动）。 */
+  function snapToDevicePixel(el) {
+    if (!el) return;
+    if (el.classList.contains('dragging')) return;
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    el.style.transform = '';
+    const r = el.getBoundingClientRect();
+    const dx = Math.round(r.x * dpr) / dpr - r.x;
+    const dy = Math.round(r.y * dpr) / dpr - r.y;
+    el.style.transform = (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01)
+      ? '' : 'translate(' + dx + 'px, ' + dy + 'px)';
+  }
   function bindComposer() {
     const POS_KEY = 'txtvein:composer-pos';
     /* 悬浮单输入气泡：代码生成的液态玻璃（低端设备自动退回毛玻璃） */
     /* 收起的圆钮和展开的输入条是**同一个胶囊**（和 NT 一样）：
      * 玻璃只装在 .composer 上，按钮/输入框透明；展开时换宽条贴图。 */
     if (TV.glass && dom.composer) {
+      /* 位移强度由 glass 参数按元素基准尺寸换算（40px → scale 像素），
+       * 这里只给形状。收起 40×40 / 展开 340×40 各一张贴图，
+       * 两张贴图短边都是 40，所以折射强度一致。 */
       TV.glass.install(dom.composer, {
-        width: 40, height: 40, radius: 14, scale: 14, id: 'tv-lg-composer',
-        openWidth: 340, openHeight: 40, openRadius: 14, openId: 'tv-lg-composer-open', openScale: 12,
+        width: 40, height: 40, radius: 12, id: 'tv-lg-composer',
+        openWidth: 340, openHeight: 40, openRadius: 12, openId: 'tv-lg-composer-open',
       });
     }
     let right = 16;
@@ -3972,6 +3989,7 @@
       bottom = Math.max(8, Math.min(bottom, maxBottom));
       dom.composer.style.right = right + 'px';
       dom.composer.style.bottom = bottom + 'px';
+      snapToDevicePixel(dom.composer);
     };
     applyPos();
     window.addEventListener('resize', applyPos);

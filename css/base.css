@@ -336,12 +336,17 @@ a { color: var(--a); text-decoration: none; }
   align-items: center;
   justify-content: center;
   padding: 24px;
+  /* 弹窗打开时**不再挡住背后**（用户 2026-11）：调液态玻璃参数要能
+   * 直接点背后的胶囊、切页签看效果。只有弹窗本体接收指针事件。 */
+  pointer-events: none;
 }
 .modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(3px);
+  /* 完全透明：纸主题下叠 12% 黑会让整页发灰，深色主题下也会压暗背景。 */
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
 }
 .modal-panel {
   position: relative;
@@ -352,6 +357,13 @@ a { color: var(--a); text-decoration: none; }
   border: 1px solid var(--line-strong);
   background: #080A0E;
   box-shadow: var(--shadow);
+  /* 圆角必须和子元素的背景一起处理：.modal-head / .modal-foot 的背景是方的，
+   * 不裁到圆角就会盖住边框弧，看起来像「圆角处缺了一段线」。 */
+  border-radius: 12px;
+  overflow: hidden;
+  /* 拖动由 JS 写 transform，这里只声明过渡不做动画（跟手才不迟滞） */
+  will-change: transform;
+  pointer-events: auto;
 }
 .modal-head {
   display: flex;
@@ -359,7 +371,11 @@ a { color: var(--a); text-decoration: none; }
   gap: 12px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--line);
+  cursor: grab;
+  touch-action: none;
 }
+.modal-panel.is-dragging .modal-head { cursor: grabbing; }
+.modal-panel.is-dragging { user-select: none; }
 .modal-head h2 {
   margin: 0;
   font-family: var(--mono);

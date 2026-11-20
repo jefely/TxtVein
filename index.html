@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-ve.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="TxtVein">
-<meta name="app-version" content="2.7.0">
+<meta name="app-version" content="2.8.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -64,6 +64,7 @@
     <button type="button" class="feedback-action" id="feedback-action" hidden></button>
   </div>
   <footer class="composer" id="composer">
+  <div class="composer-veil" aria-hidden="true"></div>
     <div class="composer-inner">
       <div class="bubble-layer" id="bubbles" hidden></div>
       <div class="prediction" id="prediction" hidden></div>
@@ -84,7 +85,7 @@
   </footer>
 </div>
 <div id="modal" class="modal" hidden>
-  <div class="modal-backdrop" data-close="1"></div>
+  <div class="modal-backdrop"></div>
   <section class="modal-panel" role="dialog" aria-modal="true">
     <header class="modal-head">
       <h2 id="modal-title"></h2>

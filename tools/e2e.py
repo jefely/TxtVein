@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """TxtVein browser E2E (editor / input / source / behavior).
 
 Covers: setup, CM5 editors, domain folding, double/triple-space,
@@ -132,7 +132,7 @@ def main():
          return r.left >= 0 && r.right <= window.innerWidth + 1;})()""", b) is True)
     j(sid, "document.querySelector('#entry').focus(); window.TxtVein.inputApi.clear();", b)
     type_text(b, sid, "wx1")
-    space(b, sid); time.sleep(0.05); space(b, sid); time.sleep(0.15)
+    space(b, sid); time.sleep(0.12); space(b, sid); time.sleep(0.18)
     ok("double space >", j(sid, "document.querySelector('#entry').value", b).endswith("> "))
     space(b, sid); time.sleep(0.15)
     ok("triple space <", j(sid, "document.querySelector('#entry').value", b).endswith("< "))

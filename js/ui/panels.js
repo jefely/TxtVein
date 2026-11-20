@@ -1,4 +1,4 @@
-/* TxtVein · 面板：规则 / 字典 / 文本 / 导入导出 / 帮助 / 密码
+﻿/* TxtVein · 面板：规则 / 字典 / 文本 / 导入导出 / 帮助 / 密码
  * 所有面板都只读 app.getState()，写操作调用 app 的方法；不直接碰核心数据。
  */
 (function (root) {
@@ -84,6 +84,8 @@
       (Array.isArray(foot) ? foot : foot ? [foot] : []).forEach((n) => n && footEl.appendChild(n));
       modal.hidden = false;
       bodyEl.scrollTop = 0;
+      /* 沿用上次拖到的位置（首次为居中） */
+      if (typeof applyPanelOffset === 'function') applyPanelOffset();
       setTimeout(() => {
         const first = bodyEl.querySelector('input, select, textarea, button');
         if (first && ui.autofocus !== false) first.focus();
@@ -97,7 +99,60 @@
     }
 
     closeBtn.addEventListener('click', close);
-    modal.querySelector('.modal-backdrop').addEventListener('click', close);
+    /* 点弹窗外边的空白处**不关闭**（用户 2026-11 要求）：
+     * 调液态玻璃参数时手容易滑到外面，一点就关掉、刚调的参数看不到效果。
+     * 关闭只剩两条路：右上角 ×，或 Esc。 */
+
+    /* ---- 弹窗可以拖着走 ----
+     * 调液态玻璃参数时，弹窗要能让开看背后的悬浮输入框。
+     * 拖标题栏移动；位置记在模块里，关掉再开还停在原地（窗口变小会夹回视口内）。 */
+    const modalPanel = modal.querySelector('.modal-panel');
+    const modalHead = modal.querySelector('.modal-head');
+    const panelOffset = { x: 0, y: 0 };
+    function applyPanelOffset() {
+      modalPanel.style.transform = panelOffset.x || panelOffset.y
+        ? 'translate(' + panelOffset.x + 'px, ' + panelOffset.y + 'px)'
+        : '';
+    }
+    function clampPanelOffset() {
+      const r = modalPanel.getBoundingClientRect();
+      const baseW = modal.offsetWidth || window.innerWidth;
+      const baseH = modal.offsetHeight || window.innerHeight;
+      // 标题栏至少留 80px 在视口里，不至于拖丢
+      const minX = -r.left - r.width + 240;
+      const maxX = baseW - r.left - 80;
+      const minY = -r.top;
+      const maxY = baseH - r.top - 60;
+      panelOffset.x = Math.max(minX, Math.min(maxX, panelOffset.x));
+      panelOffset.y = Math.max(minY, Math.min(maxY, panelOffset.y));
+      applyPanelOffset();
+    }
+    let modalDrag = null;
+    modalHead.addEventListener('pointerdown', (ev) => {
+      if (ev.target.closest('.modal-close')) return;
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      modalDrag = { x: ev.clientX, y: ev.clientY, ox: panelOffset.x, oy: panelOffset.y };
+      modalPanel.classList.add('is-dragging');
+      try { modalHead.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      ev.preventDefault();
+    });
+    modalHead.addEventListener('pointermove', (ev) => {
+      if (!modalDrag) return;
+      panelOffset.x = modalDrag.ox + (ev.clientX - modalDrag.x);
+      panelOffset.y = modalDrag.oy + (ev.clientY - modalDrag.y);
+      applyPanelOffset();
+    });
+    const endModalDrag = (ev) => {
+      if (!modalDrag) return;
+      modalDrag = null;
+      modalPanel.classList.remove('is-dragging');
+      try { modalHead.releasePointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      clampPanelOffset();
+    };
+    modalHead.addEventListener('pointerup', endModalDrag);
+    modalHead.addEventListener('pointercancel', endModalDrag);
+    window.addEventListener('resize', () => { if (!modal.hidden) clampPanelOffset(); });
+
     document.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape' && !modal.hidden) {
         const panel = bodyEl.querySelector('[data-escape-stop]');
@@ -1615,14 +1670,20 @@
       if (TV.glass && TV.glass.getParams) {
         const gp = TV.glass.getParams();
         const defs = [
-          ['不透明度', 'opacity', 0, 40, 1, '%'],
-          ['位移强度', 'scale', 0, 40, 1, ''],
+          ['不透明度', 'opacity', 0, 60, 1, '%'],
+          ['折射强度', 'scale', 0, 24, 1, 'px'],
+          ['折射环宽度', 'bevel', 8, 45, 1, '%'],
           ['高光', 'highlight', 0, 100, 1, '%'],
+          ['高光环宽度', 'ring', 0, 3, 0.1, 'px'],
+          ['高光环模糊', 'ringBlur', 0, 1.5, 0.05, 'px'],
+          ['边缘暗线', 'veil', 0, 6, 1, 'px'],
+          ['光源角度', 'angle', 0, 360, 5, '°'],
+          ['光源远近', 'distance', 0, 100, 1, '%'],
           ['阴影', 'shadow', 0, 100, 1, '%'],
-          ['背景模糊', 'blur', 0, 20, 1, 'px'],
+          ['背景模糊', 'blur', 0, 12, 1, 'px'],
         ];
         glassSection.push(el('h3', { class: 'settings-h' }, ['液态玻璃']));
-        glassSection.push(el('p', { class: 'help-text' }, ['拖动即时生效；不透明度现在控制主题色叠加的强度，0 = 完全透明。']));
+        glassSection.push(el('p', { class: 'help-text' }, ['拖动即时生效；不透明度 0 = 只保留折射与边缘。折射强度按 40px 元素折合像素，胶囊与圆钮等比。']));
         defs.forEach(([label, key, min, max, step, unit]) => {
           const range = el('input', {
             type: 'range', min: String(min), max: String(max), step: String(step),
@@ -1641,11 +1702,11 @@
         });
         glassSection.push(el('div', { class: 'settings-row' }, [
           button('视频参考值', '', () => {
-            TV.glass.setParams({ opacity: 20, scale: 12, highlight: 55, shadow: 75, blur: 0 });
+            TV.glass.setParams({ opacity: 35, scale: 8, bevel: 32, highlight: 60, ring: 1.2, ringBlur: 0.4, veil: 3, angle: 0, distance: 55, shadow: 30, blur: 1.5 });
             close();
             showSettings(app);
           }),
-          el('span', { class: 'help-text' }, ['不透明度 20 / scale 12 / 高光 55 / 阴影 75 / 模糊 0']),
+          el('span', { class: 'help-text' }, ['不透明度 35 / 折射 8 / 环宽 32 / 高光 60 / 阴影 30 / 模糊 1.5']),
         ]));
       }
       open('设置', [

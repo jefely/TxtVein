@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!-- TxtVein single-file build · source: index.html + css/ + js/ -->
 <html lang="zh-CN">
 <head>
@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-ve.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="TxtVein">
-<meta name="app-version" content="2.7.0">
+<meta name="app-version" content="2.8.0">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -368,12 +368,17 @@ a { color: var(--a); text-decoration: none; }
   align-items: center;
   justify-content: center;
   padding: 24px;
+  /* 弹窗打开时**不再挡住背后**（用户 2026-11）：调液态玻璃参数要能
+   * 直接点背后的胶囊、切页签看效果。只有弹窗本体接收指针事件。 */
+  pointer-events: none;
 }
 .modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(3px);
+  /* 完全透明：纸主题下叠 12% 黑会让整页发灰，深色主题下也会压暗背景。 */
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
 }
 .modal-panel {
   position: relative;
@@ -384,6 +389,13 @@ a { color: var(--a); text-decoration: none; }
   border: 1px solid var(--line-strong);
   background: #080A0E;
   box-shadow: var(--shadow);
+  /* 圆角必须和子元素的背景一起处理：.modal-head / .modal-foot 的背景是方的，
+   * 不裁到圆角就会盖住边框弧，看起来像「圆角处缺了一段线」。 */
+  border-radius: 12px;
+  overflow: hidden;
+  /* 拖动由 JS 写 transform，这里只声明过渡不做动画（跟手才不迟滞） */
+  will-change: transform;
+  pointer-events: auto;
 }
 .modal-head {
   display: flex;
@@ -391,7 +403,11 @@ a { color: var(--a); text-decoration: none; }
   gap: 12px;
   padding: 16px 18px;
   border-bottom: 1px solid var(--line);
+  cursor: grab;
+  touch-action: none;
 }
+.modal-panel.is-dragging .modal-head { cursor: grabbing; }
+.modal-panel.is-dragging { user-select: none; }
 .modal-head h2 {
   margin: 0;
   font-family: var(--mono);
@@ -1037,12 +1053,16 @@ a { color: var(--a); text-decoration: none; }
   touch-action: none;
   z-index: 301;
 }
-.composer-toggle:hover {
-  background: #0a160d;
-  border-color: rgba(126, 240, 161, 0.9);
-  color: #9df5b8;
-  box-shadow: 0 0 9px rgba(74, 222, 128, 0.5);
-}
+/* 悬停不再泛绿光（2026-11 用户要求），也不变淡 —— 变淡在深色底上等于变暗。
+ * 改成整体提亮：玻璃亮一点、边线亮一点，表达「被指到、准备应答」。 */
+.composer:hover { filter: brightness(1.22) saturate(1.05); }
+/* 纸面反过来：白底提亮会把深灰边框一起冲淡，糊成一片白。
+ * 改成提对比 —— 边框更深、纸面更实，看起来是「被点亮」而不是「被洗白」。 */
+/* 纸面反过来：白底已经到顶，提亮只会过曝。
+ * 所以把**静止态整体压暗**，悬停时回到正常亮度 —— 悬停相对静止就是「亮起来」。 */
+html[data-theme="paper"] .composer { filter: brightness(0.985); }
+html[data-theme="paper"] .composer:hover { filter: brightness(1); }
+.composer.dragging { filter: none; }
 .composer.open .composer-toggle {
   top: auto;
   width: 40px;
@@ -1080,25 +1100,131 @@ a { color: var(--a); text-decoration: none; }
   z-index: 2;
 }
 
-/* ===== 液态玻璃：代码生成位移贴图，backdrop-filter 折射背景 ===== */
+
+/* ===== 遮罩层（内缩） =====
+ * 独立元素而不是伪元素：伪元素的 inset 也以 padding-box 为基准，
+ * 而 .composer.open 的 padding 左右不对称，遮罩必然偏。
+ * 这里配合 .composer 的 padding:0，inset 就是相对外框的等距内缩。 */
+.composer-veil {
+  position: absolute;
+  inset: var(--lg-band-w, 2px);
+  border-radius: max(0px, calc(var(--lg-radius, 12px) - var(--lg-band-w, 2px)));
+  background-color: rgba(var(--lg-rgb, 255, 255, 255), var(--lg-a, 0.34));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, calc(var(--lg-a, 0.34) * 0.9)),
+    inset 0 12px 18px -14px rgba(255, 255, 255, calc(var(--lg-a, 0.34) * 0.65)),
+    inset 0 -6px 10px -8px rgba(0, 0, 0, calc(var(--lg-a, 0.34) * 1.2));
+  pointer-events: none;
+  z-index: 0;
+}
+.composer > *:not(.composer-veil) { position: relative; z-index: 1; }
+/* ===== 液态玻璃：代码生成位移贴图，backdrop-filter 折射背景 =====
+ * 四层：透明底 / 折射 / 双环高光 / 外投影。
+ * 边框是**两层**：外侧一道灰暗线（厚度从这里开始），
+ * 紧挨着内侧一道白高光（迎光面）。只画白边会像"描边线"，
+ * 只画灰边会像"没点亮的塑料"，两层一起才有玻璃厚度。 */
 .liquid-glass {
   isolation: isolate;
-  background-color: rgba(255, 255, 255, var(--lg-alpha, 0.10)) !important;
-  background-image:
-    radial-gradient(120% 100% at 28% 14%, rgba(255, 255, 255, var(--lg-highlight, 0.55)), rgba(255, 255, 255, 0) 46%),
-    linear-gradient(135deg, rgba(255, 255, 255, calc(var(--lg-highlight, 0.55) * 0.4)), rgba(255, 255, 255, 0) 42%) !important;
+  /* 不透明度直通：滑块 30% 就是 30% 的白色遮罩，和纸主题一个语义
+   * （用户 2026-11：中间叠一层遮罩，让不透明度调它）。
+   * 代价是深色底上的玻璃会偏灰，所以把背景提亮从 +0.68 收到 +0.20，
+   * 否则白遮罩被 brightness 二次放大，30% 就已经糊了。 */
+  --lg-a: calc(var(--lg-alpha, 0.34) * var(--lg-tint, 1));
+  --lg-b: calc(1 + var(--lg-bright, 0.20));
+  --lg-rgb: 255, 255, 255;
+  /* 光源角度：conic 的 0deg 在正上方、顺时针。整圈都亮，只是强弱随角度变。 */
+  --lg-ring-angle: 0deg;
+  --lg-ring-min: 0.70;   /* 背光侧亮度 / 迎光侧亮度；越接近 1 越像平行光 */
+  /* 双层外框：最外一道**比玻璃暗、比背景亮**的接触边，里面才是高光线。
+   * 深色底上不能更黑，所以用「中灰」；纸底上反过来用暖灰。
+   * 这一层不跟光源走 —— 它是玻璃与桌面的接触阴影。 */
+  --lg-rim-rgb: 255, 255, 255;
+  --lg-rim-alpha: 0.10;
+  /* 高光线就是 ::after 那一圈；它的亮度直接由「高光亮度」控制 */
+  --lg-rl: var(--lg-highlight, 0.6);
+  background-color: rgba(var(--lg-rgb), var(--lg-a)) !important;
+  background-image: none !important;
   border: 0 !important;
-  -webkit-backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.25) brightness(1.03) !important;
-  backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.25) brightness(1.03) !important;
+  -webkit-backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 3px)) saturate(1.3) brightness(var(--lg-b)) !important;
+  backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 3px)) saturate(1.3) brightness(var(--lg-b)) !important;
+  /* 层次完全照搬纸主题那套 inset 环（纸面上是「暗线 + 2px 白 + 3px 灰」），
+   * 深色反过来：2px 亮带 + 3px 暗缝，看上去就是遮罩让开了边框。
+   * 全部用元素自身的 inset 阴影画，天然对齐，没有 padding-box 的坑。 */
   box-shadow:
-    0 0 0 1.5px rgba(30, 40, 50, 0.30),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
-    inset 0 0 0 3px rgba(30, 40, 50, 0.06),
-    inset 0 1px 1px rgba(255, 255, 255, 0.65),
-    inset 0 -8px 18px rgba(0, 0, 0, 0.16),
-    0 8px 22px rgba(0, 0, 0, var(--lg-shadow, 0.34)) !important;
+    /* 贴合外框的一道暗缝：宽度由「边缘暗线」控制，0 = 没有 */
+    inset 0 0 0 var(--lg-edge-w, 1px) rgba(0, 0, 0, calc(var(--lg-a) * 0.75)),
+    0 16px 30px -6px rgba(0, 0, 0, var(--lg-shadow, 0.34)),
+    0 4px 10px -2px rgba(0, 0, 0, calc(var(--lg-shadow, 0.34) * 0.5)) !important;
   color: var(--text) !important;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+
+/* 投影跟着光源走：光源在 (sinθ, -cosθ) 方向，影子就落在反方向 (-sinθ, cosθ)。
+ * θ 是 --lg-ring-angle（0deg = 正上方，顺时针）。
+ * CSS 三角函数 Chrome 111+ 才有，旧内核靠上面那条固定的 0 10px 兜底。 */
+@supports (top: calc(sin(1deg) * 1px)) {
+  .liquid-glass {
+    box-shadow:
+      
+      calc(sin(var(--lg-ring-angle, 0deg)) * -16px)
+      calc(cos(var(--lg-ring-angle, 0deg)) * 16px) 30px -6px rgba(0, 0, 0, var(--lg-shadow, 0.34)),
+      calc(sin(var(--lg-ring-angle, 0deg)) * -5px)
+      calc(cos(var(--lg-ring-angle, 0deg)) * 5px) 10px -2px rgba(0, 0, 0, calc(var(--lg-shadow, 0.34) * 0.5)) !important;
+  }
+}
+/* ③ 高光 + 厚度：一整圈都在受光。
+ * 光源是空间里的（在玻璃前方朝屏幕照），玻璃边缘是凸起的斜面，
+ * 所以**整圈边缘**都会反光，只是强度随法线方向变化；
+ * 不是"平面内从左上打到右下"——那样会有一侧整段发灰，像描边。
+ * conic 的角度就是光源方位，可在设置里调。 */
+.liquid-glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: var(--lg-ring-width, 1.2px);
+  /* mask 抠出来的环在圆角处是硬切的：DPR 1.0/1.25 时能看到明显台阶。
+   * 借一点光学模糊把台阶融掉，环的走向不变。
+   * 环宽与模糊都在设置里可调（0 模糊 = 完全锐利，但有台阶）。 */
+  filter: blur(var(--lg-ring-blur, 0.4px));
+
+  background: conic-gradient(from var(--lg-ring-angle, 0deg),
+    rgba(255, 255, 255, var(--lg-rl)) 0deg,
+    rgba(255, 255, 255, calc(var(--lg-rl) * (1 + var(--lg-ring-min)) / 2)) 80deg,
+    rgba(255, 255, 255, calc(var(--lg-rl) * var(--lg-ring-min))) 165deg,
+    rgba(255, 255, 255, calc(var(--lg-rl) * (1 + var(--lg-ring-min)) / 2)) 250deg,
+    rgba(255, 255, 255, var(--lg-rl)) 320deg,
+    rgba(255, 255, 255, var(--lg-rl)) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* 厚度阴影在环的**内侧**：底部一圈压暗，让边缘看起来是立体的往下弯，
+ * 而不是贴在平面上的白色描边。 */
+.liquid-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(calc(var(--lg-ring-angle, 0deg) + 180deg),
+      rgba(var(--lg-rgb), calc(var(--lg-highlight, 0.6) * 0.09)) 0%,
+      rgba(var(--lg-rgb), calc(var(--lg-highlight, 0.6) * 0.02)) 26%,
+      rgba(var(--lg-rgb), 0) 48%);
+  /* 遮罩内部要分上下：纸主题靠白纸的反光，深色只能靠灰白内阴影。
+   * 没有这几层，遮罩就是一块均匀的灰，看着死板。 */
+  /* 内阴影的强度跟遮罩浓度走：玻璃接近全透明时它们必须消失，
+   * 否则会显形成一圈「偏移的内框」。--lg-a 就是遮罩的不透明度。 */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, calc(var(--lg-a) * 0.47)),
+    inset 0 12px 18px -14px rgba(255, 255, 255, calc(var(--lg-a) * 0.65)),
+    inset 0 -6px 10px -8px rgba(0, 0, 0, calc(var(--lg-a) * 1.2)),
+    inset 0 -1px 0 rgba(0, 0, 0, calc(var(--lg-a) * 0.35));
+  pointer-events: none;
 }
 .liquid-glass-fallback {
   background: rgba(255, 255, 255, 0.12) !important;
@@ -1288,7 +1414,8 @@ html[data-theme="paper"] .composer.open .composer-toggle {
 }
 
 /* 模态 / 面板 / 设置 */
-html[data-theme="paper"] .modal-backdrop { background: rgba(60, 55, 45, 0.28) !important; }
+/* 纸主题也不要压暗背景：弹窗打开时整页仍是纸色，才能一边调参一边看胶囊 */
+html[data-theme="paper"] .modal-backdrop { background: transparent !important; }
 html[data-theme="paper"] .modal-panel,
 html[data-theme="paper"] .modal-head,
 html[data-theme="paper"] .modal-body,
@@ -1403,7 +1530,7 @@ html[data-theme="paper"] .rtable-row.is-total { background: #efeada !important; 
   height: 40px;
   padding: 0;
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: transparent;
   display: flex;
   align-items: center;
@@ -1415,7 +1542,16 @@ html[data-theme="paper"] .rtable-row.is-total { background: #efeada !important; 
     padding 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
     gap 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
     border-radius 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 0.16s ease,
     background 0.24s ease, box-shadow 0.24s ease;
+}
+.composer {
+  /* padding 会让绝对定位的 ::before 以 padding-box 为基准，
+   * 遮罩内缩时就会偏；这两个值给 ::before 做补偿。 */
+  --lg-pad-t: 0px;
+  --lg-pad-r: 0px;
+  --lg-pad-b: 0px;
+  --lg-pad-l: 0px;
 }
 .composer.open {
   width: min(340px, calc(100vw - 24px));
@@ -1423,8 +1559,9 @@ html[data-theme="paper"] .rtable-row.is-total { background: #efeada !important; 
   padding: 2px 4px 2px 10px;
   gap: 2px;
   justify-content: flex-start;
-  border-radius: 14px;
+  border-radius: 12px;
 }
+
 .composer-inner {
   position: static;
   display: none;
@@ -1472,7 +1609,7 @@ html[data-theme="paper"] .rtable-row.is-total { background: #efeada !important; 
   border-radius: 9px;
   background: transparent;
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   box-shadow: none;
   text-shadow: none;
   cursor: grab;
@@ -1489,14 +1626,28 @@ html[data-theme="paper"] .rtable-row.is-total { background: #efeada !important; 
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   backdrop-filter: blur(14px) saturate(1.4);
 }
-/* 电纸书：胶囊是纸墨按钮，内部完全透明 */
-html[data-theme="paper"] .composer {
+/* 电纸书：没装玻璃时是纸墨按钮；装了玻璃就用同一套四层，只把颜色换成纸色 */
+html[data-theme="paper"] .composer:not(.liquid-glass) {
   background: #fffdf7 !important;
   border: 2px solid #2b2924 !important;
-  border-radius: 14px !important;
+  border-radius: 12px !important;
   box-shadow: none !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
+}
+html[data-theme="paper"] .liquid-glass {
+  --lg-tint: 1;
+  --lg-bright: 0.02;
+  --lg-rgb: 255, 253, 247;
+  --lg-rim-rgb: 43, 41, 36;
+  --lg-rim-alpha: 0.28;
+  --lg-rl: var(--lg-highlight, 0.6);
+  --lg-ring-angle: 135deg;
+  color: #111111 !important;
+  text-shadow: none;
+}
+html[data-theme="paper"] .composer.liquid-glass {
+  border-radius: 12px !important;
 }
 html[data-theme="paper"] .composer-inner,
 html[data-theme="paper"] .composer .entry-row,
@@ -1530,16 +1681,13 @@ html[data-theme="paper"] .composer .entry::placeholder { color: #5f5a4e !importa
 }
 .stats-left .sd-row > span:first-child .col-grip { right: -10px; }
 
-/* 不透明度拉到 0：彻底透明，只保留折射与文字 */
+/* 不透明度拉到 0：清掉填充，只留折射与环（边缘才是玻璃的本体） */
 .liquid-glass.lg-clear {
   background: transparent !important;
   background-image: none !important;
   border-color: transparent !important;
   box-shadow:
-    0 0 0 1.5px rgba(30, 40, 50, 0.30),
-    inset 0 0 0 2px rgba(255, 255, 255, 0.55),
-    inset 0 0 0 3px rgba(30, 40, 50, 0.06),
-    0 8px 22px rgba(0, 0, 0, 0.20) !important;
+    0 10px 24px rgba(0, 0, 0, calc(var(--lg-shadow, 0.34) * 0.7)) !important;
 }
 
 </style>
@@ -4333,7 +4481,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 </style>
 <style>
 /* css/paper.css */
-/* TxtVein · 电纸书主题收尾层
+﻿/* TxtVein · 电纸书主题收尾层
  * 必须最后加载：editor.css 里有一批 later 的 #050505 规则，
  * 这里用 html[data-theme="paper"] + !important 统一压住。
  */
@@ -4465,19 +4613,20 @@ html[data-theme="paper"] .modal-body,
 html[data-theme="paper"] .modal-foot { background: #f7f3e8 !important; color: #2b2924 !important; border-color: #d8d1c1 !important; }
 
 /* 电纸书也要玻璃：白纸磨砂 + 白边高光，而不是实心白块。
- * 必须写在 .liquid-glass 的纸主题禁用规则之后。 */
+ * 必须写在 .liquid-glass 的纸主题禁用规则之后。
+ * 三层颜色全部走变量，和深色主题共用同一套参数（外暗缝 / 高光带 / 投影）。 */
 html[data-theme="paper"] .composer.liquid-glass,
 html[data-theme="paper"] .composer.liquid-glass-fallback {
   background: rgba(255, 253, 247, var(--lg-alpha, 0.42)) !important;
   background-image: none !important;
   border: 0 !important;
-  border-radius: 14px !important;
+  border-radius: 12px !important;
   box-shadow:
-    0 0 0 1.5px rgba(43, 41, 36, 0.28),
+    0 0 0 1.5px rgba(var(--lg-rim-rgb, 43, 41, 36), var(--lg-rim-alpha, 0.28)),
     inset 0 0 0 2px rgba(255, 255, 255, 0.60),
     inset 0 0 0 3px rgba(43, 41, 36, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 6px 18px rgba(40, 35, 25, 0.18) !important;
+    0 6px 18px rgba(40, 35, 25, var(--lg-shadow, 0.18)) !important;
   -webkit-backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.06) !important;
   backdrop-filter: var(--lg-filter) blur(var(--lg-blur, 0px)) saturate(1.06) !important;
 }
@@ -4751,6 +4900,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     <button type="button" class="feedback-action" id="feedback-action" hidden></button>
   </div>
   <footer class="composer" id="composer">
+  <div class="composer-veil" aria-hidden="true"></div>
     <div class="composer-inner">
       <div class="bubble-layer" id="bubbles" hidden></div>
       <div class="prediction" id="prediction" hidden></div>
@@ -4771,7 +4921,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
   </footer>
 </div>
 <div id="modal" class="modal" hidden>
-  <div class="modal-backdrop" data-close="1"></div>
+  <div class="modal-backdrop"></div>
   <section class="modal-panel" role="dialog" aria-modal="true">
     <header class="modal-head">
       <h2 id="modal-title"></h2>
@@ -4802,7 +4952,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
   'use strict';
 
   const TV = (root.TxtVein = root.TxtVein || {});
-  const APP_VER = 'txtvein-v2.7.0';
+  const APP_VER = 'txtvein-v2.8.0';
 
   function parseVer(v) {
     const m = String(v || '').match(/v?(\d+)\.(\d+)\.(\d+)/);
@@ -22650,7 +22800,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
 </script>
 <script>
 /* js/ui/panels.js */
-/* TxtVein · 面板：规则 / 字典 / 文本 / 导入导出 / 帮助 / 密码
+﻿/* TxtVein · 面板：规则 / 字典 / 文本 / 导入导出 / 帮助 / 密码
  * 所有面板都只读 app.getState()，写操作调用 app 的方法；不直接碰核心数据。
  */
 (function (root) {
@@ -22736,6 +22886,8 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
       (Array.isArray(foot) ? foot : foot ? [foot] : []).forEach((n) => n && footEl.appendChild(n));
       modal.hidden = false;
       bodyEl.scrollTop = 0;
+      /* 沿用上次拖到的位置（首次为居中） */
+      if (typeof applyPanelOffset === 'function') applyPanelOffset();
       setTimeout(() => {
         const first = bodyEl.querySelector('input, select, textarea, button');
         if (first && ui.autofocus !== false) first.focus();
@@ -22749,7 +22901,60 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     }
 
     closeBtn.addEventListener('click', close);
-    modal.querySelector('.modal-backdrop').addEventListener('click', close);
+    /* 点弹窗外边的空白处**不关闭**（用户 2026-11 要求）：
+     * 调液态玻璃参数时手容易滑到外面，一点就关掉、刚调的参数看不到效果。
+     * 关闭只剩两条路：右上角 ×，或 Esc。 */
+
+    /* ---- 弹窗可以拖着走 ----
+     * 调液态玻璃参数时，弹窗要能让开看背后的悬浮输入框。
+     * 拖标题栏移动；位置记在模块里，关掉再开还停在原地（窗口变小会夹回视口内）。 */
+    const modalPanel = modal.querySelector('.modal-panel');
+    const modalHead = modal.querySelector('.modal-head');
+    const panelOffset = { x: 0, y: 0 };
+    function applyPanelOffset() {
+      modalPanel.style.transform = panelOffset.x || panelOffset.y
+        ? 'translate(' + panelOffset.x + 'px, ' + panelOffset.y + 'px)'
+        : '';
+    }
+    function clampPanelOffset() {
+      const r = modalPanel.getBoundingClientRect();
+      const baseW = modal.offsetWidth || window.innerWidth;
+      const baseH = modal.offsetHeight || window.innerHeight;
+      // 标题栏至少留 80px 在视口里，不至于拖丢
+      const minX = -r.left - r.width + 240;
+      const maxX = baseW - r.left - 80;
+      const minY = -r.top;
+      const maxY = baseH - r.top - 60;
+      panelOffset.x = Math.max(minX, Math.min(maxX, panelOffset.x));
+      panelOffset.y = Math.max(minY, Math.min(maxY, panelOffset.y));
+      applyPanelOffset();
+    }
+    let modalDrag = null;
+    modalHead.addEventListener('pointerdown', (ev) => {
+      if (ev.target.closest('.modal-close')) return;
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      modalDrag = { x: ev.clientX, y: ev.clientY, ox: panelOffset.x, oy: panelOffset.y };
+      modalPanel.classList.add('is-dragging');
+      try { modalHead.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      ev.preventDefault();
+    });
+    modalHead.addEventListener('pointermove', (ev) => {
+      if (!modalDrag) return;
+      panelOffset.x = modalDrag.ox + (ev.clientX - modalDrag.x);
+      panelOffset.y = modalDrag.oy + (ev.clientY - modalDrag.y);
+      applyPanelOffset();
+    });
+    const endModalDrag = (ev) => {
+      if (!modalDrag) return;
+      modalDrag = null;
+      modalPanel.classList.remove('is-dragging');
+      try { modalHead.releasePointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      clampPanelOffset();
+    };
+    modalHead.addEventListener('pointerup', endModalDrag);
+    modalHead.addEventListener('pointercancel', endModalDrag);
+    window.addEventListener('resize', () => { if (!modal.hidden) clampPanelOffset(); });
+
     document.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape' && !modal.hidden) {
         const panel = bodyEl.querySelector('[data-escape-stop]');
@@ -24267,14 +24472,20 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
       if (TV.glass && TV.glass.getParams) {
         const gp = TV.glass.getParams();
         const defs = [
-          ['不透明度', 'opacity', 0, 40, 1, '%'],
-          ['位移强度', 'scale', 0, 40, 1, ''],
+          ['不透明度', 'opacity', 0, 60, 1, '%'],
+          ['折射强度', 'scale', 0, 24, 1, 'px'],
+          ['折射环宽度', 'bevel', 8, 45, 1, '%'],
           ['高光', 'highlight', 0, 100, 1, '%'],
+          ['高光环宽度', 'ring', 0, 3, 0.1, 'px'],
+          ['高光环模糊', 'ringBlur', 0, 1.5, 0.05, 'px'],
+          ['边缘暗线', 'veil', 0, 6, 1, 'px'],
+          ['光源角度', 'angle', 0, 360, 5, '°'],
+          ['光源远近', 'distance', 0, 100, 1, '%'],
           ['阴影', 'shadow', 0, 100, 1, '%'],
-          ['背景模糊', 'blur', 0, 20, 1, 'px'],
+          ['背景模糊', 'blur', 0, 12, 1, 'px'],
         ];
         glassSection.push(el('h3', { class: 'settings-h' }, ['液态玻璃']));
-        glassSection.push(el('p', { class: 'help-text' }, ['拖动即时生效；不透明度现在控制主题色叠加的强度，0 = 完全透明。']));
+        glassSection.push(el('p', { class: 'help-text' }, ['拖动即时生效；不透明度 0 = 只保留折射与边缘。折射强度按 40px 元素折合像素，胶囊与圆钮等比。']));
         defs.forEach(([label, key, min, max, step, unit]) => {
           const range = el('input', {
             type: 'range', min: String(min), max: String(max), step: String(step),
@@ -24293,11 +24504,11 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
         });
         glassSection.push(el('div', { class: 'settings-row' }, [
           button('视频参考值', '', () => {
-            TV.glass.setParams({ opacity: 20, scale: 12, highlight: 55, shadow: 75, blur: 0 });
+            TV.glass.setParams({ opacity: 35, scale: 8, bevel: 32, highlight: 60, ring: 1.2, ringBlur: 0.4, veil: 3, angle: 0, distance: 55, shadow: 30, blur: 1.5 });
             close();
             showSettings(app);
           }),
-          el('span', { class: 'help-text' }, ['不透明度 20 / scale 12 / 高光 55 / 阴影 75 / 模糊 0']),
+          el('span', { class: 'help-text' }, ['不透明度 35 / 折射 8 / 环宽 32 / 高光 60 / 阴影 30 / 模糊 1.5']),
         ]));
       }
       open('设置', [
@@ -24447,15 +24658,24 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
 </script>
 <script>
 /* js/ui/glass.js */
-/* TxtVein · 液态玻璃（代码实现，无图片资源）
+﻿/* TxtVein · 液态玻璃（代码实现，无图片资源）
  *
- * 原理与 NT 教程一致：
- *   1. 生成一张「法线 / 位移贴图」：R/G 通道存横向/纵向偏移，128 = 不偏移；
- *   2. 把贴图塞进 SVG feImage，交给 feDisplacementMap 折射背景；
- *   3. 元素用 backdrop-filter: url(#...) 把折射结果当背景。
+ * 四层（对应用户 2026-11 提供的教程视频）：
+ *   ① 透明：rgba 底，让背后内容透出来
+ *   ② 折射：位移贴图，边缘按 Snell 定律弯折背景
+ *   ③ 高光：CSS 双环（外灰暗线 + 内白高光）勾出轮廓
+ *   ④ 阴影：外投影，把玻璃从页面上抬起来
  *
- * 只给小型悬浮按钮用（40–54px），贴图 96×96、只生成一次；
- * 低端设备 / 不支持 backdrop-filter 时退回普通毛玻璃，不跑 SVG 滤镜。
+ * 折射不是"沿法线推像素"那么简单：
+ *   1. 先描述形状 —— height = f(到边缘的距离)，边缘陡、中间平；
+ *   2. 求导得斜率 → 法线；
+ *   3. 用 Snell 定律 n1·sinθ1 = n2·sinθ2 求偏移量（n = 1.5 玻璃）；
+ *   4. 整张图按最大偏移归一化到 [-1,1]，写进 R/G，128 = 不偏移；
+ *   5. feImage → feDisplacementMap → backdrop-filter。
+ *
+ * 关键点：边缘处斜率最大，所以**位移在边缘最大、中间为 0**。
+ * 旧版用 sin(πt) / 4t(1-t)，边缘是 0，会留下一圈"不折射的硬边"，
+ * 那正是阶梯感和白边的来源。
  */
 (function (root) {
   'use strict';
@@ -24464,39 +24684,129 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
   const NS = 'http://www.w3.org/2000/svg';
   const XLINK = 'http://www.w3.org/1999/xlink';
   const MAP_CACHE = new Map();
-  const HEIGHT_CACHE = new Map();
   const PARAMS_KEY = 'txtvein.glass.v1';
-  const DEFAULT_PARAMS = { opacity: 12, scale: 14, highlight: 60, shadow: 80, blur: 0, ring: 1, ringAlpha: 58 };
+
+  /* 玻璃折射率：视频里的 n = 1.50（空气 1.00）。 */
+  const REFRACT = 1.5;
+  /* 边缘弯曲区占短边的比例（默认值）。视频剖面里这段是"一圈"，
+   * 但太窄会看不出弯折，所以在设置里可调。 */
+  const BEVEL = 0.32;
+  /* 基准尺寸：scale 的语义是"40px 元素上的最大位移像素数"，其它尺寸等比。 */
+  const BASE = 40;
+  /* filter region 相对元素外扩的比例；位移贴图要按同一比例加大，
+   * 否则 feImage 铺满 region 时和元素错位。 */
+  const REGION_EXT = 0.2;
+
+  const DEFAULT_PARAMS = {
+    opacity: 34,      // ① 透明层：视频推荐 35%
+    scale: 8,         // ② 位移强度（40px 元素上的像素）
+    bevel: 32,        // ② 折射环宽度（短边的 %）
+    highlight: 60,    // ③ 迎光高光
+    shadow: 34,       // ④ 外投影
+    blur: 1.5,        // 背景柔化（0 = 纯透明折射，视频教程值）
+    ring: 1.2,        // 高光环宽度（px）
+    veil: 1,          // 边缘暗线宽度（px）：贴合外框的那道缝
+    ringBlur: 0.4,    // 高光环模糊（px）：抗锯齿用，0 = 完全锐利
+    angle: 0,         // 光源方位（deg，0 = 正上方，顺时针）
+    distance: 55,     // 光源远近（%）：越近方向性越强，越远越接近均匀
+    ringAlpha: 62,    // 内白环透明度
+    darkRing: 34,     // 外灰暗线透明度
+  };
+  const PARAM_KEYS = Object.keys(DEFAULT_PARAMS);
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
 
   function loadParams() {
     const out = Object.assign({}, DEFAULT_PARAMS);
     try {
       const raw = JSON.parse(localStorage.getItem(PARAMS_KEY) || 'null');
       if (raw) {
-        ['opacity', 'scale', 'highlight', 'shadow', 'blur', 'ring', 'ringAlpha'].forEach((k) => {
+        PARAM_KEYS.forEach((k) => {
           const n = Number(raw[k]);
           if (Number.isFinite(n)) out[k] = n;
         });
+        /* 旧版 scale 是写死的像素值（12–18），语义和现在一致，继续用 */
       }
     } catch (e) { /* ignore */ }
     return out;
   }
 
+  /** 把参数写到元素的 CSS 变量上；scale 按元素基准尺寸换算。 */
   function applyTo(el, params) {
     if (!el) return;
     const p = params || loadParams();
-    el.style.setProperty('--lg-alpha', String(Math.max(0, Math.min(1, p.opacity / 100))));
-    el.style.setProperty('--lg-highlight', String(Math.max(0, Math.min(1, p.highlight / 100))));
-    el.style.setProperty('--lg-shadow', String(Math.max(0, Math.min(1, p.shadow / 100))));
+    el.style.setProperty('--lg-alpha', String(clamp(p.opacity / 100, 0, 1)));
+    el.style.setProperty('--lg-highlight', String(clamp(p.highlight / 100, 0, 1)));
+    el.style.setProperty('--lg-shadow', String(clamp(p.shadow / 100, 0, 1)));
     el.style.setProperty('--lg-blur', String(Math.max(0, Number(p.blur) || 0)) + 'px');
-    el.style.setProperty('--lg-ring-width', String(Math.max(0, Number(p.ring) || 0)) + 'px');
-    el.style.setProperty('--lg-ring-alpha', String(Math.max(0, Math.min(1, p.ringAlpha / 100))));
+    /* 环宽**不做物理像素取整**：取整后 0.1 步进只剩 1/2/3 三档，滑块等于废了。
+     * 抗锯齿交给 --lg-ring-blur（设置里可调）。 */
+    const ringPx = Math.max(0, Number(p.ring) || 0);
+    el.style.setProperty('--lg-ring-width', String(ringPx) + 'px');
+    /* veil = 边缘暗线宽度（px） */
+  el.style.setProperty('--lg-edge-w', String(Math.max(0, Number(p.veil) || 0)) + 'px');
+    el.style.setProperty('--lg-ring-blur', String(Math.max(0, Number(p.ringBlur) || 0)) + 'px');
+    el.style.setProperty('--lg-ring-alpha', String(clamp((Number(p.ringAlpha) || 0) / 100, 0, 1)));
+    el.style.setProperty('--lg-dark-ring', String(clamp((Number(p.darkRing) || 0) / 100, 0, 1)));
+    el.style.setProperty('--lg-ring-angle', String(Number(p.angle) || 0) + 'deg');
+    /* 光源越近，环上背光侧越暗（方向性越强）；越远越接近平行光，整圈趋匀。 */
+    const near = clamp((Number(p.distance == null ? 55 : p.distance)) / 100, 0, 1);
+    el.style.setProperty('--lg-ring-min', String(1 - near * 0.55));
     el.classList.toggle('lg-clear', Number(p.opacity) <= 0);
-    const ids = [el.dataset.lgId, el.dataset.lgOpenId].filter(Boolean);
-    ids.forEach((id) => {
-      const disp = document.querySelector('#' + id + ' feDisplacementMap');
-      if (disp) disp.setAttribute('scale', String(Math.max(0, Number(p.scale) || 0)));
-    });
+
+    /* 内缩层的包含块是 padding-box，要把四边 padding 记下来才能顶回 border-box。
+     * 直接读运行态 —— CSS 里同选择器有两处定义，硬编码会踩空。 */
+    try {
+      const cs = window.getComputedStyle(el);
+      el.style.setProperty('--lg-pad-t', cs.paddingTop);
+      el.style.setProperty('--lg-pad-r', cs.paddingRight);
+      el.style.setProperty('--lg-pad-b', cs.paddingBottom);
+      el.style.setProperty('--lg-pad-l', cs.paddingLeft);
+    } catch (e) { /* ignore */ }
+
+    /* 折射环宽度改变要重建贴图（形状变了），只改 scale 不用。 */
+    if (el.dataset.lgBevel !== String(p.bevel)) rebuild(el, p);
+    else setDispScaleFor(el, p);
+  }
+
+  function setDispScaleFor(el, p) {
+    const px = Math.max(0, Number(p.scale) || 0);
+    const base = Number(el.dataset.lgBase) || BASE;
+    const openBase = Number(el.dataset.lgOpenBase) || BASE;
+    setDispScale(el.dataset.lgId, px * (base / BASE));
+    setDispScale(el.dataset.lgOpenId, px * (openBase / BASE));
+  }
+
+  /** 按当前 bevel 重建贴图与滤镜（保留 id / 尺寸）。 */
+  function rebuild(el, p) {
+    const w = Number(el.dataset.lgW) || 40;
+    const h = Number(el.dataset.lgH) || 40;
+    const radius = Number(el.dataset.lgR) || Math.min(w, h) / 2;
+    const o = p || loadParams();
+    const bevel = clamp((Number(o.bevel) || 32) / 100, 0.04, 0.6);
+    if (!el.dataset.lgId) return;
+    try {
+      const map = buildMap(w, h, radius, { bevel });
+      if (!map) return;
+      makeFilter(el.dataset.lgId, map, 0);
+      const ow = Number(el.dataset.lgOpenW) || 0;
+      const oh = Number(el.dataset.lgOpenH) || 0;
+      if (ow > 0 && el.dataset.lgOpenId) {
+        const orad = Number(el.dataset.lgOpenR) || Math.min(ow, oh) / 2;
+        const omap = buildMap(ow, oh, orad, { bevel });
+        if (omap) makeFilter(el.dataset.lgOpenId, omap, 0);
+      }
+      el.dataset.lgBevel = String(o.bevel);
+      setDispScaleFor(el, o);
+    } catch (e) { /* ignore */ }
+  }
+
+  function setDispScale(id, px) {
+    if (!id) return;
+    const disp = document.querySelector('#' + id + ' feDisplacementMap');
+    if (disp) disp.setAttribute('scale', String(Math.max(0, px)));
   }
 
   function setParams(patch) {
@@ -24504,10 +24814,6 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     try { localStorage.setItem(PARAMS_KEY, JSON.stringify(next)); } catch (e) { /* ignore */ }
     document.querySelectorAll('[data-liquid-glass="1"]').forEach((el) => applyTo(el, next));
     return next;
-  }
-
-  function clamp(v, lo, hi) {
-    return Math.max(lo, Math.min(hi, v));
   }
 
   function sdfRoundRect(px, py, w, h, r) {
@@ -24518,16 +24824,35 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     return Math.hypot(ox, oy) + Math.min(Math.max(qx, qy), 0) - r;
   }
 
-  /** 生成位移贴图（data URL）。w/h 是元素 CSS 像素，贴图只关心比例。 */
+  /** 高度场斜率 dh/dt：t=0（最外沿）最陡，t=1（进平面）为 0。
+   *  h(t) = sin(π/2·t)，h'(t) = (π/2)·cos(π/2·t)。 */
+  function heightSlope(t) {
+    return (Math.PI / 2) * Math.cos((Math.PI / 2) * t);
+  }
+
+  /**
+   * 位移贴图：R = 横向偏移，G = 纵向偏移，128 = 不偏移。
+   * 先把整场的偏移向量归一化到 [-1,1] 再写 8 位通道，
+   * 所以贴图只描述形状，强度完全交给 feDisplacementMap 的 scale。
+   *
+   * 贴图**连 filter region 一起画**：region 比元素大 20%（见 makeFilter），
+   * feImage 默认铺满 region，所以贴图必须按 region 的尺寸出图，
+   * 元素形状画在中间 1/1.4 处。否则贴图被拉伸到 region 上，
+   * 位移环跑到元素外面 —— 玻璃看起来完全没折射。
+   */
   function buildMap(w, h, radius, opts) {
     const o = opts || {};
-    const key = ['v1', w, h, radius, o.strength || 1].join('|');
+    const bevelRatio = Number(o.bevel) || BEVEL;
+    const ext = Number(o.ext) || REGION_EXT;
+    const key = ['v4', w, h, radius, bevelRatio, o.refract || REFRACT, ext].join('|');
     if (MAP_CACHE.has(key)) return MAP_CACHE.get(key);
-    /* 256 的贴图：96 在 54px 上放大后边缘会一圈锯齿；贴图只生成一次，
-     * 256² 的生成成本可以忽略，换来的边缘平滑是肉眼可见的。 */
-    const maxSide = 96;
-    const mw = Math.max(32, Math.round(maxSide * (w / Math.max(w, h))));
-    const mh = Math.max(48, Math.round(maxSide * (h / Math.max(w, h))));
+
+    const rw = w * (1 + 2 * ext);
+    const rh = h * (1 + 2 * ext);
+    /* 贴图分辨率跟元素走：边缘只有 14% 短边，2× 超采样，长边上限 512。 */
+    const sc = Math.min(2, 512 / Math.max(rw, rh));
+    const mw = Math.max(24, Math.round(rw * sc));
+    const mh = Math.max(24, Math.round(rh * sc));
     const canvas = document.createElement('canvas');
     canvas.width = mw;
     canvas.height = mh;
@@ -24535,107 +24860,57 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     if (!ctx) return '';
     const img = ctx.createImageData(mw, mh);
     const data = img.data;
-    const bevel = Math.max(3, Math.min(w, h) * 0.34);
-    const strength = Number(o.strength) || 1;
-    /* 法线用「一个贴图像素」做中心差分：低分辨率时固定 0.6 会在环上产生台阶 */
-    const eps = Math.max(0.18, Math.min(w / mw, h / mh) * 0.55);
 
+    const bevel = Math.max(2, Math.min(w, h) * bevelRatio);
+    const eps = Math.max(0.2, Math.min(rw / mw, rh / mh) * 0.75);
+    const n = Number(o.refract) || REFRACT;
+    const vec = new Float32Array(mw * mh * 2);
+    let maxLen = 1e-6;
+
+    /* 第一遍：算物理偏移向量（未归一化）。坐标从 region 换算回元素。 */
     for (let y = 0; y < mh; y += 1) {
-      const py = ((y + 0.5) / mh) * h;
       for (let x = 0; x < mw; x += 1) {
-        const px = ((x + 0.5) / mw) * w;
+        const px = ((x + 0.5) / mw) * rw - w * ext;
+        const py = ((y + 0.5) / mh) * rh - h * ext;
         const d = -sdfRoundRect(px, py, w, h, radius); // 正 = 内部
-        let r = 128;
-        let g = 128;
-        if (d > 0) {
-          const gx = (sdfRoundRect(px + eps, py, w, h, radius)
-            - sdfRoundRect(px - eps, py, w, h, radius)) / (2 * eps);
-          const gy = (sdfRoundRect(px, py + eps, w, h, radius)
-            - sdfRoundRect(px, py - eps, w, h, radius)) / (2 * eps);
-          const len = Math.hypot(gx, gy) || 1;
-          const t = clamp(d / bevel, 0, 1);
-          /* sin 曲线在边缘和中心都为 0、中段为 1：只折射边缘一圈，中心保持清楚，
-           * 比 4t(1-t) 的导数更平滑，放大后没有折线 */
-          const slope = Math.sin(Math.PI * t);
-          const k = 127 * strength * slope;
-          r = clamp(Math.round(128 + (gx / len) * k), 0, 255);
-          g = clamp(Math.round(128 + (gy / len) * k), 0, 255);
-        }
-        const i = (y * mw + x) * 4;
-        data[i] = r;
-        data[i + 1] = g;
-        data[i + 2] = 128;
-        data[i + 3] = 255;
+        const i = (y * mw + x) * 2;
+        if (d <= 0) { vec[i] = 0; vec[i + 1] = 0; continue; }
+
+        const t = Math.min(1, d / bevel);
+        /* 表面斜率 → 入射角 → Snell → 横向位移 tan(θ1-θ2) */
+        const th1 = Math.atan(heightSlope(t));
+        const sin2 = Math.min(1, Math.sin(th1) / n);
+        const th2 = Math.asin(sin2);
+        let amount = Math.tan(th1 - th2);
+        if (!Number.isFinite(amount) || amount > 6) amount = 6;
+
+        /* 法线方向：圆角矩形 SDF 的梯度（指向外） */
+        const gx = (sdfRoundRect(px + eps, py, w, h, radius)
+          - sdfRoundRect(px - eps, py, w, h, radius)) / (2 * eps);
+        const gy = (sdfRoundRect(px, py + eps, w, h, radius)
+          - sdfRoundRect(px, py - eps, w, h, radius)) / (2 * eps);
+        const len = Math.hypot(gx, gy) || 1;
+        const vx = (gx / len) * amount;
+        const vy = (gy / len) * amount;
+        vec[i] = vx;
+        vec[i + 1] = vy;
+        const m = Math.hypot(vx, vy);
+        if (m > maxLen) maxLen = m;
       }
     }
 
-    /* R/G 各做一次 3×3 高斯模糊（256 上约 0.3px）：把贴图量化留下的
-     * 锯齿磨掉；B/A 不动，128 = 不偏移的语义保持不变。 */
-    const src = new Uint8ClampedArray(data);
-    const at = (x, y, c) => ((y * mw + x) * 4 + c);
-    for (let y = 0; y < mh; y += 1) {
-      for (let x = 0; x < mw; x += 1) {
-        for (let c = 0; c < 2; c += 1) {
-          let sum = 0;
-          let wsum = 0;
-          for (let dy = -1; dy <= 1; dy += 1) {
-            const yy = y + dy;
-            if (yy < 0 || yy >= mh) continue;
-            for (let dx = -1; dx <= 1; dx += 1) {
-              const xx = x + dx;
-              if (xx < 0 || xx >= mw) continue;
-              const wgt = (dx === 0 ? 2 : 1) * (dy === 0 ? 2 : 1);
-              sum += src[at(xx, yy, c)] * wgt;
-              wsum += wgt;
-            }
-          }
-          data[at(x, y, c)] = Math.round(sum / wsum);
-        }
-      }
+    /* 第二遍：归一化写通道。128 + 127·(v/max) ∈ [1,255]，永不溢出。 */
+    for (let k = 0; k < mw * mh; k += 1) {
+      const o4 = k * 4;
+      data[o4] = Math.round(clamp(128 + (vec[k * 2] / maxLen) * 127, 1, 255));
+      data[o4 + 1] = Math.round(clamp(128 + (vec[k * 2 + 1] / maxLen) * 127, 1, 255));
+      data[o4 + 2] = 128;
+      data[o4 + 3] = 255;
     }
 
     ctx.putImageData(img, 0, 0);
     const url = canvas.toDataURL('image/png');
     MAP_CACHE.set(key, url);
-    return url;
-  }
-
-  /** 高度图：给 feSpecularLighting 算真正的边缘高光。
-   * 中心平、边缘降到 0；alpha = 高度，RGB 白色。 */
-  function buildHeightMap(w, h, radius) {
-    const key = ['h', w, h, radius].join('|');
-    if (HEIGHT_CACHE.has(key)) return HEIGHT_CACHE.get(key);
-    const maxSide = 96;
-    const mw = Math.max(32, Math.round(maxSide * (w / Math.max(w, h))));
-    const mh = Math.max(32, Math.round(maxSide * (h / Math.max(w, h))));
-    const canvas = document.createElement('canvas');
-    canvas.width = mw;
-    canvas.height = mh;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return '';
-    const img = ctx.createImageData(mw, mh);
-    const data = img.data;
-    const bevel = Math.max(2.5, Math.min(w, h) * 0.22);
-    for (let y = 0; y < mh; y += 1) {
-      const py = ((y + 0.5) / mh) * h;
-      for (let x = 0; x < mw; x += 1) {
-        const px = ((x + 0.5) / mw) * w;
-        const d = -sdfRoundRect(px, py, w, h, radius);
-        let a = 0;
-        if (d > 0) {
-          const t = clamp(d / bevel, 0, 1);
-          a = t * t * (3 - 2 * t);
-        }
-        const i = (y * mw + x) * 4;
-        data[i] = 255;
-        data[i + 1] = 255;
-        data[i + 2] = 255;
-        data[i + 3] = Math.round(a * 255);
-      }
-    }
-    ctx.putImageData(img, 0, 0);
-    const url = canvas.toDataURL('image/png');
-    HEIGHT_CACHE.set(key, url);
     return url;
   }
 
@@ -24653,16 +24928,23 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     return svg;
   }
 
-  function makeFilter(id, mapUrl, scale, heightUrl) {
+  /**
+   * 滤镜链只有两步：贴图 → 位移。
+   * 高光不在这里做 —— 交给 CSS 双环，因为参考效果的"勾轮廓"是几何亮边，
+   * 不是对背景做一次 specular lighting（那会把背后的内容一起点亮）。
+   */
+  function makeFilter(id, mapUrl, scale) {
     const svg = defsRoot();
     const old = document.getElementById(id);
     if (old) old.remove();
     const filter = document.createElementNS(NS, 'filter');
     filter.id = id;
-    filter.setAttribute('x', '-30%');
-    filter.setAttribute('y', '-30%');
-    filter.setAttribute('width', '160%');
-    filter.setAttribute('height', '160%');
+    /* region 比元素大一圈：位移采样要不越界，结果也不会在边界被裁掉。
+       feImage 默认铺满 region —— 贴图就是按这个尺寸生成的（见 buildMap）。 */
+    filter.setAttribute('x', (-REGION_EXT * 100) + '%');
+    filter.setAttribute('y', (-REGION_EXT * 100) + '%');
+    filter.setAttribute('width', ((1 + 2 * REGION_EXT) * 100) + '%');
+    filter.setAttribute('height', ((1 + 2 * REGION_EXT) * 100) + '%');
     filter.setAttribute('color-interpolation-filters', 'sRGB');
 
     const img = document.createElementNS(NS, 'feImage');
@@ -24681,46 +24963,11 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     disp.setAttribute('result', 'refracted');
     filter.appendChild(disp);
 
+    /* 只柔化一点点，把通道量化后的锯齿磨掉，不做磨砂 */
     const blur = document.createElementNS(NS, 'feGaussianBlur');
     blur.setAttribute('in', 'refracted');
-    blur.setAttribute('stdDeviation', '0.22');
-    blur.setAttribute('result', 'refractedBlur');
+    blur.setAttribute('stdDeviation', '0.35');
     filter.appendChild(blur);
-
-    if (heightUrl) {
-      const hm = document.createElementNS(NS, 'feImage');
-      hm.setAttribute('href', heightUrl);
-      hm.setAttributeNS(XLINK, 'xlink:href', heightUrl);
-      hm.setAttribute('preserveAspectRatio', 'none');
-      hm.setAttribute('result', 'heightMap');
-      filter.appendChild(hm);
-
-      const spec = document.createElementNS(NS, 'feSpecularLighting');
-      spec.setAttribute('in', 'heightMap');
-      spec.setAttribute('surfaceScale', '2.2');
-      spec.setAttribute('specularConstant', '0.9');
-      spec.setAttribute('specularExponent', '20');
-      spec.setAttribute('lighting-color', '#ffffff');
-      spec.setAttribute('result', 'specular');
-      const light = document.createElementNS(NS, 'feDistantLight');
-      light.setAttribute('azimuth', '225');
-      light.setAttribute('elevation', '55');
-      spec.appendChild(light);
-      filter.appendChild(spec);
-
-      const clip = document.createElementNS(NS, 'feComposite');
-      clip.setAttribute('in', 'specular');
-      clip.setAttribute('in2', 'SourceAlpha');
-      clip.setAttribute('operator', 'in');
-      clip.setAttribute('result', 'specularClip');
-      filter.appendChild(clip);
-
-      const blend = document.createElementNS(NS, 'feBlend');
-      blend.setAttribute('in', 'refractedBlur');
-      blend.setAttribute('in2', 'specularClip');
-      blend.setAttribute('mode', 'screen');
-      filter.appendChild(blend);
-    }
 
     svg.appendChild(filter);
     return id;
@@ -24729,7 +24976,6 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
   function supportsLiquid() {
     if (typeof CSS === 'undefined' || !CSS.supports) return false;
     if (!CSS.supports('backdrop-filter', 'blur(1px)')) return false;
-    /* Chromium 支持 backdrop-filter: url(#filter)；不支持时会退回毛玻璃 */
     if (!CSS.supports('backdrop-filter', 'url(#tv-glass-probe)')) return false;
     const cores = Number(navigator.hardwareConcurrency) || 8;
     if (cores <= 4) return false;
@@ -24742,7 +24988,8 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
   /**
    * 给一个元素装液态玻璃。
    * @param {HTMLElement} el
-   * @param {{width?:number,height?:number,radius?:number,scale?:number,id?:string,strength?:number}} opts
+   * @param {{width?:number,height?:number,radius?:number,scale?:number,id?:string,
+   *          openWidth?:number,openHeight?:number,openRadius?:number,openId?:string}} opts
    */
   function install(el, opts) {
     if (!el || el.dataset.liquidGlass === '1') return false;
@@ -24758,29 +25005,55 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     }
 
     try {
-      const map = buildMap(w, h, radius, { strength: o.strength || 1 });
+      const base = Math.min(w, h);
+      const p = loadParams();
+      const bevel = clamp((Number(p.bevel) || 32) / 100, 0.04, 0.6);
+      const map = buildMap(w, h, radius, { bevel });
       if (!map) { el.classList.add('liquid-glass-fallback'); return false; }
       const id = o.id || ('tv-glass-' + Math.random().toString(36).slice(2, 8));
-      makeFilter(id, map, Number(o.scale) || 14);
+      makeFilter(id, map, p.scale * (base / BASE));
       el.dataset.liquidGlass = '1';
       el.dataset.lgId = id;
+      el.dataset.lgBase = String(base);
+      el.dataset.lgW = String(w);
+      el.dataset.lgH = String(h);
+      el.dataset.lgR = String(radius);
+      el.dataset.lgBevel = String(p.bevel);
       el.classList.add('liquid-glass');
       el.style.setProperty('--lg-filter', 'url(#' + id + ')');
-      applyTo(el, loadParams());
       el.style.setProperty('--lg-radius', radius + 'px');
+
       /* 展开态（宽条）单独一张贴图：同一个元素宽度变化时不会被拉伸 */
       const ow = Number(o.openWidth) || 0;
       const oh = Number(o.openHeight) || 0;
       if (ow > 0 && oh > 0) {
         const orad = o.openRadius == null ? Math.min(ow, oh) / 2 : o.openRadius;
-        const omap = buildMap(ow, oh, orad, { strength: o.strength || 1 });
+        const omap = buildMap(ow, oh, orad, { bevel });
         if (omap) {
           const oid = o.openId || (id + '-open');
-          makeFilter(oid, omap, Number(o.openScale) || Number(o.scale) || 14);
+          const obase = Math.min(ow, oh);
+          makeFilter(oid, omap, p.scale * (obase / BASE));
           el.dataset.lgOpenId = oid;
+          el.dataset.lgOpenBase = String(obase);
+          el.dataset.lgOpenW = String(ow);
+          el.dataset.lgOpenH = String(oh);
+          el.dataset.lgOpenR = String(orad);
           el.style.setProperty('--lg-filter-open', 'url(#' + oid + ')');
-          applyTo(el, loadParams());
         }
+      }
+      applyTo(el, p);
+      /* 展开 / 收起会改 padding，动画结束后重新量一次 */
+      el.addEventListener('transitionend', (ev) => {
+        if (ev.target === el) applyTo(el);
+      });
+      /* DPR 变了（换屏 / 系统缩放）要重算环宽的物理像素整数倍 */
+      if (typeof window !== 'undefined' && !el.dataset.lgDprWatch) {
+        el.dataset.lgDprWatch = '1';
+        let lastDpr = window.devicePixelRatio || 1;
+        window.addEventListener('resize', () => {
+          const d = window.devicePixelRatio || 1;
+          if (d !== lastDpr) { lastDpr = d; applyTo(el); }
+        });
       }
       return true;
     } catch (e) {
@@ -24789,7 +25062,18 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     }
   }
 
-  TV.glass = { install, buildMap, getParams: loadParams, setParams, defaults: DEFAULT_PARAMS };
+  TV.glass = {
+    install,
+    buildMap,
+    getParams: loadParams,
+    setParams,
+    defaults: DEFAULT_PARAMS,
+    /* 暴露给测试/校验：物理量本身 */
+    REFRACT,
+    BEVEL,
+    BASE,
+    heightSlope,
+  };
 
   if (typeof module === 'object' && module.exports) module.exports = TV.glass;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
@@ -24797,7 +25081,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
 </script>
 <script>
 /* js/ui/app.js */
-/* TxtVein · 应用外壳
+﻿/* TxtVein · 应用外壳
  * 唯一状态：dict + events + plans + rules（全部可序列化成两份纯文本）。
  * 所有视图都从这里派生；这里不做业务计算，只做编排。
  */
@@ -28742,15 +29026,32 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
 
   /* ---------------- 事件绑定 ---------------- */
 
+  /* 把元素吸附到物理像素格：125% 缩放下 bottom:44px 会落在 1037.5 物理像素，
+   * 1px 的边线卡在半格上被抗锯齿劈成两条灰线，看着就是毛刺。
+   * 用 translate 做视觉补偿，不动布局。拖动中跳过（会抖动）。 */
+  function snapToDevicePixel(el) {
+    if (!el) return;
+    if (el.classList.contains('dragging')) return;
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    el.style.transform = '';
+    const r = el.getBoundingClientRect();
+    const dx = Math.round(r.x * dpr) / dpr - r.x;
+    const dy = Math.round(r.y * dpr) / dpr - r.y;
+    el.style.transform = (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01)
+      ? '' : 'translate(' + dx + 'px, ' + dy + 'px)';
+  }
   function bindComposer() {
     const POS_KEY = 'txtvein:composer-pos';
     /* 悬浮单输入气泡：代码生成的液态玻璃（低端设备自动退回毛玻璃） */
     /* 收起的圆钮和展开的输入条是**同一个胶囊**（和 NT 一样）：
      * 玻璃只装在 .composer 上，按钮/输入框透明；展开时换宽条贴图。 */
     if (TV.glass && dom.composer) {
+      /* 位移强度由 glass 参数按元素基准尺寸换算（40px → scale 像素），
+       * 这里只给形状。收起 40×40 / 展开 340×40 各一张贴图，
+       * 两张贴图短边都是 40，所以折射强度一致。 */
       TV.glass.install(dom.composer, {
-        width: 40, height: 40, radius: 14, scale: 14, id: 'tv-lg-composer',
-        openWidth: 340, openHeight: 40, openRadius: 14, openId: 'tv-lg-composer-open', openScale: 12,
+        width: 40, height: 40, radius: 12, id: 'tv-lg-composer',
+        openWidth: 340, openHeight: 40, openRadius: 12, openId: 'tv-lg-composer-open',
       });
     }
     let right = 16;
@@ -28771,6 +29072,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
       bottom = Math.max(8, Math.min(bottom, maxBottom));
       dom.composer.style.right = right + 'px';
       dom.composer.style.bottom = bottom + 'px';
+      snapToDevicePixel(dom.composer);
     };
     applyPos();
     window.addEventListener('resize', applyPos);
