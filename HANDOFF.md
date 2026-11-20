@@ -2,7 +2,7 @@
 
 > 更新时间：2026-11-20
 > 当前版本：**v2.6.0**
-> 软件提交：`0be01d0`
+> 软件提交：`b1c8463`
 > 仓库：https://github.com/jefely/TxtVein.git
 > 线上：https://jefely.github.io/TxtVein/TxtVein.html
 
