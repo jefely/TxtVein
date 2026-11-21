@@ -2194,7 +2194,7 @@
 
   function statsFiveColTemplate() {
     if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
-      return 'minmax(0, 1.35fr) repeat(4, minmax(0, 1fr))';
+      return 'var(--stats-first, 80px) repeat(4, minmax(0, 1fr))';
     }
     return 'var(--stats-first, 80px) repeat(4,minmax(0,1fr))';
   }

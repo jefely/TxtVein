@@ -2192,3 +2192,31 @@ button:focus:not(:focus-visible),
 .stats-tabs-wrap,
 .q-head,
 .q-filters { background: #050505 !important; }
+
+@media (max-width: 900px) {
+  /* 手机不冻结列标题：避免滚动卡顿与第二页标题上方缝隙 */
+  .stats-left .sd-row.is-head,
+  .stats-right .sd-row.is-head { position: static; top: auto; }
+  /* 首列拖动手柄不能被 overflow:hidden 裁掉 */
+  .stats-left .sd-row.is-head > span.sd-head-first { overflow: visible !important; }
+}
+
+@media (max-width: 900px) {
+  /* 中间区表头：标题在左、选中项居中、搜索在右、清空在最右 */
+  .stats-right-head { gap: 4px; }
+  .stats-right-head .stats-list-title { flex: 0 0 auto; }
+  .stats-selected {
+    display: inline-block !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    text-align: center;
+  }
+  .stats-search { order: 2; margin-left: auto; flex: 0 1 130px; }
+  .stats-clear { order: 3; flex: 0 0 auto; }
+}

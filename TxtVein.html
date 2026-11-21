@@ -4680,6 +4680,34 @@ button:focus:not(:focus-visible),
 .q-head,
 .q-filters { background: #050505 !important; }
 
+@media (max-width: 900px) {
+  
+  .stats-left .sd-row.is-head,
+  .stats-right .sd-row.is-head { position: static; top: auto; }
+  
+  .stats-left .sd-row.is-head > span.sd-head-first { overflow: visible !important; }
+}
+
+@media (max-width: 900px) {
+  
+  .stats-right-head { gap: 4px; }
+  .stats-right-head .stats-list-title { flex: 0 0 auto; }
+  .stats-selected {
+    display: inline-block !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    order: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    text-align: center;
+  }
+  .stats-search { order: 2; margin-left: auto; flex: 0 1 130px; }
+  .stats-clear { order: 3; flex: 0 0 auto; }
+}
+
 </style>
 <style>
 /* css/paper.css */
@@ -28919,7 +28947,7 @@ const TAG_EN_DEFAULTS = {
 
   function statsFiveColTemplate() {
     if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
-      return 'minmax(0, 1.35fr) repeat(4, minmax(0, 1fr))';
+      return 'var(--stats-first, 80px) repeat(4, minmax(0, 1fr))';
     }
     return 'var(--stats-first, 80px) repeat(4,minmax(0,1fr))';
   }
