@@ -1,4 +1,4 @@
-﻿/* TxtVein · 面板：规则 / 字典 / 文本 / 导入导出 / 帮助 / 密码
+/* TxtVein · 面板：规则 / 字典 / 文本 / 导入导出 / 帮助 / 密码
  * 所有面板都只读 app.getState()，写操作调用 app 的方法；不直接碰核心数据。
  */
 (function (root) {
@@ -48,11 +48,16 @@
     const root = document.documentElement;
     const paper = p.theme === 'paper';
     root.dataset.theme = paper ? 'paper' : 'dark';
+    /* 原生控件（select 弹层 / range / 滚动条 / 日期选择器）跟 meta color-scheme 走；
+       只给 body 换纸色而不改这里，纸主题里的下拉弹层仍是黑底。 */
+    root.style.colorScheme = paper ? 'light' : 'dark';
     const colors = paper ? PAPER_COLORS : p.colors;
     COLOR_DEFS.forEach((x) => root.style.setProperty(x[2], colors[x[0]] || x[3]));
     root.style.setProperty('--tv-editor-font-size', p.fontSize + 'px');
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', paper ? '#f3efe3' : '#050505');
+    const scheme = document.querySelector('meta[name="color-scheme"]');
+    if (scheme) scheme.setAttribute('content', paper ? 'light' : 'dark');
   }
 
   function savePrefs(p) {
@@ -706,7 +711,7 @@
         el('div', { class: 'form-row' }, [field('统计分类', catSel), field('域', domain)]),
         field('母树绑定（固定）', bindSel),
         error,
-        el('p', { class: 'help-text' }, ['母树只提供先验框架；账本运算与统计以本地分组/类型为准。绑定固定在这个节点上（分支或叶子），只影响公共归属。']),
+        el('p', { class: 'help-text' }, ['母树只提供先验框架；账本运算与统计以本地分组/类型为准（私人结构）。绑定固定在这个节点上（分支或叶子），只影响母树对照，不改变统计口径。']),
       ], closeFoot([submit]));
     }
 
@@ -813,7 +818,7 @@
         el('div', { class: 'form-row-3' }, [field('大类', type), field('A 极形态', form), field('域', domain)]),
         el('div', { class: 'form-row-3' }, [field('权重', weight), field('排序', sort), field('置顶', pin)]),
         field('父节点（可选）', parent),
-        field('公共归属（可选）', el('div', { class: 'anchor-pick' }, [
+        field('母树绑定（可选）', el('div', { class: 'anchor-pick' }, [
           el('div', { class: 'anchor-row' }, [anchor, suggestBtn]),
           suggestBox,
         ])),

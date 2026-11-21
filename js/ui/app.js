@@ -1,4 +1,4 @@
-﻿/* TxtVein · 应用外壳
+/* TxtVein · 应用外壳
  * 唯一状态：dict + events + plans + rules（全部可序列化成两份纯文本）。
  * 所有视图都从这里派生；这里不做业务计算，只做编排。
  */
@@ -34,11 +34,10 @@
     domain: '',
     mode: 'CODE',
     lang: 'zh',    view: 'ledger',
-    reportMode: 'private',
     range: '本月',
     query: { text: '', fromDate: '', toDate: '', type: '', domain: '', from: '', to: '', tag: '', min: '', max: '' },
     queries: [],
-    stats: { tab: 'category', year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: '', pane: 'list', first: 0, split: 430 },
+    stats: { tab: 'category', year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: '', pane: 'list', first: 0, split: 430, qsplit: 0 },
     selectedEventIndex: -1,
     selectedNodeId: '',
     filterNodeId: '',
@@ -68,9 +67,7 @@
       reset: '重置', count: '条', total: '合计',
       colDate: '日期', colDomain: '域', colFrom: '转出', colTo: '转入', colAmount: '金额', colTags: '标签',
       category: '分类', node: '节点', note: '备注', event: '事件', allMonths: '全', statsTitle: '统计',
-      reportPrivate: '私人结构', reportPublic: '公共归属',
-      publicTitle: '公共归属 · 按母树汇总', anchored: '已归类', unclassified: '未归类',
-      staleAnchor: '归属失效', reconcile: '对账',
+      reportPrivate: '私人结构',
       statsColName: '分类', statsColNode: '节点', statsColOther: '对方', statsWeight: '强度',
       statsMonth: '月', statsItems: '项', statsRecords: '条', statsSelect: '左侧选择一项',
       noRows: '没有匹配的流水', fixedTitle: '固定收支表',
@@ -89,9 +86,7 @@
       reset: 'Reset', count: 'rows', total: 'Total',
       colDate: 'Date', colDomain: 'Book', colFrom: 'From', colTo: 'To', colAmount: 'Amount', colTags: 'Tags',
       category: 'Categories', node: 'Nodes', note: 'Notes', event: 'Events', allMonths: 'All', statsTitle: 'Stats',
-      reportPrivate: 'Private', reportPublic: 'Public',
-      publicTitle: 'Public grouping · mother tree', anchored: 'Anchored', unclassified: 'Unclassified',
-      staleAnchor: 'Stale anchor', reconcile: 'Reconcile',
+      reportPrivate: 'Private',
       statsColName: 'Category', statsColNode: 'Node', statsColOther: 'Counterpart', statsWeight: 'Weight',
       statsMonth: 'month', statsItems: 'items', statsRecords: 'records', statsSelect: 'Select an item on the left',
       noRows: 'No matching entries', fixedTitle: 'Fixed table',
@@ -1121,10 +1116,12 @@
     return el('label', { class: 'q-field' }, [el('span', {}, [label]), input]);
   }
 
-  function buildQueryPanel(grid, def, state, index) {
+  function buildQueryPanel(grid, def, state, index, opts) {
+    const o = opts || {};
     const panel = el('section', { class: 'q-panel', dataset: { query: def.key } });
+    if (o.scope) panel.dataset.qScope = o.scope;
     const head = el('div', { class: 'q-head' }, [
-      el('span', { class: 'q-title' }, [t('ledgerQuery') + ' ' + def.key]),
+      el('span', { class: 'q-title' }, [o.title || def.title || (t('ledgerQuery') + ' ' + def.key)]),
     ]);
     const clear = el('button', { class: 'q-clear', type: 'button' }, [t('clear')]);
     const total = el('span', { class: 'q-total' }, ['¥0.00']);
@@ -1182,14 +1179,17 @@
     const sum = rows.reduce((s, e) => s + (Number(e.amountCents) || 0), 0);
     panel.total.textContent = TV.amount.formatPlain(sum);
     clear(panel.table);
-    panel.table.appendChild(el('div', { class: 'q-row is-head' }, [
+    const head = el('div', { class: 'q-row is-head' }, [
       el('span', {}, [t('seq')]),
       el('span', {}, [t('dateShort')]),
       el('span', {}, [t('fromNode')]),
       el('span', {}, [t('toNode')]),
       el('span', { class: 'q-num' }, [t('amountShort')]),
       el('span', {}, [t('colNote')]),
-    ]));
+    ]);
+    panel.table.appendChild(head);
+    /* 前五列挂列宽手柄（纯展示）；备注列标 q-note 左对齐。 */
+    if (TV.queryLayout) TV.queryLayout.decorateHead(head);
     if (!rows.length) {
       panel.table.appendChild(el('div', { class: 'q-empty' }, [t('noRows')]));
       return;
@@ -1204,7 +1204,7 @@
         el('span', { class: 'q-cell' }, [fromText]),
         el('span', { class: 'q-cell' }, [toText]),
         el('span', { class: 'q-num' }, [e.minutes > 0 ? TV.amount.formatTime(e.minutes) : TV.amount.formatPlain(e.amountCents)]),
-        el('span', { class: 'q-cell q-muted' }, [noteText || '—']),
+        el('span', { class: 'q-cell q-muted q-note' }, [noteText || '—']),
       ]));
     });
   }
@@ -1216,6 +1216,8 @@
     clear(dom.queryView);
     const grid = el('div', { class: 'q-grid' });
     dom.queryView.appendChild(grid);
+    /* 三张表等宽，共用一套列宽（拖哪张都一样）；fit 按这个作用域量宽度。 */
+    dom.queryView.dataset.qScope = 'query';
     const panels = QUERY_PANELS.map((def, i) => buildQueryPanel(grid, def, S.queries[i], i));
     queryCtl = { lang: S.lang, panels };
   }
@@ -1224,6 +1226,8 @@
     if (!S.dict) return;
     ensureQuery();
     (queryCtl.panels || []).forEach((p) => renderQueryPanel(p));
+    /* 表头重画后手柄跟着重挂；列宽再按当前容器宽度算一次。 */
+    if (TV.queryLayout) TV.queryLayout.refit();
   }
 
   /* ---------------- 固定页：独立的固定表（文本编译器） ---------------- */
@@ -1937,105 +1941,14 @@
       '30px 58px minmax(46px,1fr) minmax(46px,1fr) 34px minmax(46px,.8fr)', { numCols: [4], empty: S.lang === 'en' ? 'Pick a behavior on the left' : '点左侧行为项查看明细' });
   }
 
-  function reportModeToggle() {
-    const wrap = el('div', { class: 'report-mode' });
-    [['private', t('reportPrivate')], ['public', t('reportPublic')]].forEach((pair) => {
-      const b = el('button', {
-        class: 'report-mode-btn' + (S.reportMode === pair[0] ? ' is-active' : ''),
-        type: 'button',
-      }, [pair[1]]);
-      b.addEventListener('click', () => {
-        if (S.reportMode === pair[0]) return;
-        S.reportMode = pair[0];
-        renderReport();
-      });
-      wrap.appendChild(b);
-    });
-    return wrap;
-  }
-
-  function renderPublicReportPage() {
-    clear(dom.reportView);
-    const now = new Date();
-    const pub = TV.publicReport.build(S.dict, S.events, TV.systemDict, {
-      range: S.range, domain: S.domain, lang: S.lang, now,
-    });
-    const page = el('div', { class: 'stats-page public-report' });
-    page.appendChild(reportModeToggle());
-    const head = el('div', { class: 'public-head' }, [
-      el('h2', { class: 'public-title' }, [t('publicTitle')]),
-      el('span', { class: 'public-range' }, [pub.rangeLabel || S.range || '']),
-    ]);
-    page.appendChild(head);
-
-    const cards = el('div', { class: 'public-cards' });
-    const card = (label, value, cls) => el('div', { class: 'public-card ' + (cls || '') }, [
-      el('span', { class: 'public-card-label' }, [label]),
-      el('b', { class: 'public-card-value' }, [amount.formatPlain(value)]),
-    ]);
-    cards.appendChild(card(t('anchored'), pub.anchored.closing, 'is-anchored'));
-    cards.appendChild(card(t('unclassified'), pub.unclassified.totals.closing, 'is-unclassified'));
-    cards.appendChild(card(t('staleAnchor'), pub.stale.totals.closing, 'is-stale'));
-    page.appendChild(cards);
-
-    const treeWrap = el('div', { class: 'public-tree' });
-    const renderTree = (arr, depth) => {
-      (arr || []).forEach((n) => {
-        treeWrap.appendChild(el('div', {
-          class: 'public-tree-row',
-          style: 'padding-left:' + (depth * 16) + 'px',
-        }, [
-          el('span', { class: 'public-tree-label' }, [n.label || n.id]),
-          el('span', { class: 'public-tree-amount' }, [amount.formatPlain(n.totals.closing)]),
-          el('span', { class: 'public-tree-count' }, [String(n.totals.count || 0)]),
-        ]));
-        renderTree(n.children, depth + 1);
-      });
-    };
-    const root = pub.tree.children && pub.tree.children[0];
-    if (root) renderTree(root.children, 0);
-    if (!treeWrap.children.length) {
-      treeWrap.appendChild(el('p', { class: 'help-text' }, [
-        S.lang === 'en' ? 'No anchored entries in this range.' : '本期还没有已归类节点。',
-      ]));
-    }
-    page.appendChild(treeWrap);
-
-    const bucket = (title, b, cls) => {
-      const sec = el('section', { class: 'public-bucket ' + (cls || '') }, [
-        el('h3', {}, [title + ' · ' + amount.formatPlain(b.totals.closing)]),
-      ]);
-      (b.rows || []).slice(0, 12).forEach((row) => {
-        sec.appendChild(el('div', { class: 'public-bucket-row' }, [
-          el('span', {}, [statsNodeLabel(row.id)]),
-          el('span', {}, [amount.formatPlain(row.closing)]),
-        ]));
-      });
-      return sec;
-    };
-    page.appendChild(bucket(t('unclassified'), pub.unclassified, 'is-unclassified'));
-    page.appendChild(bucket(t('staleAnchor'), pub.stale, 'is-stale'));
-
-    const rc = pub.reconcile;
-    page.appendChild(el('div', {
-      class: 'public-reconcile ' + (rc.ok ? 'is-ok' : 'is-bad'),
-    }, [
-      t('reconcile') + '：'
-        + amount.formatPlain(rc.privateTotal) + ' = '
-        + amount.formatPlain(rc.anchored) + ' + '
-        + amount.formatPlain(rc.unclassified) + ' + '
-        + amount.formatPlain(rc.stale)
-        + (rc.ok ? '  ✓' : '  ✗'),
-    ]));
-    dom.reportView.appendChild(page);
-  }
-
   function renderStatsPage() {
-    if (S.reportMode === 'public') {
-      renderPublicReportPage();
-      return;
-    }
-    if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', split: 380 };
+    if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', split: 380, qsplit: 0 };
+    /* 左表 / 查询区的宽度都存在本机；没存过再用默认比例。 */
+    const savedLeft = Number(localStorage.getItem('txtvein:stats-left'));
+    if (Number.isFinite(savedLeft) && savedLeft >= 150) S.stats.split = savedLeft;
+    const savedQueryW = Number(localStorage.getItem('txtvein:stats-query'));
+    if (Number.isFinite(savedQueryW) && savedQueryW >= 260) S.stats.qsplit = savedQueryW;
+    if (!S.statsQuery) S.statsQuery = queryInitialState('month');
     if (!S.stats.first) {
       const savedFirst = Number(localStorage.getItem('txtvein:stats-first'));
       S.stats.first = Number.isFinite(savedFirst) && savedFirst >= 24 ? savedFirst : 80;
@@ -2044,21 +1957,15 @@
     const groups = statsGroups(S.stats.tab === 'category' ? 'category' : 'node');
     clear(dom.reportView);
     const page = el('div', { class: 'stats-page' });
-    page.appendChild(reportModeToggle());
     page.dataset.pane = S.stats.pane || 'list';
     page.style.setProperty('--stats-first', (Number(S.stats.first) || 80) + 'px');
     const top = el('div', { class: 'stats-top' });
     const tabsWrap = el('div', { class: 'stats-tabs-wrap' });
+    /* 统计口径只有一种：字典里的私人结构。公共归属已作为错误路线移除，
+       这里只留一个不可点的说明标签。 */
+    tabsWrap.appendChild(el('span', { class: 'stats-scope', title: '统计口径：字典里的私人结构' }, [t('reportPrivate')]));
     tabsWrap.appendChild(el('b', { class: 'stats-title' }, [t('statsTitle')]));
-    const tabs = el('div', { class: 'stats-tabs' });
-    STAT_TABS.forEach((tab) => {
-      const b = el('button', { class: 'stats-tab' + (S.stats.tab === tab.id ? ' is-active' : ''), type: 'button' }, [t(tab.label)]);
-      b.addEventListener('click', () => { S.stats.tab = tab.id; S.stats.selected = ''; S.stats.pane = 'list'; renderStatsPage(); });
-      tabs.appendChild(b);
-    });
-    tabsWrap.appendChild(tabs);
-    const topRow = el('div', { class: 'stats-top-row' });
-    const months = el('div', { class: 'stats-months' });
+    /* 年份紧跟在「统计」后面；月份行靠左，不再推到右端。 */
     const yearInput = el('input', { class: 'stats-year-input', type: 'text', inputmode: 'numeric', maxlength: '4', title: '年份' });
     yearInput.value = String(S.stats.year || new Date().getFullYear());
     const applyYear = () => {
@@ -2077,8 +1984,17 @@
     yearInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); applyYear(); yearInput.blur(); }
     });
+    tabsWrap.appendChild(yearInput);
+    const tabs = el('div', { class: 'stats-tabs' });
+    STAT_TABS.forEach((tab) => {
+      const b = el('button', { class: 'stats-tab' + (S.stats.tab === tab.id ? ' is-active' : ''), type: 'button' }, [t(tab.label)]);
+      b.addEventListener('click', () => { S.stats.tab = tab.id; S.stats.selected = ''; S.stats.pane = 'list'; renderStatsPage(); });
+      tabs.appendChild(b);
+    });
+    tabsWrap.appendChild(tabs);
+    const topRow = el('div', { class: 'stats-top-row' });
+    const months = el('div', { class: 'stats-months' });
     topRow.appendChild(tabsWrap);
-    topRow.appendChild(yearInput);
     for (let m = 1; m <= 12; m += 1) {
       const b = el('button', { class: 'stats-month' + (Number(S.stats.month) === m ? ' is-active' : ''), type: 'button' }, [String(m)]);
       b.addEventListener('click', () => {
@@ -2096,7 +2012,10 @@
     const left = el('aside', { class: 'stats-left' });
     const gutter = el('div', { class: 'stats-gutter', title: '拖动调整宽度' });
     const right = el('main', { class: 'stats-right' });
+    const gutter2 = el('div', { class: 'stats-gutter stats-gutter-query', title: '拖动调整查询区宽度' });
+    const queryAside = el('aside', { class: 'stats-query' });
     split.appendChild(left); split.appendChild(gutter); split.appendChild(right);
+    split.appendChild(gutter2); split.appendChild(queryAside);
 
     left.appendChild(el('div', { class: 'stats-left-head' }, [
       el('b', {}, [t(S.stats.tab) + (S.lang === 'en' ? '' : '统计')]),
@@ -2140,16 +2059,32 @@
     page.appendChild(top);
     page.appendChild(split);
     dom.reportView.appendChild(page);
-    const initialLeft = Math.min(Number(S.stats.split) || 430, Math.max(150, Math.round(window.innerWidth * 0.46)));
-    split.style.gridTemplateColumns = initialLeft + 'px 5px minmax(0, 1fr)';
+
+    /* 第三区：与「流水查询」同一个面板组件，单张、不占 A/B/C。
+       它有独立的条件状态（S.statsQuery），默认本月。 */
+    buildQueryPanel(queryAside, { key: 'Q', title: t('ledgerQuery') }, S.statsQuery, 0, { scope: 'stats' });
+
+    const setSplit = (lw, qw) => {
+      split.style.gridTemplateColumns = Math.round(lw) + 'px 5px minmax(200px, 1fr) 5px ' + Math.round(qw) + 'px';
+    };
+    const vw = Math.max(660, Math.round(split.clientWidth || window.innerWidth));
+    const leftW = Math.max(150, Math.min(Number(S.stats.split) || 430, vw - 10 - 260 - 200));
+    const qMax = Math.max(260, vw - leftW - 10 - 200);
+    const qW = Math.max(260, Math.min(Number(S.stats.qsplit) || Math.round(vw * 0.30), qMax));
+    S.stats.split = Math.round(leftW);
+    S.stats.qsplit = Math.round(qW);
+    setSplit(leftW, qW);
+
     gutter.addEventListener('pointerdown', (ev) => {
       ev.preventDefault();
+      const qw = Math.round(queryAside.getBoundingClientRect().width) || S.stats.qsplit;
       const move = (e) => {
         const box = split.getBoundingClientRect();
-        const maxW = Math.min(560, Math.max(150, Math.round(box.width * 0.55)));
+        const maxW = Math.min(560, Math.max(150, Math.round(box.width - qw - 10 - 200)));
         const w = Math.max(150, Math.min(maxW, e.clientX - box.left));
         S.stats.split = Math.round(w);
-        split.style.gridTemplateColumns = Math.round(w) + 'px 5px minmax(0, 1fr)';
+        setSplit(w, qw);
+        if (TV.queryLayout) TV.queryLayout.refit();
       };
       const up = () => {
         window.removeEventListener('pointermove', move);
@@ -2159,6 +2094,29 @@
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
     });
+    gutter2.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      const lw = Math.round(left.getBoundingClientRect().width) || S.stats.split;
+      const move = (e) => {
+        const box = split.getBoundingClientRect();
+        const maxW = Math.max(260, Math.round(box.width - lw - 10 - 200));
+        const w = Math.max(260, Math.min(maxW, box.right - e.clientX));
+        S.stats.qsplit = Math.round(w);
+        setSplit(lw, w);
+        if (TV.queryLayout) TV.queryLayout.refit();
+      };
+      const up = () => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        try { localStorage.setItem('txtvein:stats-query', String(S.stats.qsplit)); } catch (e) { /* ignore */ }
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    });
+    if (TV.queryLayout) {
+      TV.queryLayout.refit();
+      requestAnimationFrame(() => TV.queryLayout.refit());
+    }
   }
 
   let reportCtl = null;

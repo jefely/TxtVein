@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """TxtVein browser E2E (editor / input / source / behavior).
 
 Covers: setup, CM5 editors, domain folding, double/triple-space,
@@ -85,6 +85,24 @@ def click_at(b, sid, x, y):
     b.call("Input.dispatchMouseEvent", {
         "type": "mouseReleased", "x": x, "y": y, "button": "left", "clickCount": 1,
     }, sid)
+
+
+def drag(b, sid, x1, y1, dx):
+    """Pointer drag for column-width handles (button must be on every move)."""
+    b.call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x1, "y": y1}, sid)
+    b.call("Input.dispatchMouseEvent", {
+        "type": "mousePressed", "x": x1, "y": y1, "button": "left", "clickCount": 1,
+    }, sid)
+    for i in range(1, 6):
+        b.call("Input.dispatchMouseEvent", {
+            "type": "mouseMoved", "x": x1 + dx * i / 5.0, "y": y1,
+            "button": "left", "buttons": 1,
+        }, sid)
+        time.sleep(0.03)
+    b.call("Input.dispatchMouseEvent", {
+        "type": "mouseReleased", "x": x1 + dx, "y": y1, "button": "left", "clickCount": 1,
+    }, sid)
+    time.sleep(0.45)
 
 
 def setup(b, sid):
@@ -285,14 +303,22 @@ def main():
     time.sleep(0.7)
     ok("report", "统计" in j(sid, "document.querySelector('#report-view').innerText", b))
     ok("stats tabs", j(sid, "document.querySelectorAll('.stats-tab').length", b) == 4)
-    j(sid, "document.querySelectorAll('.report-mode-btn')[1].click()", b)
-    ok("public report", "公共归属" in j(sid, "document.querySelector('#report-view').innerText", b))
-    ok("public cards", j(sid, "document.querySelectorAll('.public-card').length", b) == 3)
-    ok("public tree", j(sid, "document.querySelectorAll('.public-tree').length", b) == 1)
-    j(sid, "document.querySelectorAll('.report-mode-btn')[0].click()", b)
-    ok("report mode back", j(sid, "document.querySelectorAll('.stats-tab').length", b) == 4)
+    ok("private scope only", j(sid, "!document.querySelector('.report-mode-btn')", b) is True
+       and j(sid, "document.querySelector('.stats-scope').textContent", b) == "私人结构")
+    ok("no public scope button", "公共归属" not in j(sid, "document.querySelector('#report-view').innerText", b))
+    ok("stats third query", j(sid, "document.querySelectorAll('.stats-query .q-row:not(.is-head)').length", b) >= 1)
     ok("stats months", j(sid, "document.querySelectorAll('.stats-month').length", b) == 12)
-    ok("stats year aligns month 12", j(sid, "Math.abs(document.querySelector('.stats-year-input').getBoundingClientRect().right - document.querySelectorAll('.stats-month')[11].getBoundingClientRect().right) < 1", b) is True)
+    ok("stats year after title", j(sid, """(function(){
+      var wrap=document.querySelector('.stats-tabs-wrap');
+      var kids=Array.from(wrap.children);
+      var y=wrap.querySelector('.stats-year-input');
+      return !!y && kids.indexOf(y) === 2 && kids[1].classList.contains('stats-title');
+    })()""", b) is True)
+    ok("stats months left", j(sid, """(function(){
+      var m=document.querySelector('.stats-months');
+      var first=m.querySelector('.stats-month');
+      return Math.abs(first.getBoundingClientRect().left - m.getBoundingClientRect().left) < 6;
+    })()""", b) is True)
     ok("stats items", j(sid, "document.querySelectorAll('.lst-group').length", b) >= 4)
     ok("stats detail", j(sid, "document.querySelectorAll('.stats-left .sd-row:not(.is-head)').length", b) >= 2)
     j(sid, "Array.from(document.querySelectorAll('.stats-left .sd-row')).find(function(r){return !r.classList.contains('is-head') && !r.classList.contains('is-total');}).click()", b)
@@ -313,12 +339,27 @@ def main():
 
     print("== query / fixed / i18n ==")
     j(sid, "document.querySelector('#btn-query').click()", b)
-    ok("query rows", wait(b, sid, "document.querySelectorAll('.q-panel').length === 3 && document.querySelectorAll('.q-row:not(.is-head)').length > 2", 4))
-    dates = j(sid, "Array.from(document.querySelectorAll('.q-panel .q-field:first-child input')).map(function(x){return x.value;}).join('/')", b)
+    ok("query rows", wait(b, sid, "document.querySelectorAll('#query-view .q-panel').length === 3 && document.querySelectorAll('#query-view .q-row:not(.is-head)').length > 2", 4))
+    dates = j(sid, "Array.from(document.querySelectorAll('#query-view .q-panel .q-field:first-child input')).map(function(x){return x.value;}).join('/')", b)
     ok("query default dates", len(dates.split('/')) == 3 and len(dates.split('/')[1]) == 4 and len(dates.split('/')[2]) == 2, dates)
     j(sid, "document.querySelector('.q-panel[data-query=\"A\"] .q-field:first-child input').value='261115'; document.querySelector('.q-panel[data-query=\"A\"] .q-field:first-child input').dispatchEvent(new Event('input',{bubbles:true}));", b)
     time.sleep(0.3)
     ok("query filters", j(sid, "document.querySelectorAll('.q-panel[data-query=\"A\"] .q-row:not(.is-head)').length", b) >= 1)
+    # 列宽：拖 B 的「转出」右边缘 +24px，只有它变宽、备注反向变窄，松手写本机
+    qw_before = j(sid, """Array.from(document.querySelectorAll('#query-view .q-panel[data-query="B"] .q-row.is-head')[0].children)
+      .map(function(c){return Math.round(c.getBoundingClientRect().width);})""", b)
+    qbox = j(sid, """(function(){
+      var h=document.querySelector('#query-view .q-panel[data-query="B"] .q-row.is-head');
+      var c=h.children[2]; var r=c.getBoundingClientRect();
+      return {x:r.right-1, y:r.top+r.height/2};
+    })()""", b)
+    drag(b, sid, qbox["x"], qbox["y"], 24)
+    qw_after = j(sid, """Array.from(document.querySelectorAll('#query-view .q-panel[data-query="B"] .q-row.is-head')[0].children)
+      .map(function(c){return Math.round(c.getBoundingClientRect().width);})""", b)
+    ok("query column drag only target", qw_after[2] >= qw_before[2] + 12
+       and qw_after[5] <= qw_before[5] - 12
+       and qw_after[0] == qw_before[0] and qw_after[4] == qw_before[4], str(qw_before) + ' -> ' + str(qw_after))
+    ok("query columns stored", j(sid, "!!localStorage.getItem('txtvein.query.cols.v1')", b) is True)
     j(sid, "document.querySelector('#btn-fixed').click()", b)
     ok("fixed editor", wait(b, sid, "!!document.querySelector('.fixed-editor .CodeMirror')", 4))
     fixed_src = j(sid, "document.querySelector('.fixed-editor .CodeMirror').CodeMirror.getValue()", b)

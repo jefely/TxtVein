@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!-- TxtVein single-file build · source: index.html + css/ + js/ -->
 <html lang="zh-CN">
 <head>
@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-ve.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="TxtVein">
-<meta name="app-version" content="2.8.0">
+<meta name="app-version" content="2.8.1">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1314,14 +1314,12 @@ html[data-theme="paper"] .page-tabs {
   border-color: #d8d1c1 !important;
 }
 html[data-theme="paper"] .page-tab,
-html[data-theme="paper"] .report-mode-btn,
 html[data-theme="paper"] .stats-clear {
   background: #f3efe3 !important;
   color: #4a463d !important;
   border-color: #b9b09c !important;
 }
-html[data-theme="paper"] .page-tab.is-active,
-html[data-theme="paper"] .report-mode-btn.is-active {
+html[data-theme="paper"] .page-tab.is-active {
   background: #e9e3d4 !important;
   color: #1f1e1a !important;
   border-color: #8a8273 !important;
@@ -2007,111 +2005,6 @@ html[data-theme="paper"] .composer .entry::placeholder { color: #5f5a4e !importa
   .report-grid { grid-template-columns: 1fr; }
 }
 
-/* 私人结构 / 公共归属 */
-.report-mode {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 12px;
-}
-.report-mode-btn {
-  appearance: none;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--dim);
-  font-family: var(--mono);
-  font-size: 10px;
-  padding: 5px 10px;
-  cursor: pointer;
-}
-.report-mode-btn.is-active {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: rgba(214, 179, 106, 0.08);
-}
-.public-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.public-title {
-  margin: 0;
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: var(--text-2);
-  font-weight: 400;
-}
-.public-range { color: var(--dim); font-family: var(--mono); font-size: 9.5px; }
-.public-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 14px;
-}
-.public-card {
-  border: 1px solid var(--line);
-  padding: 9px 11px;
-  display: grid;
-  gap: 4px;
-}
-.public-card-label { color: var(--dim); font-family: var(--mono); font-size: 9px; }
-.public-card-value { color: var(--text-2); font-family: var(--mono); font-size: 13px; font-weight: 400; }
-.public-card.is-anchored .public-card-value { color: var(--ok, #8FBF8F); }
-.public-card.is-unclassified .public-card-value { color: var(--warn, #D6B36A); }
-.public-card.is-stale .public-card-value { color: var(--bad, #D08A8A); }
-.public-tree {
-  border: 1px solid var(--line);
-  padding: 8px 10px;
-  margin-bottom: 14px;
-}
-.public-tree-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 100px 48px;
-  gap: 8px;
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.06);
-  font-family: var(--mono);
-  font-size: 10px;
-}
-.public-tree-row:last-child { border-bottom: 0; }
-.public-tree-label { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; }
-.public-tree-amount { color: var(--text-3); text-align: right; }
-.public-tree-count { color: var(--dim); text-align: right; }
-.public-bucket {
-  border: 1px solid var(--line);
-  padding: 8px 10px;
-  margin-bottom: 10px;
-}
-.public-bucket h3 {
-  margin: 0 0 6px;
-  color: var(--dim);
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 400;
-}
-.public-bucket-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 3px 0;
-  color: var(--text-3);
-  font-family: var(--mono);
-  font-size: 9.5px;
-}
-.public-bucket.is-unclassified { border-color: rgba(214, 179, 106, 0.35); }
-.public-bucket.is-stale { border-color: rgba(208, 138, 138, 0.35); }
-.public-reconcile {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  color: var(--dim);
-}
-.public-reconcile.is-ok { color: var(--ok, #8FBF8F); }
-.public-reconcile.is-bad { color: var(--bad, #D08A8A); border-color: rgba(208, 138, 138, 0.35); }
-
 @media (max-width: 620px) {
   .report-inner { padding: 12px 10px 40px; }
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
@@ -2122,8 +2015,6 @@ html[data-theme="paper"] .composer .entry::placeholder { color: #5f5a4e !importa
   .domain-line { grid-template-columns: 50px minmax(0, 1fr) 74px; }
   .domain-line .v.cross { display: none; }
   .range-bar { margin-left: 0; }
-  .public-cards { grid-template-columns: 1fr; }
-  .public-tree-row { grid-template-columns: minmax(0, 1fr) 84px 40px; }
 }
 
 </style>
@@ -3583,7 +3474,18 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 
 
 /* ================= 查询页：NT 式三段独立查询 ================= */
-.query-view { height: 100%; overflow: hidden; }
+.query-view {
+  height: 100%;
+  overflow: hidden;
+  /* 六列宽度的唯一来源：JS 只改这里的变量（#query-view 上的内联值优先）。
+     前五列有手柄可拖；备注列吃剩余，所以不给它写宽度。 */
+  --q-c-seq: 34px;
+  --q-c-date: 70px;
+  --q-c-from: 92px;
+  --q-c-to: 92px;
+  --q-c-amt: 88px;
+  --q-note-min: 90px;
+}
 .q-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3652,7 +3554,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .q-table { flex: 1 1 auto; min-height: 0; overflow: auto; }
 .q-row {
   display: grid;
-  grid-template-columns: 34px 72px minmax(0, 1fr) minmax(0, 1fr) 88px minmax(0, .9fr);
+  grid-template-columns:
+    var(--q-c-seq, 34px) var(--q-c-date, 70px) var(--q-c-from, 92px)
+    var(--q-c-to, 92px) var(--q-c-amt, 88px) minmax(var(--q-note-min, 90px), 1fr);
   gap: 6px;
   align-items: center;
   padding: 6px 8px;
@@ -3673,7 +3577,42 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .q-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e0e0e0; }
 .q-muted { color: #8a8a8a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .q-num { text-align: right; color: #f0f0f0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 对齐口径（用户 2026-11-21）：金额靠右、备注靠左，其余居中。
+   表头与数据行同一套，避免两行字对不齐。 */
+.q-row > span { text-align: center; }
+.q-row > span.q-num { text-align: right; }
+.q-row > span.q-note { text-align: left; }
 .q-empty { padding: 20px 10px; color: #7f7f7f; font-size: 12px; text-align: center; }
+
+/* 列宽手柄：只是 7px 宽的可视/光标区，命中判定由 JS 按坐标做。
+ * 放在列间距里（right:-3px），不盖住表头文字。 */
+.q-row.is-head { touch-action: pan-y; }
+.q-row.is-head > span { position: relative; }
+.q-col-handle {
+  position: absolute;
+  right: -3px;
+  top: 7px;
+  bottom: 7px;
+  width: 7px;
+  z-index: 3;
+  cursor: col-resize;
+  touch-action: none;
+}
+.q-col-handle::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 10%;
+  bottom: 10%;
+  width: 1px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background-color 0.12s ease;
+}
+.q-row.is-head > span:hover .q-col-handle::after { background: currentColor; opacity: 0.45; }
+.q-col-handle.is-dragging::after { background: var(--accent); opacity: 0.9; }
+body.q-col-resizing { cursor: col-resize; user-select: none; }
+body.q-col-resizing .q-row.is-head > span { cursor: col-resize; }
 @media (max-width: 900px) {
   .q-grid {
     display: flex;
@@ -3796,10 +3735,21 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   border-bottom: 1px solid #2a2a2a;
   overflow: hidden;
 }
-.stats-top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.stats-top-row { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; }
 .stats-tabs-wrap { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .stats-tabs { display: flex; gap: 3px; flex: 0 0 auto; }
 .stats-title { flex: 0 0 auto; font-size: 13px; color: #e8e8e8; font-weight: 600; padding-right: 4px; }
+/* 统计口径说明：不可点，只是标签。 */
+.stats-scope {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid #333;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #8a8a8a;
+  white-space: nowrap;
+}
 .stats-tab {
   height: 27px;
   padding: 0 12px;
@@ -3811,7 +3761,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 }
 .stats-tab:hover { color: #fff; background: #252526; }
 .stats-tab.is-active { color: #fff; background: #2b2b2b; border-color: #3a3a3a; }
-.stats-months { display: flex; align-items: center; justify-content: flex-end; gap: 3px; width: 100%; overflow-x: auto; scrollbar-width: none; }
+.stats-months { display: flex; align-items: center; justify-content: flex-start; gap: 3px; width: 100%; overflow-x: auto; scrollbar-width: none; }
 .stats-months::-webkit-scrollbar { display: none; }
 .stats-year { font-family: var(--mono); font-size: 10px; color: #8a8a8a; margin-right: 3px; white-space: nowrap; }
 .stats-year-input {
@@ -3879,6 +3829,25 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .stats-gutter { cursor: col-resize; background: #151515; border-right: 1px solid #222; touch-action: none; }
 .stats-gutter:hover { background: #2a2a2a; }
 .stats-right { min-width: 0; min-height: 0; overflow: auto; background: #050505; }
+/* 统计页第三区：与流水查询同一个面板组件（单张）。 */
+.stats-query {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid #2a2a2a;
+  background: #050505;
+}
+.stats-query .q-panel {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  border-right: 0;
+}
+.stats-query .q-head { flex: 0 0 32px; }
+.stats-query .q-title { font-size: 12px; }
+.stats-query .q-filters { padding: 4px 5px; }
 .stats-right-head {
   position: sticky;
   top: 0;
@@ -4030,6 +3999,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 @media (max-width: 900px) {
   .stats-split { display: block; position: relative; }
   .stats-gutter { display: none; }
+  .stats-query { display: none !important; }
   .stats-left, .stats-right { width: 100%; height: 100%; border: 0; }
   .stats-page[data-pane="list"] .stats-right { display: none; }
   .stats-page[data-pane="detail"] .stats-left { display: none; }
@@ -4481,7 +4451,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 </style>
 <style>
 /* css/paper.css */
-﻿/* TxtVein · 电纸书主题收尾层
+/* TxtVein · 电纸书主题收尾层
  * 必须最后加载：editor.css 里有一批 later 的 #050505 规则，
  * 这里用 html[data-theme="paper"] + !important 统一压住。
  */
@@ -4762,9 +4732,9 @@ html[data-theme="paper"] .stats-left .sd-row.is-total .sd-num {
   font-size: 10.5px !important;
 }
 
-/* 查询页：去掉输入框上方的小标签；表头整行居中 */
+/* 查询页：去掉输入框上方的小标签；表头行对齐在 editor.css 统一处理
+ *（金额靠右 / 备注靠左 / 其余居中，表头与数据行共用） */
 .q-field > span { display: none !important; }
-.q-row.is-head > span { text-align: center !important; }
 
 /* 纸主题：副标题保持弱化色但加粗；主标题标签加粗居中，金额普通贴底 */
 html[data-theme="paper"] .stats-left .sd-row.is-head {
@@ -4859,6 +4829,126 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
   background-color: transparent !important;
 }
 
+/* ===== 纸主题补漏：深色主题里写死、纸色下没被变量接住的面 =====
+ * 这张清单来自对每个页面做对比度扫描（文字色 vs 生效背景 < 3:1 即报），
+ * 不是凭印象补的；新增深色组件时先跑一遍同样的扫描。
+ */
+
+/* 1. 单输入框候选气泡 / 预测条（#bubbles / #prediction，ledger.css 写死 #0A0C11） */
+html[data-theme="paper"] .bubble-layer,
+html[data-theme="paper"] .prediction {
+  background: #f7f3e8 !important;
+  border-color: #c9c0ae !important;
+  box-shadow: 0 -10px 26px rgba(40, 35, 25, 0.16) !important;
+}
+html[data-theme="paper"] .bubble { border-bottom-color: #ddd6c6 !important; }
+html[data-theme="paper"] .bubble:hover,
+html[data-theme="paper"] .bubble.is-active {
+  background: #efeada !important;
+  box-shadow: inset 2px 0 0 #3f6b52 !important;
+}
+html[data-theme="paper"] .bubble-name { color: #2b2924 !important; }
+html[data-theme="paper"] .bubble-name .code { color: #6c665a !important; }
+html[data-theme="paper"] .bubble-meta { color: #6c665a !important; }
+html[data-theme="paper"] .bubble-side { color: #4a463d !important; }
+html[data-theme="paper"] .bubble-side .pole-a { color: #2f5d50 !important; }
+html[data-theme="paper"] .bubble-side .pole-b { color: #8a5a32 !important; }
+html[data-theme="paper"] .prediction .pred-label { color: #2f6b52 !important; }
+html[data-theme="paper"] .prediction .pred-text { color: #2b2924 !important; }
+html[data-theme="paper"] .prediction .pred-key { color: #6c665a !important; }
+
+/* 2. 点行号弹出的横排菜单 + 选中行（editor.css 写死 #1e1e1e / #3a3a3a） */
+html[data-theme="paper"] .cm-line-menu {
+  background: #f7f3e8 !important;
+  border-color: #b9b09c !important;
+  box-shadow: 0 8px 22px rgba(40, 35, 25, 0.18) !important;
+}
+html[data-theme="paper"] .cm-line-menu button { color: #2b2924 !important; }
+html[data-theme="paper"] .cm-line-menu button:hover { background: #e9e3d3 !important; }
+html[data-theme="paper"] .cm-line-menu button:disabled { color: #a8a091 !important; }
+html[data-theme="paper"] .cm-line-menu button.is-primary { color: #2f6b52 !important; }
+html[data-theme="paper"] .cm-line-menu button.is-primary:hover { background: #e2ebdf !important; }
+html[data-theme="paper"] .editor-pane .CodeMirror-gutter-wrapper.tv-line-selected .CodeMirror-linenumber {
+  background: #ddd5c2 !important;
+  color: #1f1e1a !important;
+}
+html[data-theme="paper"] .editor-pane .CodeMirror-linebackground.tv-line-selected-bg {
+  background: rgba(70, 62, 48, 0.075) !important;
+}
+
+/* 3. 查询页金额列（.q-num 写死 #f0f0f0，纸面上 1:1 不可见） */
+html[data-theme="paper"] .q-num { color: #111111 !important; }
+html[data-theme="paper"] .q-row.is-head .q-num { color: #6c665a !important; }
+html[data-theme="paper"] .q-muted { color: #6c665a !important; }
+html[data-theme="paper"] .q-total { color: #2f6b52 !important; }
+
+/* 4. 固定页标题与状态行（#e8e8e8 / #6f9a7a / #d98a8a） */
+html[data-theme="paper"] .fixed-head .fixed-title { color: #111111 !important; }
+html[data-theme="paper"] .fixed-sub,
+html[data-theme="paper"] .fixed-note { color: #6c665a !important; }
+html[data-theme="paper"] .fixed-errors .fixed-ok { color: #2f6b52 !important; }
+html[data-theme="paper"] .fixed-errors .fixed-error { color: #8a3f3f !important; }
+
+/* 5. 统计右侧标题 / 弹窗标题（#e8e8e8 / #f2f2f2） */
+html[data-theme="paper"] .stats-right-head b { color: #111111 !important; }
+html[data-theme="paper"] .stats-right-head span { color: #6c665a !important; }
+html[data-theme="paper"] .modal-head h2,
+html[data-theme="paper"] #modal-title { color: #111111 !important; }
+
+/* 6. CodeMirror 补全气泡 / lint 提示：纸主题下同样不能是深色浮层 */
+html[data-theme="paper"] .CodeMirror-hints {
+  background: #f7f3e8 !important;
+  border-color: #b9b09c !important;
+  box-shadow: 0 6px 18px rgba(40, 35, 25, 0.16) !important;
+}
+html[data-theme="paper"] .CodeMirror-hint { color: #2b2924 !important; }
+html[data-theme="paper"] li.CodeMirror-hint-active {
+  background: #e9e3d3 !important;
+  color: #111111 !important;
+}
+html[data-theme="paper"] .CodeMirror-hint .hint-meta { color: #6c665a !important; }
+html[data-theme="paper"] .CodeMirror-lint-tooltip {
+  background: #f7f3e8 !important;
+  border-color: #b9b09c !important;
+  color: #2b2924 !important;
+}
+
+/* 顶栏按钮：悬停不能是深色块（纸主题下深底 + 深字会直接看不见） */
+html[data-theme="paper"] .top-menu .menu-btn:hover,
+html[data-theme="paper"] .top-menu .menu-btn:focus-visible {
+  background: #e9e3d4 !important;
+  color: #111111 !important;
+  border-color: #c9c0ae !important;
+}
+html[data-theme="paper"] .top-menu .menu-btn:active {
+  background: #ddd5c2 !important;
+}
+
+/* 7. 统计页：第三区（流水查询）与列表分组标题 */
+html[data-theme="paper"] .stats-scope {
+  color: #6c665a !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .stats-query {
+  background: #f3efe3 !important;
+  border-left-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .stats-query .q-panel { background: #f3efe3 !important; }
+html[data-theme="paper"] .lst-group-head {
+  background: #efeada !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .lst-group-head b { color: #111111 !important; }
+html[data-theme="paper"] .lst-group-head span { color: #2f6b52 !important; }
+html[data-theme="paper"] .stats-back {
+  background: #e9e3d3 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .stats-item-name { color: #2b2924 !important; }
+html[data-theme="paper"] .stats-item-meta { color: #6c665a !important; }
+
 </style>
 </head>
 <body>
@@ -4952,7 +5042,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
   'use strict';
 
   const TV = (root.TxtVein = root.TxtVein || {});
-  const APP_VER = 'txtvein-v2.8.0';
+  const APP_VER = 'txtvein-v2.8.1';
 
   function parseVer(v) {
     const m = String(v || '').match(/v?(\d+)\.(\d+)\.(\d+)/);
@@ -11732,6 +11822,153 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
   };
 
   if (typeof module === 'object' && module.exports) module.exports = TV.date;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+/* js/core/query-cols.js */
+/* TxtVein · 查询页列宽（纯计算，零 DOM）
+ *
+ * 查询页三张表同构：序 / 日期 / 转出 / 转入 / 金额 / 备注。
+ * 前五列有独立列宽，可拖；备注列不写死宽度，吃掉剩余空间。
+ * 这套模型照 NT 账本的流水查询（`ui/width-fit.js` 的 fitShareTable +
+ * `ui/table-layout.js` 的拖动），区别只有一处：
+ *
+ *   NT 把「备注列上次量到的实际宽度」当期望值存下来；
+ *   这里只存 [NOTE_FLOOR, NOTE_MIN] 之间的**期望下限** ——
+ *   窗口变宽时备注自动吃掉多出来的空间，不会把变宽后的实际值记成需求，
+ *   下次窗口变窄时就不会反过来把五列压到最小。
+ *
+ * 所以「谁让步」的次序是：
+ *   1. 先按保存的前五列宽度画；
+ *   2. 放不下时前五列按比例压（不改变比例，只压到各自下限）；
+ *   3. 备注列至少 NOTE_FLOOR；实在放不下才横向滚动。
+ *
+ * 本文件不读写 DOM、也不碰浏览器存储；界面胶水在 `js/ui/query-cols.js`。
+ */
+(function (root) {
+  'use strict';
+
+  const TV = (root.TxtVein = root.TxtVein || {});
+
+  /** 列顺序必须与 app.js 的表头 / 行模板一致。 */
+  const COLS = ['seq', 'date', 'from', 'to', 'amount'];
+  /** 默认调宽（px）。首次打开时用；拖动后存本机。 */
+  const DEFAULTS = { seq: 34, date: 70, from: 92, to: 92, amount: 88 };
+  /** 压到极限的下限（px）。字号 11.5px 下「序」26 / 日期 52 / 金额 72 仍能看。 */
+  const MINS = { seq: 26, date: 52, from: 48, to: 48, amount: 72 };
+  /** 没拖过时备注列的期望下限；也是前五列压缩预算的依据。 */
+  const NOTE_MIN = 90;
+  /** 拖动时备注列最多让到这么窄（再窄就没法读）。 */
+  const NOTE_FLOOR = 32;
+  /** 单列拖动的硬上限。 */
+  const MAX_W = 800;
+  /**
+   * 行内边距 + 列间距（px）：`padding: 6px 8px` 左右共 16，
+   * `gap: 6px` × 5 条 = 30。
+   */
+  const ROW_CHROME = 46;
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  /**
+   * 把本机存的值洗成可用的列宽。
+   * 缺省 / 非数字 / 越界都回默认；备注只收 [NOTE_FLOOR, NOTE_MIN]。
+   */
+  function normalize(raw) {
+    const src = raw && typeof raw === 'object' ? raw : {};
+    const out = {};
+    COLS.forEach((k) => {
+      const n = Number(src[k]);
+      out[k] = Number.isFinite(n) && n > 0
+        ? Math.round(clamp(n, MINS[k], MAX_W))
+        : DEFAULTS[k];
+    });
+    const note = Number(src.note);
+    out.note = Number.isFinite(note) && note > 0
+      ? Math.round(clamp(note, NOTE_FLOOR, NOTE_MIN))
+      : NOTE_MIN;
+    return out;
+  }
+
+  /**
+   * 把一组固定列按比例压进预算。
+   *
+   * 够宽时返回 `null` —— 调用方据此判断「一个像素都不用动」。
+   * 压过之后如果仍超（屏特别窄），从最宽的列往下扣到预算为止；
+   * 全部到了下限就认了，让表格略微溢出、横向滚动，而不是压成看不清。
+   *
+   * @param {number[]} widths 期望宽度（px）
+   * @param {number} budget   这组列可用的总宽（px）
+   * @param {number[]} [mins] 每列下限（同下标）
+   * @returns {number[]|null}
+   */
+  function fitWidths(widths, budget, mins) {
+    const n = (widths || []).length;
+    if (!n) return null;
+    const total = widths.reduce((s, w) => s + w, 0);
+    if (total <= budget) return null;
+    const k = budget / (total || 1);
+    const out = widths.map((w, i) => Math.max((mins && mins[i]) || 0, Math.round(w * k)));
+    let over = out.reduce((s, w) => s + w, 0) - budget;
+    while (over > 0) {
+      let widest = -1;
+      for (let i = 0; i < n; i += 1) {
+        const floor = (mins && mins[i]) || 0;
+        if (out[i] > floor && (widest < 0 || out[i] > out[widest])) widest = i;
+      }
+      if (widest < 0) break;
+      out[widest] -= 1;
+      over -= 1;
+    }
+    return out;
+  }
+
+  /** 容器 clientWidth → 六列可用宽度（扣掉行内边距与列间距）。 */
+  function availableFor(clientWidth) {
+    return Math.max(0, Math.round(Number(clientWidth) || 0) - ROW_CHROME);
+  }
+
+  /**
+   * 算一次布局。
+   *
+   * @param {object} widths 保存的列宽（normalize 过的或原始值都行）
+   * @param {number} available 六列可用宽度（不是容器宽）
+   * @returns {{cols:number[], noteMin:number, noteWant:number, compressed:boolean}}
+   */
+  function layout(widths, available) {
+    const w = normalize(widths);
+    const avail = Math.max(0, Math.round(Number(available) || 0));
+    const want = COLS.map((k) => w[k]);
+    if (!avail) {
+      return { cols: want.slice(), noteMin: w.note, noteWant: w.note, compressed: false };
+    }
+    const noteWant = clamp(w.note, NOTE_FLOOR, NOTE_MIN);
+    const budget = avail - noteWant;
+    const fitted = fitWidths(want, budget, COLS.map((k) => MINS[k]));
+    const cols = fitted || want.slice();
+    const sum = cols.reduce((s, x) => s + x, 0);
+    /* 备注列至少 NOTE_FLOOR；五列已经放不下时它保持 FLOOR，由容器横向滚动。 */
+    const noteMin = Math.max(NOTE_FLOOR, avail - sum);
+    return { cols, noteMin, noteWant, compressed: !!fitted };
+  }
+
+  /**
+   * 拖动一列时它能到的最大宽度。
+   * 唯一让得出空间的是备注列：上限 = 当前宽 + 备注还能让多少（到 NOTE_FLOOR 为止）。
+   */
+  function maxDragWidth(startW, noteNow) {
+    const slack = Math.max(0, Number(noteNow || 0) - NOTE_FLOOR);
+    return Math.round(Number(startW || 0) + slack);
+  }
+
+  TV.queryCols = {
+    COLS, DEFAULTS, MINS, NOTE_MIN, NOTE_FLOOR, MAX_W, ROW_CHROME,
+    clamp, normalize, fitWidths, availableFor, layout, maxDragWidth,
+  };
+  if (typeof module === 'object' && module.exports) module.exports = TV.queryCols;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 </script>
@@ -22800,7 +23037,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
 </script>
 <script>
 /* js/ui/panels.js */
-﻿/* TxtVein · 面板：规则 / 字典 / 文本 / 导入导出 / 帮助 / 密码
+/* TxtVein · 面板：规则 / 字典 / 文本 / 导入导出 / 帮助 / 密码
  * 所有面板都只读 app.getState()，写操作调用 app 的方法；不直接碰核心数据。
  */
 (function (root) {
@@ -22850,11 +23087,16 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     const root = document.documentElement;
     const paper = p.theme === 'paper';
     root.dataset.theme = paper ? 'paper' : 'dark';
+    /* 原生控件（select 弹层 / range / 滚动条 / 日期选择器）跟 meta color-scheme 走；
+       只给 body 换纸色而不改这里，纸主题里的下拉弹层仍是黑底。 */
+    root.style.colorScheme = paper ? 'light' : 'dark';
     const colors = paper ? PAPER_COLORS : p.colors;
     COLOR_DEFS.forEach((x) => root.style.setProperty(x[2], colors[x[0]] || x[3]));
     root.style.setProperty('--tv-editor-font-size', p.fontSize + 'px');
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', paper ? '#f3efe3' : '#050505');
+    const scheme = document.querySelector('meta[name="color-scheme"]');
+    if (scheme) scheme.setAttribute('content', paper ? 'light' : 'dark');
   }
 
   function savePrefs(p) {
@@ -23508,7 +23750,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
         el('div', { class: 'form-row' }, [field('统计分类', catSel), field('域', domain)]),
         field('母树绑定（固定）', bindSel),
         error,
-        el('p', { class: 'help-text' }, ['母树只提供先验框架；账本运算与统计以本地分组/类型为准。绑定固定在这个节点上（分支或叶子），只影响公共归属。']),
+        el('p', { class: 'help-text' }, ['母树只提供先验框架；账本运算与统计以本地分组/类型为准（私人结构）。绑定固定在这个节点上（分支或叶子），只影响母树对照，不改变统计口径。']),
       ], closeFoot([submit]));
     }
 
@@ -23615,7 +23857,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
         el('div', { class: 'form-row-3' }, [field('大类', type), field('A 极形态', form), field('域', domain)]),
         el('div', { class: 'form-row-3' }, [field('权重', weight), field('排序', sort), field('置顶', pin)]),
         field('父节点（可选）', parent),
-        field('公共归属（可选）', el('div', { class: 'anchor-pick' }, [
+        field('母树绑定（可选）', el('div', { class: 'anchor-pick' }, [
           el('div', { class: 'anchor-row' }, [anchor, suggestBtn]),
           suggestBox,
         ])),
@@ -24657,6 +24899,279 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
 
 </script>
 <script>
+/* js/ui/query-cols.js */
+/* TxtVein · 查询列宽（界面胶水）
+ *
+ * 任何带 `data-q-scope` 的容器里，`.q-table` 共用一套列宽：
+ *   · 表头右边缘拖动改列宽（前五列：序 / 日期 / 转出 / 转入 / 金额）；
+ *   · 备注列没有手柄，自动吃掉剩余宽度；
+ *   · 双击表头右边缘恢复该列默认宽度；
+ *   · 列宽存在本机 localStorage（不写进账本，和主题/字号同级）。
+ *
+ * 作用域让同一个组件能放进两个地方：
+ *   `#query-view`（三段流水查询）——三张表等宽，共用一套变量；
+ *   统计页右侧 `.q-panel[data-q-scope="stats"]`（单张流水查询）。
+ * 两个作用域宽度不同，所以按作用域分别 fit；列宽本身共享，改哪边都一样。
+ *
+ * 纯计算在 `js/core/query-cols.js`；这里只做三件事：
+ * 量 DOM、挂手柄/指针事件、把结果写成 CSS 变量。
+ */
+(function (root) {
+  'use strict';
+
+  const TV = (root.TxtVein = root.TxtVein || {});
+  const core = TV.queryCols;
+  const COLS = core.COLS;
+  const KEY = 'txtvein.query.cols.v1';
+  /** 边界左侧的命中宽度；可视线左移 EDGE，避免正好压在列线上。 */
+  const HIT = 10;
+  const EDGE = 2;
+  /** CSS 变量名（金额列用短名 amt，和 grid-template 保持一致）。 */
+  const VAR = { seq: 'seq', date: 'date', from: 'from', to: 'to', amount: 'amt' };
+
+  let widths = core.normalize(read());
+  let bound = false;
+  let resizeTimer = 0;
+  let drag = null;
+  let raf = 0;
+
+  function read() {
+    try {
+      return JSON.parse(localStorage.getItem(KEY) || 'null');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function write() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(widths));
+    } catch (e) { /* ignore */ }
+  }
+
+  function setVars(scope, layout) {
+    if (!scope || !layout) return;
+    COLS.forEach((k, i) => scope.style.setProperty('--q-c-' + VAR[k], layout.cols[i] + 'px'));
+    scope.style.setProperty('--q-note-min', layout.noteMin + 'px');
+  }
+
+  /** 作用域里第一张有宽度的表（隐藏页为 0，跳过）。 */
+  function scopeWidth(scope) {
+    const tables = scope.querySelectorAll('.q-table');
+    for (const t of tables) {
+      const w = t.clientWidth;
+      if (w > 0) return w;
+    }
+    return 0;
+  }
+
+  function fitScope(scope) {
+    const avail = core.availableFor(scopeWidth(scope));
+    if (!avail) return null;
+    const layout = core.layout(widths, avail);
+    setVars(scope, layout);
+    return layout;
+  }
+
+  function allScopes() {
+    if (typeof document === 'undefined') return [];
+    return Array.prototype.slice.call(document.querySelectorAll('[data-q-scope]'));
+  }
+
+  function fit() {
+    allScopes().forEach(fitScope);
+  }
+
+  function scheduleFit() {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resizeTimer = 0;
+      fit();
+    }, 80);
+  }
+
+  /** 表头每一格：前五列记下列名并挂手柄，最后一格（备注）标 q-note。 */
+  function decorateHead(row) {
+    if (!row) return;
+    const cells = row.children;
+    for (let i = 0; i < cells.length; i += 1) {
+      const cell = cells[i];
+      if (i < COLS.length) {
+        cell.dataset.col = COLS[i];
+        if (!cell.querySelector('.q-col-handle')) {
+          const handle = document.createElement('span');
+          handle.className = 'q-col-handle';
+          handle.setAttribute('aria-hidden', 'true');
+          handle.title = '拖动调整列宽；双击恢复默认';
+          cell.appendChild(handle);
+        }
+      } else if (i === COLS.length) {
+        cell.classList.add('q-note');
+      }
+    }
+  }
+
+  /** 在表头行里找 clientX 命中的列边界（列右边缘左移 EDGE）。 */
+  function edgeTarget(row, x) {
+    let best = null;
+    let bestD = Infinity;
+    for (const cell of row.children) {
+      const col = cell.dataset ? cell.dataset.col : '';
+      if (!col || COLS.indexOf(col) < 0) continue;
+      const r = cell.getBoundingClientRect();
+      /* 允许落在边界右侧 4px（列间距里），但不能越过下一列左边缘 */
+      if (x > r.right + 4) continue;
+      const d = Math.abs((r.right - EDGE) - x);
+      if (d <= HIT && d < bestD) { best = cell; bestD = d; }
+    }
+    return best;
+  }
+
+  function measure(head) {
+    const out = {};
+    COLS.forEach((k, i) => {
+      const cell = head.children[i];
+      out[k] = cell ? Math.round(cell.getBoundingClientRect().width) : widths[k];
+    });
+    return out;
+  }
+
+  function onDown(ev) {
+    if (!ev.target || !ev.target.closest) return;
+    const scope = ev.target.closest('[data-q-scope]');
+    if (!scope) return;
+    const table = ev.target.closest('.q-table');
+    if (!table || !scope.contains(table)) return;
+    const head = ev.target.closest('.q-row.is-head');
+    if (!head) return;
+    if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+    const cell = edgeTarget(head, ev.clientX);
+    if (!cell) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    startDrag(scope, head, cell, ev);
+  }
+
+  function startDrag(scope, head, cell, ev) {
+    const col = cell.dataset.col;
+    const idx = COLS.indexOf(col);
+    if (idx < 0) return;
+
+    const noteCell = head.children[COLS.length];
+    const noteNow = noteCell
+      ? Math.round(noteCell.getBoundingClientRect().width)
+      : core.NOTE_MIN;
+    const startX = ev.clientX;
+    const minW = core.MINS[col];
+    const startW = Math.round(cell.getBoundingClientRect().width);
+    const maxW = Math.min(core.MAX_W, Math.max(startW, core.maxDragWidth(startW, noteNow)));
+    const before = widths;
+    /* 拖动期间先按屏幕上量到的宽度画（含窗口窄时的压缩值），松手再存。 */
+    const measured = measure(head);
+    const frozen = core.normalize(Object.assign({}, measured, { note: widths.note }));
+    const baseCols = COLS.map((k) => measured[k]);
+
+    widths = frozen;
+    let applied = { cols: baseCols.slice(), noteMin: noteNow, noteWant: widths.note, compressed: false };
+    setVars(scope, applied);
+    document.body.classList.add('q-col-resizing');
+    cell.classList.add('is-dragging');
+    try { cell.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    drag = { moved: false, before };
+
+    let next = startW;
+    const flush = () => {
+      raf = 0;
+      if (!drag || !applied) return;
+      const cols = applied.cols.slice();
+      cols[idx] = Math.round(next);
+      const noteMin = Math.max(core.NOTE_FLOOR, noteNow - (cols[idx] - startW));
+      applied = { cols, noteMin, noteWant: widths.note, compressed: false };
+      setVars(scope, applied);
+    };
+
+    const onMove = (e) => {
+      if (!drag) return;
+      next = core.clamp(startW + (e.clientX - startX), minW, maxW);
+      drag.moved = true;
+      if (!raf) raf = requestAnimationFrame(flush);
+    };
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (raf) { cancelAnimationFrame(raf); flush(); }
+      cell.removeEventListener('pointermove', onMove);
+      cell.removeEventListener('pointerup', finish);
+      cell.removeEventListener('pointercancel', finish);
+      window.removeEventListener('blur', finish);
+      try { cell.releasePointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      cell.classList.remove('is-dragging');
+      document.body.classList.remove('q-col-resizing');
+      const moved = drag.moved;
+      const beforeW = drag.before;
+      drag = null;
+      if (!moved) {
+        /* 只是点了一下边界：不写盘，恢复原样 */
+        widths = beforeW;
+        fit();
+        return;
+      }
+      /* 松手时量一遍：五列存实际宽，备注存 [FLOOR, MIN] 之间的期望下限。
+         窗口变宽时备注会自己吃满多出来的空间，不会把变宽后的实际值
+         记成「需求」，下次窗口变窄就不会反过来压五列。 */
+      const after = measure(head);
+      const noteAfter = noteCell ? Math.round(noteCell.getBoundingClientRect().width) : widths.note;
+      widths = core.normalize(Object.assign({}, after, {
+        note: Math.min(core.NOTE_MIN, Math.max(core.NOTE_FLOOR, noteAfter)),
+      }));
+      write();
+      fit();
+    };
+
+    cell.addEventListener('pointermove', onMove);
+    cell.addEventListener('pointerup', finish);
+    cell.addEventListener('pointercancel', finish);
+    window.addEventListener('blur', finish);
+  }
+
+  function onDouble(ev) {
+    if (!ev.target || !ev.target.closest) return;
+    const scope = ev.target.closest('[data-q-scope]');
+    if (!scope) return;
+    const table = ev.target.closest('.q-table');
+    if (!table || !scope.contains(table)) return;
+    const head = ev.target.closest('.q-row.is-head');
+    if (!head) return;
+    const cell = edgeTarget(head, ev.clientX);
+    if (!cell) return;
+    ev.preventDefault();
+    const col = cell.dataset.col;
+    if (!col) return;
+    const next = Object.assign({}, widths);
+    next[col] = core.DEFAULTS[col];
+    widths = core.normalize(next);
+    write();
+    fit();
+  }
+
+  function attach() {
+    if (bound || typeof document === 'undefined') return;
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('dblclick', onDouble);
+    window.addEventListener('resize', scheduleFit);
+    window.addEventListener('orientationchange', scheduleFit);
+    bound = true;
+  }
+
+  attach();
+
+  TV.queryLayout = { attach, decorateHead, refit: fit };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
 /* js/ui/glass.js */
 ﻿/* TxtVein · 液态玻璃（代码实现，无图片资源）
  *
@@ -25081,7 +25596,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
 </script>
 <script>
 /* js/ui/app.js */
-﻿/* TxtVein · 应用外壳
+/* TxtVein · 应用外壳
  * 唯一状态：dict + events + plans + rules（全部可序列化成两份纯文本）。
  * 所有视图都从这里派生；这里不做业务计算，只做编排。
  */
@@ -25117,11 +25632,10 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     domain: '',
     mode: 'CODE',
     lang: 'zh',    view: 'ledger',
-    reportMode: 'private',
     range: '本月',
     query: { text: '', fromDate: '', toDate: '', type: '', domain: '', from: '', to: '', tag: '', min: '', max: '' },
     queries: [],
-    stats: { tab: 'category', year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: '', pane: 'list', first: 0, split: 430 },
+    stats: { tab: 'category', year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: '', pane: 'list', first: 0, split: 430, qsplit: 0 },
     selectedEventIndex: -1,
     selectedNodeId: '',
     filterNodeId: '',
@@ -25151,9 +25665,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
       reset: '重置', count: '条', total: '合计',
       colDate: '日期', colDomain: '域', colFrom: '转出', colTo: '转入', colAmount: '金额', colTags: '标签',
       category: '分类', node: '节点', note: '备注', event: '事件', allMonths: '全', statsTitle: '统计',
-      reportPrivate: '私人结构', reportPublic: '公共归属',
-      publicTitle: '公共归属 · 按母树汇总', anchored: '已归类', unclassified: '未归类',
-      staleAnchor: '归属失效', reconcile: '对账',
+      reportPrivate: '私人结构',
       statsColName: '分类', statsColNode: '节点', statsColOther: '对方', statsWeight: '强度',
       statsMonth: '月', statsItems: '项', statsRecords: '条', statsSelect: '左侧选择一项',
       noRows: '没有匹配的流水', fixedTitle: '固定收支表',
@@ -25172,9 +25684,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
       reset: 'Reset', count: 'rows', total: 'Total',
       colDate: 'Date', colDomain: 'Book', colFrom: 'From', colTo: 'To', colAmount: 'Amount', colTags: 'Tags',
       category: 'Categories', node: 'Nodes', note: 'Notes', event: 'Events', allMonths: 'All', statsTitle: 'Stats',
-      reportPrivate: 'Private', reportPublic: 'Public',
-      publicTitle: 'Public grouping · mother tree', anchored: 'Anchored', unclassified: 'Unclassified',
-      staleAnchor: 'Stale anchor', reconcile: 'Reconcile',
+      reportPrivate: 'Private',
       statsColName: 'Category', statsColNode: 'Node', statsColOther: 'Counterpart', statsWeight: 'Weight',
       statsMonth: 'month', statsItems: 'items', statsRecords: 'records', statsSelect: 'Select an item on the left',
       noRows: 'No matching entries', fixedTitle: 'Fixed table',
@@ -26204,10 +26714,12 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     return el('label', { class: 'q-field' }, [el('span', {}, [label]), input]);
   }
 
-  function buildQueryPanel(grid, def, state, index) {
+  function buildQueryPanel(grid, def, state, index, opts) {
+    const o = opts || {};
     const panel = el('section', { class: 'q-panel', dataset: { query: def.key } });
+    if (o.scope) panel.dataset.qScope = o.scope;
     const head = el('div', { class: 'q-head' }, [
-      el('span', { class: 'q-title' }, [t('ledgerQuery') + ' ' + def.key]),
+      el('span', { class: 'q-title' }, [o.title || def.title || (t('ledgerQuery') + ' ' + def.key)]),
     ]);
     const clear = el('button', { class: 'q-clear', type: 'button' }, [t('clear')]);
     const total = el('span', { class: 'q-total' }, ['¥0.00']);
@@ -26265,14 +26777,17 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     const sum = rows.reduce((s, e) => s + (Number(e.amountCents) || 0), 0);
     panel.total.textContent = TV.amount.formatPlain(sum);
     clear(panel.table);
-    panel.table.appendChild(el('div', { class: 'q-row is-head' }, [
+    const head = el('div', { class: 'q-row is-head' }, [
       el('span', {}, [t('seq')]),
       el('span', {}, [t('dateShort')]),
       el('span', {}, [t('fromNode')]),
       el('span', {}, [t('toNode')]),
       el('span', { class: 'q-num' }, [t('amountShort')]),
       el('span', {}, [t('colNote')]),
-    ]));
+    ]);
+    panel.table.appendChild(head);
+    /* 前五列挂列宽手柄（纯展示）；备注列标 q-note 左对齐。 */
+    if (TV.queryLayout) TV.queryLayout.decorateHead(head);
     if (!rows.length) {
       panel.table.appendChild(el('div', { class: 'q-empty' }, [t('noRows')]));
       return;
@@ -26287,7 +26802,7 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
         el('span', { class: 'q-cell' }, [fromText]),
         el('span', { class: 'q-cell' }, [toText]),
         el('span', { class: 'q-num' }, [e.minutes > 0 ? TV.amount.formatTime(e.minutes) : TV.amount.formatPlain(e.amountCents)]),
-        el('span', { class: 'q-cell q-muted' }, [noteText || '—']),
+        el('span', { class: 'q-cell q-muted q-note' }, [noteText || '—']),
       ]));
     });
   }
@@ -26299,6 +26814,8 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     clear(dom.queryView);
     const grid = el('div', { class: 'q-grid' });
     dom.queryView.appendChild(grid);
+    /* 三张表等宽，共用一套列宽（拖哪张都一样）；fit 按这个作用域量宽度。 */
+    dom.queryView.dataset.qScope = 'query';
     const panels = QUERY_PANELS.map((def, i) => buildQueryPanel(grid, def, S.queries[i], i));
     queryCtl = { lang: S.lang, panels };
   }
@@ -26307,6 +26824,8 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     if (!S.dict) return;
     ensureQuery();
     (queryCtl.panels || []).forEach((p) => renderQueryPanel(p));
+    /* 表头重画后手柄跟着重挂；列宽再按当前容器宽度算一次。 */
+    if (TV.queryLayout) TV.queryLayout.refit();
   }
 
   /* ---------------- 固定页：独立的固定表（文本编译器） ---------------- */
@@ -27020,105 +27539,14 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
       '30px 58px minmax(46px,1fr) minmax(46px,1fr) 34px minmax(46px,.8fr)', { numCols: [4], empty: S.lang === 'en' ? 'Pick a behavior on the left' : '点左侧行为项查看明细' });
   }
 
-  function reportModeToggle() {
-    const wrap = el('div', { class: 'report-mode' });
-    [['private', t('reportPrivate')], ['public', t('reportPublic')]].forEach((pair) => {
-      const b = el('button', {
-        class: 'report-mode-btn' + (S.reportMode === pair[0] ? ' is-active' : ''),
-        type: 'button',
-      }, [pair[1]]);
-      b.addEventListener('click', () => {
-        if (S.reportMode === pair[0]) return;
-        S.reportMode = pair[0];
-        renderReport();
-      });
-      wrap.appendChild(b);
-    });
-    return wrap;
-  }
-
-  function renderPublicReportPage() {
-    clear(dom.reportView);
-    const now = new Date();
-    const pub = TV.publicReport.build(S.dict, S.events, TV.systemDict, {
-      range: S.range, domain: S.domain, lang: S.lang, now,
-    });
-    const page = el('div', { class: 'stats-page public-report' });
-    page.appendChild(reportModeToggle());
-    const head = el('div', { class: 'public-head' }, [
-      el('h2', { class: 'public-title' }, [t('publicTitle')]),
-      el('span', { class: 'public-range' }, [pub.rangeLabel || S.range || '']),
-    ]);
-    page.appendChild(head);
-
-    const cards = el('div', { class: 'public-cards' });
-    const card = (label, value, cls) => el('div', { class: 'public-card ' + (cls || '') }, [
-      el('span', { class: 'public-card-label' }, [label]),
-      el('b', { class: 'public-card-value' }, [amount.formatPlain(value)]),
-    ]);
-    cards.appendChild(card(t('anchored'), pub.anchored.closing, 'is-anchored'));
-    cards.appendChild(card(t('unclassified'), pub.unclassified.totals.closing, 'is-unclassified'));
-    cards.appendChild(card(t('staleAnchor'), pub.stale.totals.closing, 'is-stale'));
-    page.appendChild(cards);
-
-    const treeWrap = el('div', { class: 'public-tree' });
-    const renderTree = (arr, depth) => {
-      (arr || []).forEach((n) => {
-        treeWrap.appendChild(el('div', {
-          class: 'public-tree-row',
-          style: 'padding-left:' + (depth * 16) + 'px',
-        }, [
-          el('span', { class: 'public-tree-label' }, [n.label || n.id]),
-          el('span', { class: 'public-tree-amount' }, [amount.formatPlain(n.totals.closing)]),
-          el('span', { class: 'public-tree-count' }, [String(n.totals.count || 0)]),
-        ]));
-        renderTree(n.children, depth + 1);
-      });
-    };
-    const root = pub.tree.children && pub.tree.children[0];
-    if (root) renderTree(root.children, 0);
-    if (!treeWrap.children.length) {
-      treeWrap.appendChild(el('p', { class: 'help-text' }, [
-        S.lang === 'en' ? 'No anchored entries in this range.' : '本期还没有已归类节点。',
-      ]));
-    }
-    page.appendChild(treeWrap);
-
-    const bucket = (title, b, cls) => {
-      const sec = el('section', { class: 'public-bucket ' + (cls || '') }, [
-        el('h3', {}, [title + ' · ' + amount.formatPlain(b.totals.closing)]),
-      ]);
-      (b.rows || []).slice(0, 12).forEach((row) => {
-        sec.appendChild(el('div', { class: 'public-bucket-row' }, [
-          el('span', {}, [statsNodeLabel(row.id)]),
-          el('span', {}, [amount.formatPlain(row.closing)]),
-        ]));
-      });
-      return sec;
-    };
-    page.appendChild(bucket(t('unclassified'), pub.unclassified, 'is-unclassified'));
-    page.appendChild(bucket(t('staleAnchor'), pub.stale, 'is-stale'));
-
-    const rc = pub.reconcile;
-    page.appendChild(el('div', {
-      class: 'public-reconcile ' + (rc.ok ? 'is-ok' : 'is-bad'),
-    }, [
-      t('reconcile') + '：'
-        + amount.formatPlain(rc.privateTotal) + ' = '
-        + amount.formatPlain(rc.anchored) + ' + '
-        + amount.formatPlain(rc.unclassified) + ' + '
-        + amount.formatPlain(rc.stale)
-        + (rc.ok ? '  ✓' : '  ✗'),
-    ]));
-    dom.reportView.appendChild(page);
-  }
-
   function renderStatsPage() {
-    if (S.reportMode === 'public') {
-      renderPublicReportPage();
-      return;
-    }
-    if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', split: 380 };
+    if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', split: 380, qsplit: 0 };
+    /* 左表 / 查询区的宽度都存在本机；没存过再用默认比例。 */
+    const savedLeft = Number(localStorage.getItem('txtvein:stats-left'));
+    if (Number.isFinite(savedLeft) && savedLeft >= 150) S.stats.split = savedLeft;
+    const savedQueryW = Number(localStorage.getItem('txtvein:stats-query'));
+    if (Number.isFinite(savedQueryW) && savedQueryW >= 260) S.stats.qsplit = savedQueryW;
+    if (!S.statsQuery) S.statsQuery = queryInitialState('month');
     if (!S.stats.first) {
       const savedFirst = Number(localStorage.getItem('txtvein:stats-first'));
       S.stats.first = Number.isFinite(savedFirst) && savedFirst >= 24 ? savedFirst : 80;
@@ -27127,21 +27555,15 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     const groups = statsGroups(S.stats.tab === 'category' ? 'category' : 'node');
     clear(dom.reportView);
     const page = el('div', { class: 'stats-page' });
-    page.appendChild(reportModeToggle());
     page.dataset.pane = S.stats.pane || 'list';
     page.style.setProperty('--stats-first', (Number(S.stats.first) || 80) + 'px');
     const top = el('div', { class: 'stats-top' });
     const tabsWrap = el('div', { class: 'stats-tabs-wrap' });
+    /* 统计口径只有一种：字典里的私人结构。公共归属已作为错误路线移除，
+       这里只留一个不可点的说明标签。 */
+    tabsWrap.appendChild(el('span', { class: 'stats-scope', title: '统计口径：字典里的私人结构' }, [t('reportPrivate')]));
     tabsWrap.appendChild(el('b', { class: 'stats-title' }, [t('statsTitle')]));
-    const tabs = el('div', { class: 'stats-tabs' });
-    STAT_TABS.forEach((tab) => {
-      const b = el('button', { class: 'stats-tab' + (S.stats.tab === tab.id ? ' is-active' : ''), type: 'button' }, [t(tab.label)]);
-      b.addEventListener('click', () => { S.stats.tab = tab.id; S.stats.selected = ''; S.stats.pane = 'list'; renderStatsPage(); });
-      tabs.appendChild(b);
-    });
-    tabsWrap.appendChild(tabs);
-    const topRow = el('div', { class: 'stats-top-row' });
-    const months = el('div', { class: 'stats-months' });
+    /* 年份紧跟在「统计」后面；月份行靠左，不再推到右端。 */
     const yearInput = el('input', { class: 'stats-year-input', type: 'text', inputmode: 'numeric', maxlength: '4', title: '年份' });
     yearInput.value = String(S.stats.year || new Date().getFullYear());
     const applyYear = () => {
@@ -27160,8 +27582,17 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     yearInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); applyYear(); yearInput.blur(); }
     });
+    tabsWrap.appendChild(yearInput);
+    const tabs = el('div', { class: 'stats-tabs' });
+    STAT_TABS.forEach((tab) => {
+      const b = el('button', { class: 'stats-tab' + (S.stats.tab === tab.id ? ' is-active' : ''), type: 'button' }, [t(tab.label)]);
+      b.addEventListener('click', () => { S.stats.tab = tab.id; S.stats.selected = ''; S.stats.pane = 'list'; renderStatsPage(); });
+      tabs.appendChild(b);
+    });
+    tabsWrap.appendChild(tabs);
+    const topRow = el('div', { class: 'stats-top-row' });
+    const months = el('div', { class: 'stats-months' });
     topRow.appendChild(tabsWrap);
-    topRow.appendChild(yearInput);
     for (let m = 1; m <= 12; m += 1) {
       const b = el('button', { class: 'stats-month' + (Number(S.stats.month) === m ? ' is-active' : ''), type: 'button' }, [String(m)]);
       b.addEventListener('click', () => {
@@ -27179,7 +27610,10 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     const left = el('aside', { class: 'stats-left' });
     const gutter = el('div', { class: 'stats-gutter', title: '拖动调整宽度' });
     const right = el('main', { class: 'stats-right' });
+    const gutter2 = el('div', { class: 'stats-gutter stats-gutter-query', title: '拖动调整查询区宽度' });
+    const queryAside = el('aside', { class: 'stats-query' });
     split.appendChild(left); split.appendChild(gutter); split.appendChild(right);
+    split.appendChild(gutter2); split.appendChild(queryAside);
 
     left.appendChild(el('div', { class: 'stats-left-head' }, [
       el('b', {}, [t(S.stats.tab) + (S.lang === 'en' ? '' : '统计')]),
@@ -27223,16 +27657,32 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
     page.appendChild(top);
     page.appendChild(split);
     dom.reportView.appendChild(page);
-    const initialLeft = Math.min(Number(S.stats.split) || 430, Math.max(150, Math.round(window.innerWidth * 0.46)));
-    split.style.gridTemplateColumns = initialLeft + 'px 5px minmax(0, 1fr)';
+
+    /* 第三区：与「流水查询」同一个面板组件，单张、不占 A/B/C。
+       它有独立的条件状态（S.statsQuery），默认本月。 */
+    buildQueryPanel(queryAside, { key: 'Q', title: t('ledgerQuery') }, S.statsQuery, 0, { scope: 'stats' });
+
+    const setSplit = (lw, qw) => {
+      split.style.gridTemplateColumns = Math.round(lw) + 'px 5px minmax(200px, 1fr) 5px ' + Math.round(qw) + 'px';
+    };
+    const vw = Math.max(660, Math.round(split.clientWidth || window.innerWidth));
+    const leftW = Math.max(150, Math.min(Number(S.stats.split) || 430, vw - 10 - 260 - 200));
+    const qMax = Math.max(260, vw - leftW - 10 - 200);
+    const qW = Math.max(260, Math.min(Number(S.stats.qsplit) || Math.round(vw * 0.30), qMax));
+    S.stats.split = Math.round(leftW);
+    S.stats.qsplit = Math.round(qW);
+    setSplit(leftW, qW);
+
     gutter.addEventListener('pointerdown', (ev) => {
       ev.preventDefault();
+      const qw = Math.round(queryAside.getBoundingClientRect().width) || S.stats.qsplit;
       const move = (e) => {
         const box = split.getBoundingClientRect();
-        const maxW = Math.min(560, Math.max(150, Math.round(box.width * 0.55)));
+        const maxW = Math.min(560, Math.max(150, Math.round(box.width - qw - 10 - 200)));
         const w = Math.max(150, Math.min(maxW, e.clientX - box.left));
         S.stats.split = Math.round(w);
-        split.style.gridTemplateColumns = Math.round(w) + 'px 5px minmax(0, 1fr)';
+        setSplit(w, qw);
+        if (TV.queryLayout) TV.queryLayout.refit();
       };
       const up = () => {
         window.removeEventListener('pointermove', move);
@@ -27242,6 +27692,29 @@ html[data-theme="paper"] .composer.liquid-glass.lg-clear {
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
     });
+    gutter2.addEventListener('pointerdown', (ev) => {
+      ev.preventDefault();
+      const lw = Math.round(left.getBoundingClientRect().width) || S.stats.split;
+      const move = (e) => {
+        const box = split.getBoundingClientRect();
+        const maxW = Math.max(260, Math.round(box.width - lw - 10 - 200));
+        const w = Math.max(260, Math.min(maxW, box.right - e.clientX));
+        S.stats.qsplit = Math.round(w);
+        setSplit(lw, w);
+        if (TV.queryLayout) TV.queryLayout.refit();
+      };
+      const up = () => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', up);
+        try { localStorage.setItem('txtvein:stats-query', String(S.stats.qsplit)); } catch (e) { /* ignore */ }
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    });
+    if (TV.queryLayout) {
+      TV.queryLayout.refit();
+      requestAnimationFrame(() => TV.queryLayout.refit());
+    }
   }
 
   let reportCtl = null;

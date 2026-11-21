@@ -18,6 +18,7 @@ const FILES = [
   'js/core/nt-bridge.js',
   'js/core/amount.js',
   'js/core/date.js',
+  'js/core/query-cols.js',
   'js/core/dict.js',
   'js/core/ids.js',
   'js/core/parser.js',

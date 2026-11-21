@@ -1,4 +1,4 @@
-﻿/* TxtVein · 电纸书主题收尾层
+/* TxtVein · 电纸书主题收尾层
  * 必须最后加载：editor.css 里有一批 later 的 #050505 规则，
  * 这里用 html[data-theme="paper"] + !important 统一压住。
  */
@@ -279,9 +279,9 @@ html[data-theme="paper"] .stats-left .sd-row.is-total .sd-num {
   font-size: 10.5px !important;
 }
 
-/* 查询页：去掉输入框上方的小标签；表头整行居中 */
+/* 查询页：去掉输入框上方的小标签；表头行对齐在 editor.css 统一处理
+ *（金额靠右 / 备注靠左 / 其余居中，表头与数据行共用） */
 .q-field > span { display: none !important; }
-.q-row.is-head > span { text-align: center !important; }
 
 /* 纸主题：副标题保持弱化色但加粗；主标题标签加粗居中，金额普通贴底 */
 html[data-theme="paper"] .stats-left .sd-row.is-head {
@@ -375,3 +375,123 @@ html[data-theme="paper"] .composer {
 html[data-theme="paper"] .composer.liquid-glass.lg-clear {
   background-color: transparent !important;
 }
+
+/* ===== 纸主题补漏：深色主题里写死、纸色下没被变量接住的面 =====
+ * 这张清单来自对每个页面做对比度扫描（文字色 vs 生效背景 < 3:1 即报），
+ * 不是凭印象补的；新增深色组件时先跑一遍同样的扫描。
+ */
+
+/* 1. 单输入框候选气泡 / 预测条（#bubbles / #prediction，ledger.css 写死 #0A0C11） */
+html[data-theme="paper"] .bubble-layer,
+html[data-theme="paper"] .prediction {
+  background: #f7f3e8 !important;
+  border-color: #c9c0ae !important;
+  box-shadow: 0 -10px 26px rgba(40, 35, 25, 0.16) !important;
+}
+html[data-theme="paper"] .bubble { border-bottom-color: #ddd6c6 !important; }
+html[data-theme="paper"] .bubble:hover,
+html[data-theme="paper"] .bubble.is-active {
+  background: #efeada !important;
+  box-shadow: inset 2px 0 0 #3f6b52 !important;
+}
+html[data-theme="paper"] .bubble-name { color: #2b2924 !important; }
+html[data-theme="paper"] .bubble-name .code { color: #6c665a !important; }
+html[data-theme="paper"] .bubble-meta { color: #6c665a !important; }
+html[data-theme="paper"] .bubble-side { color: #4a463d !important; }
+html[data-theme="paper"] .bubble-side .pole-a { color: #2f5d50 !important; }
+html[data-theme="paper"] .bubble-side .pole-b { color: #8a5a32 !important; }
+html[data-theme="paper"] .prediction .pred-label { color: #2f6b52 !important; }
+html[data-theme="paper"] .prediction .pred-text { color: #2b2924 !important; }
+html[data-theme="paper"] .prediction .pred-key { color: #6c665a !important; }
+
+/* 2. 点行号弹出的横排菜单 + 选中行（editor.css 写死 #1e1e1e / #3a3a3a） */
+html[data-theme="paper"] .cm-line-menu {
+  background: #f7f3e8 !important;
+  border-color: #b9b09c !important;
+  box-shadow: 0 8px 22px rgba(40, 35, 25, 0.18) !important;
+}
+html[data-theme="paper"] .cm-line-menu button { color: #2b2924 !important; }
+html[data-theme="paper"] .cm-line-menu button:hover { background: #e9e3d3 !important; }
+html[data-theme="paper"] .cm-line-menu button:disabled { color: #a8a091 !important; }
+html[data-theme="paper"] .cm-line-menu button.is-primary { color: #2f6b52 !important; }
+html[data-theme="paper"] .cm-line-menu button.is-primary:hover { background: #e2ebdf !important; }
+html[data-theme="paper"] .editor-pane .CodeMirror-gutter-wrapper.tv-line-selected .CodeMirror-linenumber {
+  background: #ddd5c2 !important;
+  color: #1f1e1a !important;
+}
+html[data-theme="paper"] .editor-pane .CodeMirror-linebackground.tv-line-selected-bg {
+  background: rgba(70, 62, 48, 0.075) !important;
+}
+
+/* 3. 查询页金额列（.q-num 写死 #f0f0f0，纸面上 1:1 不可见） */
+html[data-theme="paper"] .q-num { color: #111111 !important; }
+html[data-theme="paper"] .q-row.is-head .q-num { color: #6c665a !important; }
+html[data-theme="paper"] .q-muted { color: #6c665a !important; }
+html[data-theme="paper"] .q-total { color: #2f6b52 !important; }
+
+/* 4. 固定页标题与状态行（#e8e8e8 / #6f9a7a / #d98a8a） */
+html[data-theme="paper"] .fixed-head .fixed-title { color: #111111 !important; }
+html[data-theme="paper"] .fixed-sub,
+html[data-theme="paper"] .fixed-note { color: #6c665a !important; }
+html[data-theme="paper"] .fixed-errors .fixed-ok { color: #2f6b52 !important; }
+html[data-theme="paper"] .fixed-errors .fixed-error { color: #8a3f3f !important; }
+
+/* 5. 统计右侧标题 / 弹窗标题（#e8e8e8 / #f2f2f2） */
+html[data-theme="paper"] .stats-right-head b { color: #111111 !important; }
+html[data-theme="paper"] .stats-right-head span { color: #6c665a !important; }
+html[data-theme="paper"] .modal-head h2,
+html[data-theme="paper"] #modal-title { color: #111111 !important; }
+
+/* 6. CodeMirror 补全气泡 / lint 提示：纸主题下同样不能是深色浮层 */
+html[data-theme="paper"] .CodeMirror-hints {
+  background: #f7f3e8 !important;
+  border-color: #b9b09c !important;
+  box-shadow: 0 6px 18px rgba(40, 35, 25, 0.16) !important;
+}
+html[data-theme="paper"] .CodeMirror-hint { color: #2b2924 !important; }
+html[data-theme="paper"] li.CodeMirror-hint-active {
+  background: #e9e3d3 !important;
+  color: #111111 !important;
+}
+html[data-theme="paper"] .CodeMirror-hint .hint-meta { color: #6c665a !important; }
+html[data-theme="paper"] .CodeMirror-lint-tooltip {
+  background: #f7f3e8 !important;
+  border-color: #b9b09c !important;
+  color: #2b2924 !important;
+}
+
+/* 顶栏按钮：悬停不能是深色块（纸主题下深底 + 深字会直接看不见） */
+html[data-theme="paper"] .top-menu .menu-btn:hover,
+html[data-theme="paper"] .top-menu .menu-btn:focus-visible {
+  background: #e9e3d4 !important;
+  color: #111111 !important;
+  border-color: #c9c0ae !important;
+}
+html[data-theme="paper"] .top-menu .menu-btn:active {
+  background: #ddd5c2 !important;
+}
+
+/* 7. 统计页：第三区（流水查询）与列表分组标题 */
+html[data-theme="paper"] .stats-scope {
+  color: #6c665a !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .stats-query {
+  background: #f3efe3 !important;
+  border-left-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .stats-query .q-panel { background: #f3efe3 !important; }
+html[data-theme="paper"] .lst-group-head {
+  background: #efeada !important;
+  color: #2b2924 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .lst-group-head b { color: #111111 !important; }
+html[data-theme="paper"] .lst-group-head span { color: #2f6b52 !important; }
+html[data-theme="paper"] .stats-back {
+  background: #e9e3d3 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .stats-item-name { color: #2b2924 !important; }
+html[data-theme="paper"] .stats-item-meta { color: #6c665a !important; }

@@ -959,7 +959,18 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 
 
 /* ================= 查询页：NT 式三段独立查询 ================= */
-.query-view { height: 100%; overflow: hidden; }
+.query-view {
+  height: 100%;
+  overflow: hidden;
+  /* 六列宽度的唯一来源：JS 只改这里的变量（#query-view 上的内联值优先）。
+     前五列有手柄可拖；备注列吃剩余，所以不给它写宽度。 */
+  --q-c-seq: 34px;
+  --q-c-date: 70px;
+  --q-c-from: 92px;
+  --q-c-to: 92px;
+  --q-c-amt: 88px;
+  --q-note-min: 90px;
+}
 .q-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1028,7 +1039,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .q-table { flex: 1 1 auto; min-height: 0; overflow: auto; }
 .q-row {
   display: grid;
-  grid-template-columns: 34px 72px minmax(0, 1fr) minmax(0, 1fr) 88px minmax(0, .9fr);
+  grid-template-columns:
+    var(--q-c-seq, 34px) var(--q-c-date, 70px) var(--q-c-from, 92px)
+    var(--q-c-to, 92px) var(--q-c-amt, 88px) minmax(var(--q-note-min, 90px), 1fr);
   gap: 6px;
   align-items: center;
   padding: 6px 8px;
@@ -1049,7 +1062,42 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .q-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e0e0e0; }
 .q-muted { color: #8a8a8a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .q-num { text-align: right; color: #f0f0f0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 对齐口径（用户 2026-11-21）：金额靠右、备注靠左，其余居中。
+   表头与数据行同一套，避免两行字对不齐。 */
+.q-row > span { text-align: center; }
+.q-row > span.q-num { text-align: right; }
+.q-row > span.q-note { text-align: left; }
 .q-empty { padding: 20px 10px; color: #7f7f7f; font-size: 12px; text-align: center; }
+
+/* 列宽手柄：只是 7px 宽的可视/光标区，命中判定由 JS 按坐标做。
+ * 放在列间距里（right:-3px），不盖住表头文字。 */
+.q-row.is-head { touch-action: pan-y; }
+.q-row.is-head > span { position: relative; }
+.q-col-handle {
+  position: absolute;
+  right: -3px;
+  top: 7px;
+  bottom: 7px;
+  width: 7px;
+  z-index: 3;
+  cursor: col-resize;
+  touch-action: none;
+}
+.q-col-handle::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 10%;
+  bottom: 10%;
+  width: 1px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background-color 0.12s ease;
+}
+.q-row.is-head > span:hover .q-col-handle::after { background: currentColor; opacity: 0.45; }
+.q-col-handle.is-dragging::after { background: var(--accent); opacity: 0.9; }
+body.q-col-resizing { cursor: col-resize; user-select: none; }
+body.q-col-resizing .q-row.is-head > span { cursor: col-resize; }
 @media (max-width: 900px) {
   .q-grid {
     display: flex;
@@ -1172,10 +1220,21 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   border-bottom: 1px solid #2a2a2a;
   overflow: hidden;
 }
-.stats-top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.stats-top-row { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; }
 .stats-tabs-wrap { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .stats-tabs { display: flex; gap: 3px; flex: 0 0 auto; }
 .stats-title { flex: 0 0 auto; font-size: 13px; color: #e8e8e8; font-weight: 600; padding-right: 4px; }
+/* 统计口径说明：不可点，只是标签。 */
+.stats-scope {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid #333;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #8a8a8a;
+  white-space: nowrap;
+}
 .stats-tab {
   height: 27px;
   padding: 0 12px;
@@ -1187,7 +1246,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 }
 .stats-tab:hover { color: #fff; background: #252526; }
 .stats-tab.is-active { color: #fff; background: #2b2b2b; border-color: #3a3a3a; }
-.stats-months { display: flex; align-items: center; justify-content: flex-end; gap: 3px; width: 100%; overflow-x: auto; scrollbar-width: none; }
+.stats-months { display: flex; align-items: center; justify-content: flex-start; gap: 3px; width: 100%; overflow-x: auto; scrollbar-width: none; }
 .stats-months::-webkit-scrollbar { display: none; }
 .stats-year { font-family: var(--mono); font-size: 10px; color: #8a8a8a; margin-right: 3px; white-space: nowrap; }
 .stats-year-input {
@@ -1255,6 +1314,25 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .stats-gutter { cursor: col-resize; background: #151515; border-right: 1px solid #222; touch-action: none; }
 .stats-gutter:hover { background: #2a2a2a; }
 .stats-right { min-width: 0; min-height: 0; overflow: auto; background: #050505; }
+/* 统计页第三区：与流水查询同一个面板组件（单张）。 */
+.stats-query {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid #2a2a2a;
+  background: #050505;
+}
+.stats-query .q-panel {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  border-right: 0;
+}
+.stats-query .q-head { flex: 0 0 32px; }
+.stats-query .q-title { font-size: 12px; }
+.stats-query .q-filters { padding: 4px 5px; }
 .stats-right-head {
   position: sticky;
   top: 0;
@@ -1406,6 +1484,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 @media (max-width: 900px) {
   .stats-split { display: block; position: relative; }
   .stats-gutter { display: none; }
+  .stats-query { display: none !important; }
   .stats-left, .stats-right { width: 100%; height: 100%; border: 0; }
   .stats-page[data-pane="list"] .stats-right { display: none; }
   .stats-page[data-pane="detail"] .stats-left { display: none; }

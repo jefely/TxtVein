@@ -768,14 +768,12 @@ html[data-theme="paper"] .page-tabs {
   border-color: #d8d1c1 !important;
 }
 html[data-theme="paper"] .page-tab,
-html[data-theme="paper"] .report-mode-btn,
 html[data-theme="paper"] .stats-clear {
   background: #f3efe3 !important;
   color: #4a463d !important;
   border-color: #b9b09c !important;
 }
-html[data-theme="paper"] .page-tab.is-active,
-html[data-theme="paper"] .report-mode-btn.is-active {
+html[data-theme="paper"] .page-tab.is-active {
   background: #e9e3d4 !important;
   color: #1f1e1a !important;
   border-color: #8a8273 !important;

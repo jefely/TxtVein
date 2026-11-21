@@ -58,7 +58,7 @@ def main():
     print("editors:", j(b, sid, "document.querySelectorAll('.CodeMirror').length"))
     j(b, sid, "document.querySelector('#btn-query').click()")
     time.sleep(0.4)
-    print("query rows:", j(b, sid, "document.querySelectorAll('.query-row').length"))
+    print("query rows:", j(b, sid, "document.querySelectorAll('#query-view .q-row:not(.is-head)').length"))
     print("state:", j(b, sid, "JSON.stringify(window.__txtvein.state())"))
     shot(b, sid, os.path.join(ROOT, "shots", "05-single-file.png"))
     b.call("Page.reload", {}, sid)

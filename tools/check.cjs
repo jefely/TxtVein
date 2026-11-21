@@ -56,6 +56,7 @@ const CORE = [
   'js/core/nt-bridge.js',
   'js/core/amount.js',
   'js/core/date.js',
+  'js/core/query-cols.js',
   'js/core/dict.js',
   'js/core/ids.js',
   'js/core/parser.js',
@@ -84,9 +85,11 @@ const UI = [
   'js/ui/input.js',
   'js/ui/panels.js',
   'js/ui/plan-view.js',
+  'js/ui/query-cols.js',
+  'js/ui/glass.js',
   'js/ui/app.js',
 ];
-const CSS = ['css/base.css', 'css/ledger.css', 'css/report.css', 'css/panels.css', 'css/editor.css'];
+const CSS = ['css/base.css', 'css/ledger.css', 'css/report.css', 'css/panels.css', 'css/editor.css', 'css/paper.css'];
 
 console.log('TxtVein gate');
 console.log('1) 文件存在');
@@ -153,7 +156,8 @@ console.log('7) 数据文件与测试');
   'tests/system-graph.test.cjs', 'tests/system-dict.test.cjs', 'tests/system-i18n.test.cjs',
   'tests/split-dict.test.cjs', 'tests/tree-view.test.cjs', 'tests/anchor.test.cjs',
   'tests/public-report.test.cjs', 'tests/suggester.test.cjs',
-  'tests/text-bundle.test.cjs', 'tests/nt-bridge.test.cjs', 'tests/dict-v4.test.cjs'].forEach((f) => ok(f, exists(f)));
+  'tests/text-bundle.test.cjs', 'tests/nt-bridge.test.cjs', 'tests/dict-v4.test.cjs',
+  'tests/query-cols.test.cjs'].forEach((f) => ok(f, exists(f)));
 ok('示例账本存在', exists('js/core/example.js'));
 ['vendor/codemirror/codemirror.min.js', 'vendor/codemirror/codemirror.min.css',
   'vendor/codemirror/addon/hint/show-hint.min.js', 'vendor/codemirror/addon/lint/lint.min.js',
