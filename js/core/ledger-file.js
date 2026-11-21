@@ -57,6 +57,12 @@
       '# 金额: 整数分；60m 为时间代币；标签为 T_ID',
     ];
     (s.events || []).forEach((e) => lines.push(eventLine(e)));
+    const nodes = (s.dict && s.dict.nodes) || {};
+    const bound = Object.keys(nodes)
+      .map((id) => nodes[id])
+      .filter((n) => n && !n.system && n.anchor_id)
+      .map((n) => (n.domain && n.domain !== 'P' ? n.domain + ':' : '') + n.zh_code + '=' + n.anchor_id);
+    if (bound.length) lines.push('# BINDINGS: ' + bound.join(';'));
     const blocks = rulesMod.serializeBlocks(s.plans || [], s.rules || []);
     if (blocks) {
       lines.push(blocks);
@@ -65,7 +71,7 @@
   }
 
   function parseMeta(lines) {
-    const meta = { format: '', vaultId: '', link: '' };
+    const meta = { format: '', vaultId: '', link: '', bindings: {} };
     lines.forEach((line) => {
       const m = S(line).match(/^#\s*([A-Za-z_]+)\s*:\s*(.*)$/);
       if (!m) return;
@@ -73,6 +79,12 @@
       if (key === 'FORMAT') meta.format = m[2].trim();
       if (key === 'VAULT_ID') meta.vaultId = m[2].trim();
       if (key === 'LINK') meta.link = m[2].trim();
+      if (key === 'BINDINGS') {
+        m[2].split(';').forEach((pair) => {
+          const at = pair.indexOf('=');
+          if (at > 0) meta.bindings[pair.slice(0, at).trim()] = pair.slice(at + 1).trim();
+        });
+      }
     });
     return meta;
   }

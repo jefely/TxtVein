@@ -32,6 +32,8 @@ function inlineCss(html) {
   return html.replace(/<link\s+rel="stylesheet"\s+href="([^"]+)"\s*\/?>/g, (m, href) => {
     if (/^https?:/i.test(href)) throw new Error('不允许外链 CSS：' + href);
     let css = read(href);
+    /* 单文件体积门禁：CSS 注释不进入成品，源码里仍保留。 */
+    css = css.replace(/\/\*[\s\S]*?\*\//g, '');
     if (font) {
       css = css.replace(
         /url\(["']?\.\.\/assets\/cascadia\/CascadiaCode\.woff2["']?\)/g,

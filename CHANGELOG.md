@@ -72,7 +72,7 @@
 - **编辑器语义高亮不再改字重**：`tv-def` / `cm-type` 只保留颜色，不再加粗。
   此前识别成功后字重跳到 600，补入真粗体后字典页的条目会忽粗忽细；
   现在字典 / 流水的识别结果只变颜色。
-- 单文件 **1,536.0 KB**。
+- 单文件 **1,522.5 KB**。
 - **英文界面整体缩短**：Dictionary → Dict、Candidates → Cand.（Language 保留全名）；
   查询筛选 From / To / Min / Max；统计类型 Debt / Asset / Expense / Cost；
   统计列头 Open / Close / Borrow / Repay / In / Out / Net 等；
@@ -82,10 +82,10 @@
 
 **验证**
 
-- `node --test tests/*.test.cjs` → **283 pass / 0 fail**
+- `node --test tests/*.test.cjs` → **285 pass / 0 fail**
 - `node tools/check.cjs` → **198 pass / 0 fail**
 - `python tools/e2e.py` → **119 pass** · `python tools/e2e_v4.py` → **64 pass**
-- 单文件 `TxtVein.html` **1,536.0 KB**
+- 单文件 `TxtVein.html` **1,522.5 KB**
 
 ## v2.8.1 · 查询列宽 / 统计第三区 / 电纸书补漏
 
@@ -300,3 +300,5 @@
 - **固定页掩码/明文**：切换时固定页也重新投影，节点与备注按当前模式显示；投影不会反向写坏原始固定表。
 - **纸主题行号列**：流水 / 字典 / 固定页的行号列统一用纸色背景 `#f7f3e8`、分隔线 `#d8d1c1`。
 - **节点颜色拆分**：颜色设置分为「节点简码」和「节点名称」两项；旧 `node` 颜色自动迁移到两项。
+- **节点树绑定导出**：字典 `[母树]` 改写稳定 `SYS.*` 节点 ID（不再写会变的名称/路径）；
+  流水文件新增 `# BINDINGS: 简码=SYS.*` 头，导入时按 ID 还原绑定；私有节点改名不影响绑定。

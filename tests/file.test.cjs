@@ -114,3 +114,16 @@ test('流水文件：链式与时间行可往返', () => {
   assert.equal(p.events[0].chainId, 'C_001');
   assert.equal(p.events[2].amountCents, 500);
 });
+
+test('流水文件：携带私人节点的节点树绑定', () => {
+  const d = JSON.parse(JSON.stringify(EX.dict));
+  const id = Object.keys(d.nodes).find((x) => !d.nodes[x].system);
+  d.nodes[id].anchor_id = 'SYS.CAT.TEST.BIND';
+  const txt = TV.ledgerFile.serializeLedger({
+    vaultId: 'test0001', link: '', events: EX.events, plans: EX.plans, rules: EX.rules, dict: d,
+  });
+  assert.ok(txt.includes('# BINDINGS:'), txt);
+  assert.ok(txt.includes(d.nodes[id].zh_code + '=SYS.CAT.TEST.BIND'), txt);
+  const p = TV.ledgerFile.parseLedger(txt, { dict: d });
+  assert.equal(p.meta.bindings[d.nodes[id].zh_code], 'SYS.CAT.TEST.BIND');
+});

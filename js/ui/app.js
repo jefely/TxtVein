@@ -269,6 +269,7 @@
       events: S.events,
       plans: S.plans,
       rules: S.rules,
+      dict: S.dict,
     });
     const ledgerHash = await crypto.sha256Hex(ledgerFile.bodyForHash(ledger));
     S.dict.link = ledgerHash;
@@ -4034,7 +4035,24 @@
 
     const dp = dictFile.parseDict(dictText);
     if (!dp.ok) return { ok: false, error: dp.error };
+    const applyBindings = (dict, bindings) => {
+      Object.keys(bindings || {}).forEach((key) => {
+        const m = String(key).match(/^([PFCH]):(.+)$/);
+        const domain = m ? m[1] : 'P';
+        const code = m ? m[2] : String(key);
+        const id = Object.keys(dict.nodes || {}).find((x) => {
+          const n = dict.nodes[x];
+          return n && !n.system && n.zh_code === code && (n.domain || 'P') === domain;
+        });
+        if (!id) return;
+        const anchor = bindings[key];
+        if (TV.systemDict && TV.systemDict.nodes && TV.systemDict.nodes[anchor] && !dict.nodes[id].anchor_id) {
+          dict.nodes[id].anchor_id = anchor;
+        }
+      });
+    };
     const lp = ledgerFile.parseLedger(ledgerText, { dict: dp.dict });
+    applyBindings(dp.dict, lp.meta && lp.meta.bindings);
     const errors = (lp.issues || []).filter((x) => x.level === 'error');
     if (errors.length && !o.force) {
       return {

@@ -662,21 +662,6 @@ const TAG_EN_DEFAULTS = {
       }
     });
     /* 归属块：每个绑定过的节点一行（固定绑定，不随统计分类走） */
-    const sysNodes = (TV.systemDict && TV.systemDict.nodes) || {};
-    const idxCache = new Map();
-    const shortRefOf = (type, id) => {
-      const nodes = sysNodes;
-      let idx = idxCache.get(type);
-      if (!idx) { idx = buildIndex(TV.systemDict, TV.systemDictCore, type); idxCache.set(type, idx); }
-      const nm = nodes[id] && nodes[id].zh_name;
-      if (nm && (idx.byName.get(nm) || []).length === 1) return nm;
-      const chain = [];
-      let cur = id;
-      let guard = 0;
-      while (cur && nodes[cur] && guard < 64) { chain.unshift(cur); cur = nodes[cur].parent_id; guard += 1; }
-      return chain.filter((x) => nodes[x].kind !== 'root' && nodes[x].kind !== 'type')
-        .map((x) => nodes[x].zh_name).join('/');
-    };
     const bound = Object.keys(dict.nodes || {}).map((id) => dict.nodes[id])
       .filter((n) => !n.system && n.anchor_id)
       .sort((a, b) => (a.source_line || 1e9) - (b.source_line || 1e9) || S(a.zh_code).localeCompare(S(b.zh_code)));
@@ -685,7 +670,7 @@ const TAG_EN_DEFAULTS = {
       out.push('[母树]，Bindings');
       bound.forEach((n) => {
         const codeCell = n.domain && n.domain !== 'P' ? n.domain + ':' + n.zh_code : n.zh_code;
-        out.push(codeCell + '，' + (shortRefOf(n.type, n.anchor_id) || n.anchor_id));
+        out.push(codeCell + '，' + n.anchor_id);
       });
     }
 

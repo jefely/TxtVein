@@ -94,7 +94,7 @@ test('统计分类的第三列仍读作「默认绑定」，写回时变成节�
   assert.equal(r.dict.nodes[codeId(r.dict, 'DT')].anchor_id, 'SYS.CAT.TRANSPORT');
   const text = V4.emit(r);
   assert.ok(text.indexOf('通勤，Commute') >= 0, text);
-  assert.ok(text.indexOf('DT，交通') >= 0, text);
+  assert.ok(text.indexOf('DT，SYS.') >= 0, text);
   assert.ok(text.indexOf('通勤，，交通') < 0, '不再输出分类第三列');
 });
 
@@ -208,7 +208,7 @@ test('模型操作：落分组、改绑定、孤儿兜底', () => {
   assert.equal(d.nodes[id].anchor_id, 'SYS.CAT.TRANSPORT');
   const text = V4.emit(d);
   assert.ok(text.indexOf('  WF，午饭') >= 0, text);
-  assert.ok(text.indexOf('WF，交通') >= 0, text);
+  assert.ok(text.indexOf('WF，SYS.') >= 0, text);
   d.nodes[id].category_key = '';
   const orphan = V4.emit(d);
   assert.ok(orphan.indexOf('未分类') >= 0 && orphan.indexOf('WF，午饭') >= 0, orphan);
@@ -312,7 +312,7 @@ test('域：C 节点在 v4 文本 / 拆分 / 合并里保留 C: 前缀', () => {
   assert.equal(c.domain, 'C');
   const text = V4.emit(r.dict);
   assert.ok(text.indexOf('C:CZC，出租车') >= 0, text);
-  assert.ok(text.indexOf('C:CZC，交通') >= 0, text);
+  assert.ok(text.indexOf('C:CZC，SYS.') >= 0, text);
   const sp = TV.userDict.split(src);
   assert.equal(sp.ok, true);
   assert.ok(sp.c.indexOf('C:CZC，出租车') >= 0, sp.c);
@@ -440,4 +440,13 @@ test('掩码模式分期备注只留 2/7', () => {
   const r = V4.parse(src, { now: new Date('2026-01-01T00:00:00Z') });
   assert.equal(TV.dict.maskNote(r.dict, '< 2612分期 第2/7期', 'CODE', 'zh'), '< 2612FQ 2/7');
   assert.equal(TV.dict.maskNote(r.dict, '< 2612分期 第2/7期', 'PLAIN', 'zh'), '< 2612分期 第2/7期');
+});
+
+test('v4 字典导出：母树绑定写稳定节点树 ID', () => {
+  const r = V4.parse(SAMPLE, { now: new Date('2026-01-01T00:00:00Z') });
+  const text = V4.emit(r.dict);
+  const idx = text.indexOf('[母树]');
+  assert.ok(idx >= 0);
+  const block = text.slice(idx);
+  assert.ok(block.includes('SYS.'), block.slice(0, 200));
 });

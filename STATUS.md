@@ -22,7 +22,7 @@
 
 ```text
 D:\myproject\TxtVein\
-├─ TxtVein.html          1,536.0 KB 单文件成品（内置 Cascadia Code 字体）
+├─ TxtVein.html          1,522.5 KB 单文件成品（内置 Cascadia Code 字体）
 ├─ index.html            开发入口
 ├─ css/ (6)              base / ledger / report / panels / editor / paper
 ├─ js/core/ (33)         text/pinyin/system-dict-core/system-dict/user-dict/
@@ -35,7 +35,7 @@ D:\myproject\TxtVein\
 ├─ js/ui/ (12)           dom/gate/editor/panes/report-view/input/panels/
 │                        plan-view/query-cols/stats-cols/glass/app
 ├─ vendor/codemirror/    CM5 + hint/lint/matchbrackets/active-line
-├─ tests/ (25 个文件)     283 条 node --test
+├─ tests/ (25 个文件)     285 条 node --test
 ├─ tools/                build / check / cdp / e2e / smoke_file
 ├─ docs/screens/         01-editor / 02-report / 03-invalid / 04-mobile /
 │                        06-tree / 07-candidates / 08-tree-edit
@@ -49,7 +49,7 @@ D:\myproject\TxtVein\
 
 | 项 | 现状 |
 |---|---|
-| 单文件 | `TxtVein.html` **1,536.0 KB**；零外链、零 CDN；字体 base64 内嵌 |
+| 单文件 | `TxtVein.html` **1,522.5 KB**；零外链、零 CDN；字体 base64 内嵌 |
 | 数据事实 | 后台 ID 图；编辑器文本是投影 + 手稿；ID 不出现在 UI |
 | 源码编辑器 | 流水 `ledger.tv` / 字典 `dict.tv` 双 CM5；行号、高亮、单波浪线（只标出错 token）、补全、运算符工具条 |
 | 相对日期 | 输入框 `-1/-2` 提交时固化；直接编辑在日期 token 后按空格立即固化；`0/+1` 同理 |
@@ -78,14 +78,14 @@ D:\myproject\TxtVein\
 | 固定收支 | **独立固定表**（`fixed.tv`，`[固定]` + `[分期]` 两段）；固定行只写 `19日` / `每日` / `每年` 表示周期、不写 `*m/*d/*y`（周期标记只用于流水记录）；新行空格自动补 `每日 `，`19`+空格自动补 `19日 `；支持双击空格 `>` / 三击空格 `<`；固定行末尾 `< 261019` 作为来源日期标记（不参与标签）；流水行内联 `*m/*d/*y` 绑定期间保留、不自动剥离；分期支持 `20000/12+2000/12`、`(20000+2000)/12`、`22000/12`、`9900/7` 紧凑式，金额支持 `+ - * / ()`；首月写 `< 2612`，期数可单列 `< 2612/12`，最后一期补差；输入表达式原样保留、不自动展开，分期未来行只写 `< 2612分期 第4/7期`，每月固定写 `< 固定每月 话费`，每日写 `< 固定每日`（有备注接在后面）；固定页允许添加新行 / 注释，写回只改计划行不删除其它行；未来流水行只读，行号菜单「编辑」跳到固定行；固定页光标 / 行号列与流水字典一致，行号可点出操作菜单；顶部无标题说明、底部一行聚合；每月到期自动落账，每日未来行当天常驻、可重复确认多条；与 NT 的 `scheduled` / `planKey` / `voidedPlans` 互通 |
 | 报表 | 双极四列 + 能量审计 + 时间 + 链式因果 + 顶部行为/备注统计 + 行为树/备注树 |
 | 存储 | localStorage 加密保险库；PBKDF2 150k → AES-GCM-256；CAS 防多标签覆盖 |
-| 测试 | **283** Node · **198** 门禁 · **118 + 64** E2E · 单文件冒烟通过 |
+| 测试 | **285** Node · **198** 门禁 · **118 + 64** E2E · 单文件冒烟通过 |
 | 字典 v4 | **已实施**：节点级固定绑定 / 无损转换 / 整页母树（点选绑定） / 同支推荐 / 语义校验 / 语义染色 / 录入流（编辑器同源 / 修正模式按波浪线启用 / 输入框收窄 / 自动别名不落盘 / v4 不自动建行为项 / 颜色与字号可配 / 改字典按 ID 重投影流水）；待打磨拖拽与状态栏计数 |
 
 最近验证（2026-11-21，v2.8.2）：
 
 ```text
-node --test tests/*.test.cjs             283 pass / 0 fail
-node tools/build.cjs                     TxtVein.html 1,536.0 KB
+node --test tests/*.test.cjs             285 pass / 0 fail
+node tools/build.cjs                     TxtVein.html 1,522.5 KB
 node tools/check.cjs                     198 pass / 0 fail
 python tools/e2e.py    (http://8899)     119 pass / E2E PASSED
 python tools/e2e_v4.py (http://8899)     64 pass / E2E v4 PASSED
@@ -127,7 +127,7 @@ python tools/smoke_file.py      setup + render + reload unlock；manifest CORS �
 最近验证（2026-11-21）：
 
 ```text
-node --test tests/*.test.cjs    283 pass / 0 fail
+node --test tests/*.test.cjs    285 pass / 0 fail
 node tools/check.cjs            198 pass / 0 fail
 python tools/e2e.py             119 pass / 0 fail
 python tools/smoke_file.py      setup + render + reload unlock, 0 runtime errors
