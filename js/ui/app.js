@@ -2597,6 +2597,14 @@
       TV.queryLayout.refit();
       requestAnimationFrame(() => TV.queryLayout.refit());
     }
+
+    /* 手机上三栏横向滑动；点左表进入中间时滚到对应栏。 */
+    if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+      const target = S.stats.pane === 'detail' ? right : left;
+      requestAnimationFrame(() => {
+        try { split.scrollTo({ left: target.offsetLeft, behavior: 'auto' }); } catch (e) { /* ignore */ }
+      });
+    }
   }
 
   let reportCtl = null;

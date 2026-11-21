@@ -1549,24 +1549,28 @@ html[data-lang="en"] .stats-tab { font-size: 11.5px; }
   .stats-clear { padding: 0 6px; font-size: 9px; }
 }
 @media (max-width: 900px) {
-  .stats-split { display: block; position: relative; }
-  .stats-gutter { display: none; }
-  .stats-query { display: none !important; }
-  .stats-left, .stats-right { width: 100%; height: 100%; border: 0; }
-  .stats-page[data-pane="list"] .stats-right { display: none; }
-  .stats-page[data-pane="detail"] .stats-left { display: none; }
-  .stats-page[data-pane="detail"] .stats-right { display: block; }
-  .stats-back {
-    display: inline-block;
-    flex: 0 0 auto;
-    height: 22px;
-    padding: 0 7px;
-    border: 1px solid #3a3a3a;
-    border-radius: 3px;
-    background: #202020;
-    color: #cfcfcf;
-    font-size: 10px;
+  .stats-split {
+    display: flex !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .stats-split::-webkit-scrollbar { display: none; }
+  .stats-gutter { display: none; }
+  .stats-left, .stats-right, .stats-query {
+    flex: 0 0 100%;
+    width: 100%;
+    height: auto;
+    align-self: stretch;
+    min-height: 0;
+    border: 0;
+    scroll-snap-align: start;
+  }
+  .stats-left, .stats-right { overflow-y: auto; overflow-x: hidden; }
+  .stats-query { display: flex !important; overflow: hidden; }
+  .stats-back { display: none; }
   .stats-right-head b { flex: 1 1 auto; }
   .stats-selected { display: none !important; }
   .stats-search { flex-basis: 140px; }
@@ -2155,3 +2159,9 @@ body.s-col-resizing { cursor: col-resize; user-select: none; }
 }
 .fixed-editor .tv-fixed-state-hidden { display: inline-block; width: 0; height: 0; overflow: hidden; }
 .fixed-editor .CodeMirror-linebackground.tv-line-selected-bg { background: rgba(255, 255, 255, 0.055); }
+
+/* 移动端点击不要蓝色色块闪现 */
+* { -webkit-tap-highlight-color: transparent; }
+button:focus:not(:focus-visible),
+.page-tab:focus:not(:focus-visible),
+.menu-btn:focus:not(:focus-visible) { outline: none; }

@@ -72,7 +72,7 @@
 - **编辑器语义高亮不再改字重**：`tv-def` / `cm-type` 只保留颜色，不再加粗。
   此前识别成功后字重跳到 600，补入真粗体后字典页的条目会忽粗忽细；
   现在字典 / 流水的识别结果只变颜色。
-- 单文件 **1,522.5 KB**。
+- 单文件 **1,529.2 KB**。
 - **英文界面整体缩短**：Dictionary → Dict、Candidates → Cand.（Language 保留全名）；
   查询筛选 From / To / Min / Max；统计类型 Debt / Asset / Expense / Cost；
   统计列头 Open / Close / Borrow / Repay / In / Out / Net 等；
@@ -85,7 +85,7 @@
 - `node --test tests/*.test.cjs` → **285 pass / 0 fail**
 - `node tools/check.cjs` → **198 pass / 0 fail**
 - `python tools/e2e.py` → **119 pass** · `python tools/e2e_v4.py` → **64 pass**
-- 单文件 `TxtVein.html` **1,522.5 KB**
+- 单文件 `TxtVein.html` **1,529.2 KB**
 
 ## v2.8.1 · 查询列宽 / 统计第三区 / 电纸书补漏
 
@@ -303,3 +303,5 @@
 - **节点树绑定导出**：字典 `[母树]` 改写稳定 `SYS.*` 节点 ID（不再写会变的名称/路径）；
   流水文件新增 `# BINDINGS: 简码=SYS.*` 头，导入时按 ID 还原绑定；私有节点改名不影响绑定。
 - **运算符颜色**：修正深色模式下 `.cm-operator` 写死 `#f0f0f0 !important` 覆盖设置的问题，现在跟随「运算符」颜色项。
+- **手机统计页**：三区改为横向滑动切换（左统计 / 中列表 / 右查询），每区可独立上下滚动；点击左侧进入中间区自动横移。
+- **手机点按**：取消 `-webkit-tap-highlight-color` 蓝色块。
