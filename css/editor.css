@@ -2220,3 +2220,9 @@ button:focus:not(:focus-visible),
   .stats-search { order: 2; margin-left: auto; flex: 0 1 130px; }
   .stats-clear { order: 3; flex: 0 0 auto; }
 }
+
+@media (max-width: 900px) {
+  /* 标题行禁止横向翻页，优先把手势留给首列拖动手柄 */
+  .stats-left .sd-row.is-head { touch-action: pan-y; }
+  .stats-left .sd-row.is-head .col-grip { width: 22px; right: -11px; }
+}
