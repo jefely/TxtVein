@@ -383,16 +383,18 @@ def main():
     ok("stats query multi node", s_multi > 0 and s_multi == s_sal + s_wx1 and s_space == s_multi,
        "%s + %s = %s / space %s" % (s_sal, s_wx1, s_multi, s_space))
     s_from("")
-    ok("stats type title tight", j(sid, """(function(){
+    ok("stats total centered / first column centered", j(sid, """(function(){
       var t=document.querySelector('.stats-left .sd-total-title');
       var row=t.parentElement;
       var amt=document.querySelector('.stats-left .sd-row.is-total:not(.is-total-title)');
       var head=document.querySelector('.stats-left .sd-row.is-head');
       var cs=getComputedStyle(t), rs=getComputedStyle(row);
-      return cs.textAlign==='left' && cs.alignSelf==='end' && rs.borderBottomWidth==='0px' && rs.alignItems==='end'
-        && row.getBoundingClientRect().height < 26
-        && amt.getBoundingClientRect().height < 18
-        && head.getBoundingClientRect().height < 26;
+      var cells=Array.from(document.querySelectorAll('.stats-left .sd-row:not(.is-total-title):not(.is-total) > span:first-child'));
+      var centered=cells.length && cells.every(function(c){return getComputedStyle(c).textAlign==='center';});
+      return cs.textAlign==='left' && cs.alignSelf==='center' && rs.borderBottomWidth==='0px' && rs.alignItems==='center'
+        && amt.getBoundingClientRect().height >= 20
+        && head.getBoundingClientRect().height < 26
+        && centered;
     })()""", b) is True)
     ok("stats headers aligned", j(sid, """(function(){
       var heads=Array.from(document.querySelectorAll('.stats-left .sd-row.is-head'));

@@ -556,3 +556,20 @@ html[data-theme="paper"] .q-filters {
   background: #f7f3e8 !important;
   border-color: #d8d1c1 !important;
 }
+
+html[data-theme="paper"] .stats-left .sd-row.is-total,
+html[data-theme="paper"] .stats-left .sd-row.is-total:not(.is-total-title) {
+  align-items: center !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  min-height: 26px !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total > span,
+html[data-theme="paper"] .stats-left .sd-row.is-total:not(.is-total-title) > span,
+html[data-theme="paper"] .stats-left .sd-row.is-total .sd-num,
+html[data-theme="paper"] .stats-left .sd-row.is-total .sd-total-title {
+  align-self: center !important;
+  line-height: normal !important;
+  padding-bottom: 0 !important;
+}
+html[data-theme="paper"] .stats-left .sd-row.is-total.is-total-title > .sd-total-title { align-self: center !important; }

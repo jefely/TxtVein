@@ -34,6 +34,8 @@ function inlineCss(html) {
     let css = read(href);
     /* 单文件体积门禁：CSS 注释不进入成品，源码里仍保留。 */
     css = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    /* CSS 空白压到单行，减小单文件体积；不影响样式语义。 */
+    css = css.replace(/\s*\n\s*/g, ' ');
     if (font) {
       css = css.replace(
         /url\(["']?\.\.\/assets\/cascadia\/CascadiaCode\.woff2["']?\)/g,

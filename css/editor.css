@@ -2243,3 +2243,26 @@ button:focus:not(:focus-visible),
   .stats-left .sd-row.is-head { touch-action: pan-y; }
   .stats-left .sd-row.is-head .col-grip { width: 22px; right: -11px; }
 }
+
+/* 统计左表合计行：不再贴底线，文字与金额上下居中 */
+.stats-left .sd-row.is-total,
+.stats-left .sd-row.is-total:not(.is-total-title) {
+  align-items: center !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  min-height: 26px !important;
+}
+.stats-left .sd-row.is-total > span,
+.stats-left .sd-row.is-total:not(.is-total-title) > span,
+.stats-left .sd-row.is-total .sd-num,
+.stats-left .sd-row.is-total .sd-total-title {
+  align-self: center !important;
+  line-height: normal !important;
+  padding-bottom: 0 !important;
+}
+
+@media (max-width: 900px) {
+  /* 手机首列表头与数据行使用同样的左右内边距，列中心才对齐 */
+  .stats-left .sd-row.is-head { padding-left: 5px !important; padding-right: 5px !important; }
+}
+.stats-left .sd-row.is-total.is-total-title > .sd-total-title { align-self: center !important; }
