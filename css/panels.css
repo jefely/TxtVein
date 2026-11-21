@@ -430,7 +430,7 @@
 /* ===== 整页「母树」：左私人字典 / 右母树 ===== */
 .mother-view { height: 100%; min-height: 0; display: flex; }
 .mother-view[hidden] { display: none; }
-.mother-page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.mother-page { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .mother-empty { padding: 32px; color: var(--text-2); line-height: 1.9; }
 .mother-bar {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -441,7 +441,16 @@
   background: rgba(15, 23, 42, 0.5); border: 1px solid var(--line); border-radius: 6px;
 }
 .mother-bar .mother-search:focus { outline: none; border-color: var(--line-strong); }
-.mother-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.mother-cols { flex: 1; width: 100%; min-width: 0; min-height: 0; display: grid; grid-template-columns: var(--mother-left, 1fr) 5px minmax(0, 1fr); }
+.mother-gutter {
+  position: relative; cursor: col-resize; touch-action: none;
+  background: transparent; border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+}
+.mother-gutter::after {
+  content: ''; position: absolute; left: 2px; top: 35%; bottom: 35%; width: 1px;
+  background: transparent; transition: background-color .12s ease;
+}
+.mother-gutter:hover::after { background: var(--accent); }
 .mother-pane { min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
 .mother-pane:last-child { border-right: 0; }
 .mother-pane-head {
@@ -475,8 +484,15 @@
 .mother-row:hover .mother-actions { opacity: 1; }
 .mother-hint { border-top: 1px solid var(--line); padding: 7px 14px; font-size: 12px; color: var(--text-2); }
 @media (max-width: 820px) {
-  .mother-cols { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-  .mother-pane { border-right: 0; border-bottom: 1px solid var(--line); }
+  /* 保持左右两栏，整体比屏幕宽，横向拖动查看；不上下堆叠。 */
+  .mother-cols {
+    grid-template-columns: var(--mother-left, 380px) 5px minmax(360px, 1fr);
+    grid-template-rows: 1fr;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mother-pane { border-right: 1px solid var(--line); border-bottom: 0; }
   .mother-bar .mother-search { width: 100%; }
 }
 

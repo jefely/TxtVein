@@ -104,6 +104,21 @@
     }
   }
 
+  /* 旧版新增颜色项时纸主题曾拿到深色默认值；只修这些“旧深色默认”，保留自定义色。 */
+  function repairPaperColors(out) {
+    const legacy = {
+      nodecode: '#9CDCFE', nodename: '#9CDCFE', dictcat: '#E8E8E8',
+      tagcode: '#4ADE80', tagname: '#DCDCAA',
+    };
+    Object.keys(legacy).forEach((k) => {
+      if (out.paper && out.paper.colors
+        && String(out.paper.colors[k] || '').toUpperCase() === legacy[k].toUpperCase()) {
+        out.paper.colors[k] = PAPER_COLORS[k];
+      }
+    });
+    return out;
+  }
+
   function loadPrefs() {
     const out = defaultPrefs();
     const v3 = readStored(PREFS_KEY);
@@ -113,7 +128,7 @@
       out.paper = normalizeSet(v3.paper, paperColors());
       const base = out.theme === 'paper' ? out.paper.fontSize : out.dark.fontSize;
       out.fonts = normalizeFonts(v3.fonts, base);
-      return out;
+      return repairPaperColors(out);
     }
     const v2 = readStored(V2_PREFS_KEY);
     if (v2 && (v2.dark || v2.paper)) {
@@ -123,7 +138,7 @@
       /* v2 → v3：深色字号一次性对齐纸主题；颜色保持各自主题的默认/已存值。 */
       out.dark.fontSize = out.paper.fontSize;
       out.fonts = normalizeFonts(null, out.paper.fontSize);
-      return out;
+      return repairPaperColors(out);
     }
     /* v1 只有一套字号与颜色：深色沿用，纸主题字号也取同一值，保证两套一致。 */
     const v1 = readStored(LEGACY_PREFS_KEY);
@@ -133,7 +148,7 @@
       out.paper.fontSize = out.dark.fontSize;
       out.fonts = normalizeFonts(null, v1.fontSize);
     }
-    return out;
+    return repairPaperColors(out);
   }
 
   function activeSet(p) {
@@ -1721,22 +1736,48 @@
       ]);
 
       page.appendChild(bar);
-      page.appendChild(el('div', { class: 'mother-cols' }, [
-        el('div', { class: 'mother-pane' }, [
-          el('div', { class: 'mother-pane-head' }, [
-            el('b', {}, ['私人字典']),
-            el('span', { class: 'mother-count' }, [ids.length + ' 节点 · ' + cats.length + ' 分组']),
-          ]),
-          left,
+      const cols = el('div', { class: 'mother-cols' });
+      const leftPane = el('div', { class: 'mother-pane' }, [
+        el('div', { class: 'mother-pane-head' }, [
+          el('b', {}, ['私人字典']),
+          el('span', { class: 'mother-count' }, [ids.length + ' 节点 · ' + cats.length + ' 分组']),
         ]),
-        el('div', { class: 'mother-pane' }, [
-          el('div', { class: 'mother-pane-head' }, [
-            el('b', {}, ['节点']),
-            el('span', { class: 'mother-count' }, ['先选左边节点，再点分支/叶子']),
-          ]),
-          right,
+        left,
+      ]);
+      const gutter = el('div', { class: 'mother-gutter', role: 'separator', title: '拖动调整左右宽度' });
+      const rightPane = el('div', { class: 'mother-pane' }, [
+        el('div', { class: 'mother-pane-head' }, [
+          el('b', {}, ['节点']),
+          el('span', { class: 'mother-count' }, ['先选左边节点，再点分支/叶子']),
         ]),
-      ]));
+        right,
+      ]);
+      cols.appendChild(leftPane);
+      cols.appendChild(gutter);
+      cols.appendChild(rightPane);
+      page.appendChild(cols);
+      const savedLeft = Number(localStorage.getItem('txtvein:mother-left'));
+      if (Number.isFinite(savedLeft) && savedLeft >= 180) {
+        cols.style.setProperty('--mother-left', Math.round(savedLeft) + 'px');
+      }
+      gutter.addEventListener('pointerdown', (ev) => {
+        ev.preventDefault();
+        const startX = ev.clientX;
+        const startW = leftPane.getBoundingClientRect().width;
+        const move = (e) => {
+          const w = Math.max(180, Math.min(600, Math.round(startW + e.clientX - startX)));
+          cols.style.setProperty('--mother-left', w + 'px');
+        };
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+          try {
+            localStorage.setItem('txtvein:mother-left', String(Math.round(leftPane.getBoundingClientRect().width)));
+          } catch (e) { /* ignore */ }
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+      });
       page.appendChild(hint);
       if (motherSel && nodes[motherSel]) select(motherSel);
     }

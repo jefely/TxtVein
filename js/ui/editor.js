@@ -100,7 +100,8 @@
                 return first ? 'dict-cat' : 'tag-name';
               }
             } else if (field === 1) {
-              if (stream.match(/^[^\s，,]+/)) return 'tag-name';
+              if (header && stream.match(/^[A-Za-z][A-Za-z -]*/)) return 'dict-en';
+              if (stream.match(/^[^\s，,]+/)) return indent > 0 ? 'tag-name' : 'dict-en';
             } else if (stream.match(/^[^\s，,]+/)) {
               return 'dict-en';
             }

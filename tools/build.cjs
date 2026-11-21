@@ -54,6 +54,8 @@ function inlineJs(html) {
   return html.replace(/<script\s+src="([^"]+)"\s*><\/script>/g, (m, src) => {
     if (/^https?:/i.test(src)) throw new Error('不允许外链 JS：' + src);
     let js = read(src);
+    /* 成品不携带整行 JS 注释，源码仍保留。 */
+    js = js.replace(/^\s*\/\/.*$/gm, '');
     /* 防止提前闭合 script；本仓库代码目前没有这个串，保留护栏 */
     js = js.replace(/<\/script/gi, '<\\/script');
     return '<script>\n/* ' + src + ' */\n' + js + '\n</script>';

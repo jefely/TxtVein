@@ -2416,7 +2416,7 @@ html[data-theme="paper"] .composer .entry::placeholder { color: #5f5a4e !importa
 
 .mother-view { height: 100%; min-height: 0; display: flex; }
 .mother-view[hidden] { display: none; }
-.mother-page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.mother-page { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .mother-empty { padding: 32px; color: var(--text-2); line-height: 1.9; }
 .mother-bar {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -2427,7 +2427,16 @@ html[data-theme="paper"] .composer .entry::placeholder { color: #5f5a4e !importa
   background: rgba(15, 23, 42, 0.5); border: 1px solid var(--line); border-radius: 6px;
 }
 .mother-bar .mother-search:focus { outline: none; border-color: var(--line-strong); }
-.mother-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.mother-cols { flex: 1; width: 100%; min-width: 0; min-height: 0; display: grid; grid-template-columns: var(--mother-left, 1fr) 5px minmax(0, 1fr); }
+.mother-gutter {
+  position: relative; cursor: col-resize; touch-action: none;
+  background: transparent; border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+}
+.mother-gutter::after {
+  content: ''; position: absolute; left: 2px; top: 35%; bottom: 35%; width: 1px;
+  background: transparent; transition: background-color .12s ease;
+}
+.mother-gutter:hover::after { background: var(--accent); }
 .mother-pane { min-height: 0; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
 .mother-pane:last-child { border-right: 0; }
 .mother-pane-head {
@@ -2461,8 +2470,15 @@ html[data-theme="paper"] .composer .entry::placeholder { color: #5f5a4e !importa
 .mother-row:hover .mother-actions { opacity: 1; }
 .mother-hint { border-top: 1px solid var(--line); padding: 7px 14px; font-size: 12px; color: var(--text-2); }
 @media (max-width: 820px) {
-  .mother-cols { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-  .mother-pane { border-right: 0; border-bottom: 1px solid var(--line); }
+  
+  .mother-cols {
+    grid-template-columns: var(--mother-left, 380px) 5px minmax(360px, 1fr);
+    grid-template-rows: 1fr;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mother-pane { border-right: 1px solid var(--line); border-bottom: 0; }
   .mother-bar .mother-search { width: 100%; }
 }
 
@@ -6036,7 +6052,6 @@ html[data-theme="paper"] .q-filters {
       }
     });
 
-    // 层叠：任意两节点的叶子集，只能不交、包含、被包含。
     ids.forEach((id) => { leafSets[id] = leafSet(nodes, id); });
     for (let i = 0; i < ids.length; i += 1) {
       for (let j = i + 1; j < ids.length; j += 1) {
@@ -6080,7 +6095,6 @@ html[data-theme="paper"] .q-filters {
       }
     });
 
-    // 银行 facet：独立子树，不是锚点目标；储蓄/借贷两列指向计数树叶子。
     const bIds = Object.keys(banks);
     const bZhNames = new Map();
     const bEnNames = new Map();
@@ -6113,7 +6127,6 @@ html[data-theme="paper"] .q-filters {
       }
     });
 
-    // 推荐码跨 Tree / Merchant 也不重复，避免输入歧义。
     zhCodes.forEach((id, code) => {
       if (mZhCodes.has(code)) err('CODE_CROSS_DUP', '中文推荐码跨树/商户重复：' + code + ' / ' + id + ' / ' + mZhCodes.get(code), id);
     });
@@ -10450,7 +10463,6 @@ html[data-theme="paper"] .q-filters {
       return { ok: false, p: '', c: '', diagnostics, stats: null };
     }
 
-    // 私人父级必须同域、同 kind。
     records.forEach((rec) => {
       if (!rec.parent || rec.parent === '-') return;
       if (/^SYS\./i.test(rec.parent)) return; // 锚点
@@ -10464,7 +10476,6 @@ html[data-theme="paper"] .q-filters {
       }
     });
 
-    // 别名目标按域拆；跨域同码必须写域限定。
     aliases.forEach((a) => {
       const buckets = { P: [], C: [] };
       a.targets.forEach((tok) => {
@@ -10680,7 +10691,7 @@ html[data-theme="paper"] .q-filters {
         });
       };
       sortTree(roots);
-      // 环保护：如果某节点既不是根也不在任何根下，补到根，避免视图丢节点。
+
       const seen = new Set();
       const walk = (arr) => arr.forEach((x) => { if (!seen.has(x.id)) { seen.add(x.id); walk(x.children); } });
       walk(roots);
@@ -10904,7 +10915,6 @@ html[data-theme="paper"] .q-filters {
       });
     });
 
-    // 只保留有贡献的分支；祖先链全部保留。
     const active = new Set();
     Object.keys(buckets).forEach((id) => {
       core.ancestors(sysNodes, id).forEach((a) => active.add(a));
@@ -13511,8 +13521,8 @@ html[data-theme="paper"] .q-filters {
         period = sp.period;
         tok = sp.token;
       }
-      // 节点码/别名可能长得像数量：58D 既是「58 天」也可能是账户码。
-      // 在「节点位置」且能精确命中节点时，优先当节点；行尾的数量仍按金额/时间。
+
+
       const prefForMatch = stripDomainPrefix(tok);
       const matchDomain = prefForMatch.domain || lineDomain || o.domain || 'P';
       const exactNode = prefForMatch.explicit
@@ -15275,8 +15285,8 @@ html[data-theme="paper"] .q-filters {
       if (/^\*[dmy]$/i.test(t)) { period = t.slice(1).toLowerCase(); continue; }
       const sp = amount.splitPeriod(t);
       if (sp.period) period = sp.period;
-      // 简码可以带数字、甚至以数字开头（58D）。在节点位置精确命中时，
-      // 优先当节点，避免被 parseQuantity 当成「58 天」。
+
+
       const forceNode = /^[NH]:/i.test(t);
       const probe = forceNode ? t.replace(/^[NH]:/i, '') : sp.token;
       const exactNode = dictMod.collectMatches(dict, probe, domain);
@@ -19700,8 +19710,8 @@ const TAG_EN_DEFAULTS = {
   function bodyForHash(dict) {
     const copy = normalizeDict(dict);
     delete copy.link;
-    // 导出时间不是内容：两次导出只要字典内容相同，指纹就必须相同。
-    // 否则流水和字典分开点两次「导出」时，LINK 会因为 meta.updatedAt 秒级变化而误报不匹配。
+
+
     if (copy.meta) delete copy.meta.updatedAt;
     delete copy.updatedAt;
     return canonicalJson(copy) + '\n';
@@ -21511,7 +21521,8 @@ const TAG_EN_DEFAULTS = {
                 return first ? 'dict-cat' : 'tag-name';
               }
             } else if (field === 1) {
-              if (stream.match(/^[^\s，,]+/)) return 'tag-name';
+              if (header && stream.match(/^[A-Za-z][A-Za-z -]*/)) return 'dict-en';
+              if (stream.match(/^[^\s，,]+/)) return indent > 0 ? 'tag-name' : 'dict-en';
             } else if (stream.match(/^[^\s，,]+/)) {
               return 'dict-en';
             }
@@ -23802,6 +23813,21 @@ const TAG_EN_DEFAULTS = {
     }
   }
 
+  /* 旧版新增颜色项时纸主题曾拿到深色默认值；只修这些“旧深色默认”，保留自定义色。 */
+  function repairPaperColors(out) {
+    const legacy = {
+      nodecode: '#9CDCFE', nodename: '#9CDCFE', dictcat: '#E8E8E8',
+      tagcode: '#4ADE80', tagname: '#DCDCAA',
+    };
+    Object.keys(legacy).forEach((k) => {
+      if (out.paper && out.paper.colors
+        && String(out.paper.colors[k] || '').toUpperCase() === legacy[k].toUpperCase()) {
+        out.paper.colors[k] = PAPER_COLORS[k];
+      }
+    });
+    return out;
+  }
+
   function loadPrefs() {
     const out = defaultPrefs();
     const v3 = readStored(PREFS_KEY);
@@ -23811,7 +23837,7 @@ const TAG_EN_DEFAULTS = {
       out.paper = normalizeSet(v3.paper, paperColors());
       const base = out.theme === 'paper' ? out.paper.fontSize : out.dark.fontSize;
       out.fonts = normalizeFonts(v3.fonts, base);
-      return out;
+      return repairPaperColors(out);
     }
     const v2 = readStored(V2_PREFS_KEY);
     if (v2 && (v2.dark || v2.paper)) {
@@ -23821,7 +23847,7 @@ const TAG_EN_DEFAULTS = {
       /* v2 → v3：深色字号一次性对齐纸主题；颜色保持各自主题的默认/已存值。 */
       out.dark.fontSize = out.paper.fontSize;
       out.fonts = normalizeFonts(null, out.paper.fontSize);
-      return out;
+      return repairPaperColors(out);
     }
     /* v1 只有一套字号与颜色：深色沿用，纸主题字号也取同一值，保证两套一致。 */
     const v1 = readStored(LEGACY_PREFS_KEY);
@@ -23831,7 +23857,7 @@ const TAG_EN_DEFAULTS = {
       out.paper.fontSize = out.dark.fontSize;
       out.fonts = normalizeFonts(null, v1.fontSize);
     }
-    return out;
+    return repairPaperColors(out);
   }
 
   function activeSet(p) {
@@ -23921,7 +23947,7 @@ const TAG_EN_DEFAULTS = {
       const r = modalPanel.getBoundingClientRect();
       const baseW = modal.offsetWidth || window.innerWidth;
       const baseH = modal.offsetHeight || window.innerHeight;
-      // 标题栏至少留 80px 在视口里，不至于拖丢
+
       const minX = -r.left - r.width + 240;
       const maxX = baseW - r.left - 80;
       const minY = -r.top;
@@ -24719,8 +24745,7 @@ const TAG_EN_DEFAULTS = {
       const note = el('div', { class: 'import-note' });
       const cache = new Map();
 
-      // 一次导出只生成一份快照：流水和字典必须来自同一次 buildTexts。
-      // 否则 buildTexts 会更新 meta.updatedAt，两个文件各自生成会导致 LINK 指纹不匹配。
+
       async function pack(mode) {
         if (cache.has(mode)) return cache.get(mode);
         const r = await app.exportText(mode);
@@ -25419,22 +25444,48 @@ const TAG_EN_DEFAULTS = {
       ]);
 
       page.appendChild(bar);
-      page.appendChild(el('div', { class: 'mother-cols' }, [
-        el('div', { class: 'mother-pane' }, [
-          el('div', { class: 'mother-pane-head' }, [
-            el('b', {}, ['私人字典']),
-            el('span', { class: 'mother-count' }, [ids.length + ' 节点 · ' + cats.length + ' 分组']),
-          ]),
-          left,
+      const cols = el('div', { class: 'mother-cols' });
+      const leftPane = el('div', { class: 'mother-pane' }, [
+        el('div', { class: 'mother-pane-head' }, [
+          el('b', {}, ['私人字典']),
+          el('span', { class: 'mother-count' }, [ids.length + ' 节点 · ' + cats.length + ' 分组']),
         ]),
-        el('div', { class: 'mother-pane' }, [
-          el('div', { class: 'mother-pane-head' }, [
-            el('b', {}, ['节点']),
-            el('span', { class: 'mother-count' }, ['先选左边节点，再点分支/叶子']),
-          ]),
-          right,
+        left,
+      ]);
+      const gutter = el('div', { class: 'mother-gutter', role: 'separator', title: '拖动调整左右宽度' });
+      const rightPane = el('div', { class: 'mother-pane' }, [
+        el('div', { class: 'mother-pane-head' }, [
+          el('b', {}, ['节点']),
+          el('span', { class: 'mother-count' }, ['先选左边节点，再点分支/叶子']),
         ]),
-      ]));
+        right,
+      ]);
+      cols.appendChild(leftPane);
+      cols.appendChild(gutter);
+      cols.appendChild(rightPane);
+      page.appendChild(cols);
+      const savedLeft = Number(localStorage.getItem('txtvein:mother-left'));
+      if (Number.isFinite(savedLeft) && savedLeft >= 180) {
+        cols.style.setProperty('--mother-left', Math.round(savedLeft) + 'px');
+      }
+      gutter.addEventListener('pointerdown', (ev) => {
+        ev.preventDefault();
+        const startX = ev.clientX;
+        const startW = leftPane.getBoundingClientRect().width;
+        const move = (e) => {
+          const w = Math.max(180, Math.min(600, Math.round(startW + e.clientX - startX)));
+          cols.style.setProperty('--mother-left', w + 'px');
+        };
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+          try {
+            localStorage.setItem('txtvein:mother-left', String(Math.round(leftPane.getBoundingClientRect().width)));
+          } catch (e) { /* ignore */ }
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+      });
       page.appendChild(hint);
       if (motherSel && nodes[motherSel]) select(motherSel);
     }
@@ -28798,9 +28849,7 @@ const TAG_EN_DEFAULTS = {
     const nums = o.numCols || [];
     const wrap = el('div', { class: 'stats-table' });
     if (o.list) wrap.dataset.list = o.list;
-    if (o.total) {
-      // 收入/负债/权益这些是**单独一行**的主标题，上下居中；
-      // 合计金额另起一行靠右贴底，避免同一个格子里互相拉扯。
+    if (o.total) {
       const title = el('div', {
         class: 'sd-row is-total is-total-title',
         style: 'grid-template-columns:' + template,
