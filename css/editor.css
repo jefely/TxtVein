@@ -2194,11 +2194,23 @@ button:focus:not(:focus-visible),
 .q-filters { background: #050505 !important; }
 
 @media (max-width: 900px) {
-  /* 左表不冻结（多组表头太多，滚动会卡）；中间列表保持一条冻结表头 */
+  /* 左表不冻结（多组表头太多，滚动会卡）；中间列表：标题行固定，数据区独立滚动 */
   .stats-left .sd-row.is-head { position: static; top: auto; }
+  .stats-right {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .stats-right-head { position: static; flex: 0 0 30px; }
+  .stats-right-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   .stats-right .sd-row.is-head {
     position: sticky;
-    top: 30px;
+    top: 0;
     z-index: 4;
     background: #101010;
   }
