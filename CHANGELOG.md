@@ -72,7 +72,7 @@
 - **编辑器语义高亮不再改字重**：`tv-def` / `cm-type` 只保留颜色，不再加粗。
   此前识别成功后字重跳到 600，补入真粗体后字典页的条目会忽粗忽细；
   现在字典 / 流水的识别结果只变颜色。
-- 单文件 **1,535.2 KB**。
+- 单文件 **1,535.3 KB**。
 - **英文界面整体缩短**：Dictionary → Dict、Candidates → Cand.（Language 保留全名）；
   查询筛选 From / To / Min / Max；统计类型 Debt / Asset / Expense / Cost；
   统计列头 Open / Close / Borrow / Repay / In / Out / Net 等；
@@ -85,7 +85,7 @@
 - `node --test tests/*.test.cjs` → **285 pass / 0 fail**
 - `node tools/check.cjs` → **198 pass / 0 fail**
 - `python tools/e2e.py` → **119 pass** · `python tools/e2e_v4.py` → **64 pass**
-- 单文件 `TxtVein.html` **1,535.2 KB**
+- 单文件 `TxtVein.html` **1,535.3 KB**
 
 ## v2.8.1 · 查询列宽 / 统计第三区 / 电纸书补漏
 
@@ -318,3 +318,4 @@
 - **统计页闪屏**：根因是切换模式时整页重建 + 用 rAF 延后恢复横向滚动，浏览器先画了第一页；改为重建后在同一个渲染任务里同步恢复横/纵滚动，不再出现“先跳第一页再滑回来”。
 - 统计页移动端触摸滚动改回原生实现，移除自定义 touch 接管。
 - **手机统计首列拖动**：标题行设 `touch-action: pan-y`，横向手势不再翻页；首列手柄加大命中区，可正常拖动。
+- **手机统计中间表头**：恢复中间列表冻结表头，层级 4、吸附在列头下方 30px，不再被数据行盖住，也没有顶部缝隙；左表仍不冻结以避免卡顿。

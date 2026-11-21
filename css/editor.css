@@ -2194,9 +2194,14 @@ button:focus:not(:focus-visible),
 .q-filters { background: #050505 !important; }
 
 @media (max-width: 900px) {
-  /* 手机不冻结列标题：避免滚动卡顿与第二页标题上方缝隙 */
-  .stats-left .sd-row.is-head,
-  .stats-right .sd-row.is-head { position: static; top: auto; }
+  /* 左表不冻结（多组表头太多，滚动会卡）；中间列表保持一条冻结表头 */
+  .stats-left .sd-row.is-head { position: static; top: auto; }
+  .stats-right .sd-row.is-head {
+    position: sticky;
+    top: 30px;
+    z-index: 4;
+    background: #101010;
+  }
   /* 首列拖动手柄不能被 overflow:hidden 裁掉 */
   .stats-left .sd-row.is-head > span.sd-head-first { overflow: visible !important; }
 }
