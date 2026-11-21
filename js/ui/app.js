@@ -2084,39 +2084,6 @@
   function statsNodeLabel(id) { return TV.dict.renderNode(S.dict, id, S.mode, S.lang); }
   function statsTypeLabel(type) { return S.lang === 'en' ? (STAT_TYPE_EN[type] || type) : type; }
 
-  function bindStatsTouch(split, left, right, queryAside) {
-    let start = null;
-    split.addEventListener('touchstart', (ev) => {
-      if (!ev.touches || ev.touches.length !== 1) return;
-      const t = ev.target;
-      if (t.closest && t.closest('input,textarea,select,button,.col-grip,.q-col-handle')) return;
-      const pane = t.closest ? t.closest('.stats-left,.stats-right,.stats-query') : null;
-      if (!pane) return;
-      const scroller = pane.classList.contains('stats-query')
-        ? (pane.querySelector('.q-table') || pane) : pane;
-      start = {
-        x: ev.touches[0].clientX, y: ev.touches[0].clientY,
-        sl: split.scrollLeft, st: scroller.scrollTop, scroller, moved: false,
-      };
-    }, { passive: true });
-    split.addEventListener('touchmove', (ev) => {
-      if (!start || !ev.touches || ev.touches.length !== 1) return;
-      const dx = ev.touches[0].clientX - start.x;
-      const dy = ev.touches[0].clientY - start.y;
-      if (!start.moved && Math.abs(dx) + Math.abs(dy) < 6) return;
-      start.moved = true;
-      if (Math.abs(dy) > Math.abs(dx)) {
-        if (start.scroller.scrollHeight > start.scroller.clientHeight) {
-          start.scroller.scrollTop = start.st - dy;
-          ev.preventDefault();
-        }
-      }
-      /* 横向不接管：交给原生 overflow + scroll-snap，保留查询页同款滑动动画。 */
-    }, { passive: false });
-    split.addEventListener('touchend', () => { start = null; });
-    split.addEventListener('touchcancel', () => { start = null; });
-  }
-
   function statsTable(headers, rows, template, opts) {
     const o = opts || {};
     const nums = o.numCols || [];
@@ -2439,6 +2406,13 @@
     }
     const range = statsMonthRange();
     const groups = statsGroups(S.stats.tab === 'category' ? 'category' : 'node');
+    const oldSplit = dom.reportView.querySelector('.stats-split');
+    const savedScroll = oldSplit ? {
+      left: oldSplit.scrollLeft,
+      leftTop: (oldSplit.querySelector('.stats-left') || {}).scrollTop || 0,
+      rightTop: (oldSplit.querySelector('.stats-right') || {}).scrollTop || 0,
+      queryTop: (oldSplit.querySelector('.stats-query .q-table') || {}).scrollTop || 0,
+    } : null;
     clear(dom.reportView);
     const page = el('div', { class: 'stats-page' });
     page.dataset.pane = S.stats.pane || 'list';
@@ -2606,7 +2580,6 @@
     /* 第三区：与「流水查询」同一个面板组件，单张、不占 A/B/C。
        它有独立的条件状态（S.statsQuery），默认本月。 */
     buildQueryPanel(queryAside, { key: 'Q', title: t('ledgerQuery') }, S.statsQuery, 0, { scope: 'stats' });
-    bindStatsTouch(split, left, right, queryAside);
 
     const setSplit = (lw) => {
       split.style.gridTemplateColumns = Math.round(lw) + 'px 5px minmax(200px, 1fr) minmax(200px, 1fr)';
@@ -2639,25 +2612,31 @@
       requestAnimationFrame(() => TV.queryLayout.refit());
     }
 
-    /* 手机上三栏横向滑动；保留当前页，切换明文/掩码时不跳回第一页。 */
+    /* 手机上三栏横向滑动：渲染后同步恢复滚动位置，不能等 rAF（会先画一帧第一页）。 */
     if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
       split.addEventListener('scroll', () => {
         if (!split.clientWidth) return;
         S.stats.mobilePane = Math.max(0, Math.min(2, Math.round(split.scrollLeft / split.clientWidth)));
       }, { passive: true });
       const idx = Math.max(0, Math.min(2, Number(S.stats.mobilePane) || 0));
-      requestAnimationFrame(() => {
-        split.scrollTo({ left: idx * split.clientWidth, behavior: 'auto' });
-        if (window.__statsFit) window.removeEventListener('resize', window.__statsFit);
-        window.__statsFit = () => {
-          const top = split.getBoundingClientRect().top;
-          split.style.height = Math.max(120, Math.round(window.innerHeight - top)) + 'px';
-        };
-        window.__statsFit();
-        window.addEventListener('resize', window.__statsFit);
-      });
+      if (window.__statsFit) window.removeEventListener('resize', window.__statsFit);
+      window.__statsFit = () => {
+        const top = split.getBoundingClientRect().top;
+        split.style.height = Math.max(120, Math.round(window.innerHeight - top)) + 'px';
+      };
+      window.__statsFit();
+      window.addEventListener('resize', window.__statsFit);
+      split.scrollLeft = idx * split.clientWidth;
     } else {
       split.style.height = '';
+    }
+    if (savedScroll) {
+      const l = split.querySelector('.stats-left');
+      const r = split.querySelector('.stats-right');
+      const q = split.querySelector('.stats-query .q-table');
+      if (l) l.scrollTop = savedScroll.leftTop;
+      if (r) r.scrollTop = savedScroll.rightTop;
+      if (q) q.scrollTop = savedScroll.queryTop;
     }
   }
 
