@@ -37,7 +37,7 @@
     range: '本月',
     query: { text: '', fromDate: '', toDate: '', type: '', domain: '', from: '', to: '', tag: '', min: '', max: '' },
     queries: [],
-    stats: { tab: 'category', year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: '', pane: 'list', first: 0, split: 430, qsplit: 0 },
+    stats: { tab: 'category', year: new Date().getFullYear(), month: new Date().getMonth() + 1, selected: '', search: '', pane: 'list', first: 0, split: 430 },
     selectedEventIndex: -1,
     selectedNodeId: '',
     filterNodeId: '',
@@ -57,8 +57,9 @@
   const LABELS = {
     zh: {
       security: '安全', import: '导入', export: '导出', settings: '设置', help: '帮助', candidates: '候选',
-      query: '查询', ledger: '流水', dict: '字典', mother: '母树', fixed: '固定', report: '统计',
+      query: '查询', ledger: '流水', dict: '字典', mother: '节点', fixed: '固定', report: '统计',
       modeCode: '掩码', mask: '掩码', modePlain: '明文', language: '语言', lock: '锁',
+      theme: '主题', themeDark: '深色', themePaper: '电纸书',
       queryTitle: '查询流水', queryText: '关键词 / 名称 / 日期', all: '全部',
       ledgerQuery: '流水查询', clear: '清空', seq: '序', noteSearch: '备注搜索',
       amountShort: '金额', dateShort: '日期', colNote: '备注',
@@ -67,30 +68,27 @@
       reset: '重置', count: '条', total: '合计',
       colDate: '日期', colDomain: '域', colFrom: '转出', colTo: '转入', colAmount: '金额', colTags: '标签',
       category: '分类', node: '节点', note: '备注', event: '事件', allMonths: '全', statsTitle: '统计',
-      reportPrivate: '私人结构',
       statsColName: '分类', statsColNode: '节点', statsColOther: '对方', statsWeight: '强度',
       statsMonth: '月', statsItems: '项', statsRecords: '条', statsSelect: '左侧选择一项',
-      noRows: '没有匹配的流水', fixedTitle: '固定收支表',
-      fixedHint: '独立的表，自动保存 · 行形同流水：每日 / 每月16日 + 转出 > 转入 金额 < 标签 *d|*m|*y // 备注 · 分期加 期数=N 首月=YYMM 本金=… 利息=… · 状态在 | 后（生成 / 确认 / 作废）',
+      noRows: '没有匹配的流水',
       feedbackHint: '行首空格补日期 · 双击空格 > · 三击 < · 数字/鼠标选候选 · Ctrl+Enter 编译',
     },
     en: {
-      security: 'Security', import: 'Import', export: 'Export', settings: 'Settings', help: 'Help', candidates: 'Candidates',
-      query: 'Query', ledger: 'Ledger', dict: 'Dictionary', mother: 'Mother', fixed: 'Fixed', report: 'Stats',
+      security: 'Security', import: 'Import', export: 'Export', settings: 'Settings', help: 'Help', candidates: 'Cand.',
+      query: 'Query', ledger: 'Ledger', dict: 'Dict', mother: 'Node', fixed: 'Fixed', report: 'Stats',
       modeCode: 'Mask', mask: 'Mask', modePlain: 'Plain', language: 'Language', lock: 'Lock',
-      queryTitle: 'Query ledger', queryText: 'Keyword / name / date', all: 'All',
-      ledgerQuery: 'Ledger query', clear: 'Clear', seq: '#', noteSearch: 'Note search',
+      theme: 'Theme', themeDark: 'Dark', themePaper: 'E-ink',
+      queryTitle: 'Query', queryText: 'Keyword / name / date', all: 'All',
+      ledgerQuery: 'Query', clear: 'Clear', seq: '#', noteSearch: 'Note',
       amountShort: 'Amount', dateShort: 'Date', colNote: 'Note',
       fromDate: 'From', toDate: 'To', type: 'Type', domain: 'Book',
-      fromNode: 'From account', toNode: 'To account', tag: 'Tag', min: 'Min amount', max: 'Max amount',
+      fromNode: 'From', toNode: 'To', tag: 'Tag', min: 'Min', max: 'Max',
       reset: 'Reset', count: 'rows', total: 'Total',
-      colDate: 'Date', colDomain: 'Book', colFrom: 'From', colTo: 'To', colAmount: 'Amount', colTags: 'Tags',
-      category: 'Categories', node: 'Nodes', note: 'Notes', event: 'Events', allMonths: 'All', statsTitle: 'Stats',
-      reportPrivate: 'Private',
-      statsColName: 'Category', statsColNode: 'Node', statsColOther: 'Counterpart', statsWeight: 'Weight',
-      statsMonth: 'month', statsItems: 'items', statsRecords: 'records', statsSelect: 'Select an item on the left',
-      noRows: 'No matching entries', fixedTitle: 'Fixed table',
-      fixedHint: 'Independent table, auto-saved · same shape as ledger rows: Daily / Monthly day 16 + from > to amount < tags *d|*m|*y // note · installments add 期数=N 首月=YYMM 本金=… 利息=… · state after | (生成 / 确认 / 作废)',
+      colDate: 'Date', colDomain: 'Book', colFrom: 'From', colTo: 'To', colAmount: 'Amount', colTags: 'Tag',
+      category: 'Cat', node: 'Node', note: 'Note', event: 'Event', allMonths: 'All', statsTitle: 'Stats',
+      statsColName: 'Cat', statsColNode: 'Node', statsColOther: 'Other', statsWeight: 'Weight',
+      statsMonth: 'month', statsItems: 'items', statsRecords: 'rows', statsSelect: 'Pick a row',
+      noRows: 'No rows',
       feedbackHint: 'Leading space adds date · double space > · triple < · Ctrl+Enter compile',
     },
   };
@@ -106,7 +104,16 @@
     return (LABELS[lang] && LABELS[lang][key]) || LABELS.zh[key] || key;
   }
 
+  /** 顶栏「主题」按钮的提示：显示当前主题，文字本身保持「主题 / Theme」。 */
+  function syncThemeButton() {
+    if (!dom.btnTheme) return;
+    const theme = document.documentElement.dataset.theme === 'paper' ? 'paper' : 'dark';
+    dom.btnTheme.title = t('theme') + ' · ' + t(theme === 'paper' ? 'themePaper' : 'themeDark');
+  }
+
   function applyLang() {
+    document.documentElement.lang = S.lang === 'en' ? 'en' : 'zh-CN';
+    document.documentElement.dataset.lang = S.lang === 'en' ? 'en' : 'zh';
     document.querySelectorAll('[data-i18n]').forEach((node) => {
       const key = node.getAttribute('data-i18n');
       if (key) node.textContent = t(key);
@@ -115,9 +122,10 @@
     if (cand) cand.textContent = t('candidates');
     if (dom.btnMode) dom.btnMode.textContent = S.mode === 'CODE' ? t('modeCode') : t('modePlain');
     if (dom.btnLang) dom.btnLang.textContent = t('language');
+    syncThemeButton();
     renderTabs();
     if (S.view === 'query') renderQuery();
-    if (S.view === 'fixed') renderFixedHint();
+    if (S.view === 'fixed') renderFixed();
     renderFutureBlock(true);
     updateFeedback();
   }
@@ -155,6 +163,7 @@
     toastAction: $('#toast-action'),
     btnMode: $('#btn-mode'),
     btnLang: $('#btn-lang'),
+    btnTheme: $('#btn-theme'),
     btnSettings: $('#btn-settings'),
     btnQuery: $('#btn-query'),
     btnLedger: $('#btn-ledger'),
@@ -450,6 +459,7 @@
     });
     if (dom.btnMode) dom.btnMode.textContent = S.mode === 'CODE' ? t('modeCode') : t('modePlain');
     if (dom.btnLang) dom.btnLang.textContent = t('language');
+    syncThemeButton();
   }
 
   function paneModel() {
@@ -510,6 +520,9 @@
       onCanonicalLine: (cm, line) => markCanonicalOnEnter(cm, line),
       onConfirmVirtual: (row) => confirmPlanOccurrence(row),
       onVoidVirtual: (row) => voidPlanOccurrence(row),
+      onEditVirtual: (row) => {
+        if (row && row.planId) gotoPlanLine(row.planId);
+      },
       onTailDirty: () => renderFutureBlock(true),
       onAdoptMother: (id, domain) => {
         const r = adoptMother(id, '', domain);
@@ -623,8 +636,16 @@
           out.push(domainPrefix(b.domain) + b.date + ' ' + from + ' > ' + to + ' ' + (b.weight || 1) + tags);
         }
       });
-      /* 行尾注释（固定收支模板备注 / 手工注释）跟着行一起走 */
-      if (cmt && out.length > outBefore) out[out.length - 1] += ' ' + cmt;
+      /* 行尾注释 / 固定收支备注跟着行一起走；掩码模式把标签名换成简码 */
+      const eventRec = semantic.find((r) => r.kind === 'E');
+      const eventNote = eventRec ? String(eventRec.e.note || '').trim() : '';
+      if (eventNote && eventNote.startsWith('<')) {
+        if (out.length > outBefore) {
+          out[out.length - 1] += ' ' + TV.dict.maskNote(S.dict, eventNote, S.mode, S.lang);
+        }
+      } else if (cmt && out.length > outBefore) {
+        out[out.length - 1] += ' ' + TV.dict.maskNote(S.dict, cmt, S.mode, S.lang);
+      }
       /* 同一行还有备注节点（通常没有）时保留原文，避免丢失 */
       if (notes.some((r) => r.n.kind === 'note')) {
         notes.filter((r) => r.n.kind === 'note').forEach((r) => {
@@ -707,7 +728,7 @@
     const list = (S.plans || []).map((p) => [
       p.id, p.status, p.kind, p.period, p.day, p.month, p.note,
       p.periods, p.firstMonth, p.principalCents, p.interestCents,
-      p.from, p.to, p.amountCents, (p.tagIds || []).join(','), p.line,
+      p.from, p.to, p.amountCents, (p.tagIds || []).join(','), p.line, p.sourceDate,
       JSON.stringify(p.state || {}),
     ].join('\u0001'));
     const ev = S.events || [];
@@ -723,7 +744,7 @@
     const sig = planSignature();
     if (!force && sig === S.planDockSig) return;
     S.planDockSig = sig;
-    editorCtl.setVirtualRows(TV.planView.futureLineRows(planModel(), 6));
+    editorCtl.setVirtualRows(TV.planView.futureLineRows(planModel(), 24));
   }
 
   const planActions = {
@@ -732,13 +753,58 @@
     edit: (id) => gotoPlanLine(id),
   };
 
-  /** 把 S.plans 写回独立的固定表文本（含生成/确认/作废状态）。 */
+  /** 把 S.plans 写回固定表：只改计划行，保留用户自己加的注释 / 空行 / 新行。 */
   function writeFixedSource() {
     if (!S.dict) return false;
-    const next = TV.source.fixedSourceFromPlans(S.plans || [], S.dict, {
-      mode: S.mode, lang: S.lang,
+    const current = fixedCtl && fixedCtl.cm ? fixedCtl.cm.getValue() : S.fixedSource;
+    if (!String(current || '').trim()) {
+      const next = TV.source.fixedSourceFromPlans(S.plans || [], S.dict, {
+        mode: S.mode, lang: S.lang,
+      });
+      if (next === S.fixedSource) return false;
+      S.fixedSource = next;
+      if (fixedCtl && fixedCtl.cm && fixedCtl.cm.getValue() !== next) {
+        fixedCtl.cm.setValue(next);
+        fixedCtl.cm.clearHistory();
+      }
+      return true;
+    }
+    const lines = String(current).replace(/\r\n?/g, '\n').split('\n');
+    const used = new Set();
+    let changed = false;
+    (S.plans || []).forEach((p) => {
+      const next = TV.source.planSourceLine(p)
+        || TV.source.planLineText(p, S.dict, { mode: S.mode, lang: S.lang });
+      const raw = String(p.raw || '').trim();
+      const normalizedRaw = raw.replace(/\s+\*[dmy]\b/gi, '')
+        .replace(/^(\s*(?:停用\s*)?)每月\s*(\d{1,2})\s*日/, '$1$2日');
+      let idx = -1;
+      for (let i = 0; i < lines.length; i += 1) {
+        if (used.has(i)) continue;
+        const t = lines[i].trim();
+        if ((raw && t === raw) || (normalizedRaw && t === normalizedRaw)) { idx = i; break; }
+      }
+      if (idx >= 0) {
+        used.add(idx);
+        if (lines[idx] !== next) { lines[idx] = next; changed = true; }
+        return;
+      }
+      /* 从流水行 *m 新挂出来的计划：补进对应段，不动其它行。 */
+      const header = p.kind === 'installment' ? '[分期]' : '[固定]';
+      let h = lines.findIndex((x) => x.trim() === header);
+      if (h < 0) {
+        if (lines.length && lines[lines.length - 1] !== '') lines.push('');
+        lines.push(header, next);
+      } else {
+        let at = h + 1;
+        while (at < lines.length && !/^\s*\[[^\]]+\]\s*$/.test(lines[at])) at += 1;
+        if (at > h + 1 && lines[at - 1].trim() === '') at -= 1;
+        lines.splice(at, 0, next);
+      }
+      changed = true;
     });
-    if (next === S.fixedSource) return false;
+    if (!changed) return false;
+    const next = lines.join('\n');
     S.fixedSource = next;
     if (fixedCtl && fixedCtl.cm && fixedCtl.cm.getValue() !== next) {
       fixedCtl.cm.setValue(next);
@@ -759,11 +825,12 @@
     }
   }
 
-  /** 流水行：固定收支模板的备注作为行尾注释保留（NT 的 note）。 */
+  /** 流水行：固定收支备注用 `< 固定收支 …` 标记，其它备注用 //。 */
   function eventLineWithNote(e) {
     const line = renderEventLine(e);
     const note = String((e && e.note) || '').trim().replace(/\/\//g, '/ /');
-    return note ? line + ' // ' + note : line;
+    if (!note) return line;
+    return /^<\s*/.test(note) ? line + ' ' + note : line + ' // ' + note;
   }
 
   /**
@@ -839,7 +906,7 @@
   /**
    * 流水行尾录了 `*m` / `*d` / `*y`：
    *   · *m 保留这一笔的「日」；*d 不保留日期；*y 保留月 + 日；
-   *   · 把它加进固定表，再把流水行尾的标记去掉。
+   *   · 把它加进固定表；行尾 *m/*d/*y 保留（绑定标记，解绑时才去掉）。
    */
   function adoptInlinePeriods(r) {
     const plans = ((r && r.plans) || []).slice();
@@ -852,12 +919,15 @@
       const period = e.period;
       const day = period === 'd' ? 0 : Number(e.date.slice(4, 6));
       const month = period === 'y' ? Number(e.date.slice(2, 4)) : 0;
-      const same = plans.some((p) => p.from === e.from && p.to === e.to
+      const same = plans.find((p) => p.from === e.from && p.to === e.to
         && p.amountCents === e.amountCents && p.period === period
         && (p.domain || 'P') === (e.domain || 'P')
         && (period === 'd' || rulesMod.dayOf(p) === day)
         && (period === 'y' ? rulesMod.monthOf(p) === month : true));
-      if (!same) {
+      if (same) {
+        same.sourceLine = e.sourceLine || 0;
+        same.inlineSource = true;
+      } else {
         plans.push({
           id: 'P_new_' + plans.length,
           kind: 'fixed',
@@ -867,6 +937,8 @@
           month,
           note: '',
           inst: null,
+          sourceLine: e.sourceLine || 0,
+          inlineSource: true,
           /* NT 的 markPlanHandled：从哪一笔流水挂出来的，就把那个月记成已生成，
            * 避免到期自动补账时重复落一笔。 */
           state: { generated: [e.date.slice(0, 4)], confirmed: [], voided: [] },
@@ -879,8 +951,6 @@
         });
         changed = true;
       }
-      const next = lines[idx].replace(/\s+\*[dmy]\b/gi, '');
-      if (next !== lines[idx]) { lines[idx] = next; changed = true; }
     });
     S.plans = plans;
     if (!changed) return false;
@@ -905,6 +975,7 @@
         const cents = Math.round(Number(rows[0].amountCents) || 0);
         if (cents > 0 && cents !== plan.amountCents) {
           plan.amountCents = cents;
+          plan.raw = '';
           changed = true;
         }
       });
@@ -925,7 +996,7 @@
       S.dict = r.dict;
       rulesMod.remapRefs(S.rules, prevDict, S.dict);
       /* 独立的固定表：和流水各自编译，互不污染 */
-      const fp = TV.source.compileFixed(fixedViewSource(), S.dict, {
+      const fp = TV.source.compileFixed(fixedCanonicalSource(), S.dict, {
         now: new Date(), domain: S.domain,
       });
       S.plans = fp.plans || [];
@@ -1074,11 +1145,19 @@
   function queryNodeText(id) {
     const n = S.dict.nodes[id];
     if (!n) return '';
-    return [n.zh_code, n.en_code, n.zh_name, n.en_name].filter(Boolean).join(' ').toLowerCase();
+    return [id, n.zh_code, n.en_code, n.zh_name, n.en_name].filter(Boolean).join(' ').toLowerCase();
+  }
+  function queryTerms(text) {
+    return String(text || '')
+      .split(/[\s,，.、]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
   function queryMatchNode(id, q) {
-    if (!q) return true;
-    return queryNodeText(id).includes(String(q).toLowerCase());
+    const terms = queryTerms(q);
+    if (!terms.length) return true;
+    const text = queryNodeText(id);
+    return terms.some((term) => text.includes(term.toLowerCase()));
   }
   function queryAmountMatch(cents, text) {
     const s = String(text || '').trim().replace(/\s+/g, '');
@@ -1097,11 +1176,43 @@
   }
   function queryNoteText(e) {
     const tags = (e.tagIds || []).map((id) => TV.dict.renderTag(S.dict, id, 'PLAIN', S.lang)).join(' ');
-    return [tags, e.domain || 'P'].filter(Boolean).join(' ').toLowerCase();
+    return [String(e.note || '').trim(), tags, e.domain || 'P']
+      .filter(Boolean).join(' ').toLowerCase();
   }
+  /** 查询纳入未来记录：每月固定 + 分期全部剩余期；未来区每日未确认项不纳入。 */
+  function queryFutureEvents() {
+    const out = [];
+    const now = new Date();
+    (S.plans || []).forEach((p) => {
+      if (!p || p.status !== 'active') return;
+      const monthlyFixed = p.kind !== 'installment' && p.period === 'm';
+      if (!monthlyFixed && p.kind !== 'installment') return;
+      const rows = TV.rules.futureOccurrences(p, now, S.events || [], 24);
+      rows.forEach((r) => {
+        out.push({
+          date: r.date,
+          from: p.from,
+          to: p.to,
+          amountCents: Math.round(Number(r.amountCents) || 0),
+          tagIds: (p.tagIds || []).slice(),
+          note: r.note || '',
+          domain: p.domain || 'P',
+          planId: p.id,
+          periodIndex: r.periodIndex || '',
+          virtual: true,
+        });
+      });
+    });
+    return out;
+  }
+
+  function queryEvents() {
+    return (S.events || []).concat(queryFutureEvents());
+  }
+
   function queryFilter(state) {
     const q = state || {};
-    return (S.events || []).filter((e) => {
+    return queryEvents().filter((e) => {
       if (q.dateFrom && e.date < q.dateFrom) return false;
       if (q.dateTo && e.date > q.dateTo) return false;
       if (!queryMatchNode(e.from, q.from)) return false;
@@ -1131,9 +1242,15 @@
     const filters = el('div', { class: 'q-filters' });
     const date = el('input', { class: 'q-input', type: 'text', placeholder: 'YYMMDD / YYMM / YY', maxlength: '17' });
     date.value = state.dateText || '';
-    const from = el('input', { class: 'q-input', type: 'text', placeholder: t('fromNode') });
+    const from = el('input', {
+      class: 'q-input', type: 'text', placeholder: t('fromNode'),
+      title: S.lang === 'en' ? 'Multiple nodes allowed, comma or space separated' : '可输入多个节点，逗号或空格分隔',
+    });
     from.value = state.from || '';
-    const to = el('input', { class: 'q-input', type: 'text', placeholder: t('toNode') });
+    const to = el('input', {
+      class: 'q-input', type: 'text', placeholder: t('toNode'),
+      title: S.lang === 'en' ? 'Multiple nodes allowed, comma or space separated' : '可输入多个节点，逗号或空格分隔',
+    });
     to.value = state.to || '';
     const amount = el('input', { class: 'q-input', type: 'text', placeholder: t('amountShort') });
     amount.value = state.amount || '';
@@ -1197,14 +1314,16 @@
     rows.forEach((e, i) => {
       const fromText = TV.dict.renderNode(S.dict, e.from, S.mode, S.lang);
       const toText = TV.dict.renderNode(S.dict, e.to, S.mode, S.lang);
-      const noteText = (e.tagIds || []).map((id) => TV.dict.renderTag(S.dict, id, S.mode, S.lang)).join(' ');
+      const noteText = [TV.dict.maskNote(S.dict, String(e.note || '').trim(), S.mode, S.lang),
+        (e.tagIds || []).map((id) => TV.dict.renderTag(S.dict, id, S.mode, S.lang)).join(' ')]
+        .filter(Boolean).join(' ');
       panel.table.appendChild(el('div', { class: 'q-row' }, [
         el('span', { class: 'q-muted' }, [String(i + 1)]),
         el('span', { class: 'q-muted' }, [e.date]),
         el('span', { class: 'q-cell' }, [fromText]),
         el('span', { class: 'q-cell' }, [toText]),
-        el('span', { class: 'q-num' }, [e.minutes > 0 ? TV.amount.formatTime(e.minutes) : TV.amount.formatPlain(e.amountCents)]),
-        el('span', { class: 'q-cell q-muted q-note' }, [noteText || '—']),
+        el('span', { class: 'q-num' }, [e.minutes > 0 ? TV.amount.formatTime(e.minutes) : TV.amount.formatCompact(e.amountCents)]),
+        el('span', { class: 'q-cell q-muted q-note' }, [noteText || '']),
       ]));
     });
   }
@@ -1233,13 +1352,190 @@
   /* ---------------- 固定页：独立的固定表（文本编译器） ---------------- */
   let fixedCtl = null;
 
-  function fixedViewSource() {
+  let fixedLineMenu = null;
+  let fixedLineMenuLine = -1;
+  let fixedLineClip = '';
+
+  function closeFixedLineMenu() {
+    if (!fixedLineMenu) return;
+    try {
+      fixedLineMenu.__cm.removeLineClass(fixedLineMenuLine, 'gutter', 'tv-line-selected');
+      fixedLineMenu.__cm.removeLineClass(fixedLineMenuLine, 'background', 'tv-line-selected-bg');
+    } catch (e) { /* ignore */ }
+    fixedLineMenu.remove();
+    fixedLineMenu.remove();
+    fixedLineMenu = null;
+    fixedLineMenuLine = -1;
+    document.removeEventListener('mousedown', closeFixedLineMenu, true);
+    document.removeEventListener('keydown', fixedLineMenuKey, true);
+  }
+  function fixedLineMenuKey(ev) {
+    if (ev.key === 'Escape') closeFixedLineMenu();
+  }
+  function fixedRemoveLine(cm, line) {
+    if (cm.lineCount() <= 1) {
+      cm.replaceRange('', { line, ch: 0 }, { line, ch: cm.getLine(line).length });
+      return;
+    }
+    cm.replaceRange('', { line, ch: 0 }, { line: line + 1, ch: 0 });
+  }
+  function fixedCopyLine(cm, line) {
+    fixedLineClip = cm.getLine(line) || '';
+    try { if (navigator.clipboard) navigator.clipboard.writeText(fixedLineClip); } catch (e) { /* ignore */ }
+  }
+  function fixedReadClip(cb) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        navigator.clipboard.readText().then(cb).catch(() => cb(fixedLineClip));
+        return;
+      }
+    } catch (e) { /* ignore */ }
+    cb(fixedLineClip);
+  }
+  function openFixedLineMenu(cm, line, x, y) {
+    closeFixedLineMenu();
+    const menu = el('div', { class: 'cm-line-menu' });
+    const add = (label, fn, disabled) => {
+      const btn = el('button', { type: 'button' }, [label]);
+      btn.disabled = !!disabled;
+      if (!disabled) btn.addEventListener('click', () => { closeFixedLineMenu(); fn(); cm.focus(); });
+      menu.appendChild(btn);
+    };
+    add('删除', () => fixedRemoveLine(cm, line));
+    add('剪切', () => { fixedCopyLine(cm, line); fixedRemoveLine(cm, line); });
+    add('复制', () => fixedCopyLine(cm, line));
+    add('粘贴', () => fixedReadClip((t) => {
+      if (t == null || t === '') return;
+      const text = String(t).replace(/\n$/, '');
+      cm.replaceRange(text, { line, ch: 0 }, { line, ch: cm.getLine(line).length });
+    }));
+    add('插入', () => fixedReadClip((t) => {
+      if (t == null || t === '') return;
+      const text = String(t).replace(/\n$/, '');
+      cm.replaceRange(text + '\n', { line, ch: 0 });
+    }));
+    add('上移', () => {
+      if (line <= 0) return;
+      const a = cm.getLine(line - 1);
+      const b = cm.getLine(line);
+      cm.replaceRange(b + '\n' + a, { line: line - 1, ch: 0 }, { line, ch: b.length });
+    }, line <= 0);
+    document.body.appendChild(menu);
+    const r = menu.getBoundingClientRect();
+    const gutter = cm.getWrapperElement().querySelector('.CodeMirror-gutters');
+    const gr = gutter ? gutter.getBoundingClientRect() : null;
+    const coords = cm.charCoords({ line, ch: 0 }, 'window');
+    let left = Math.max((gr ? gr.right : 0) + 8, x + 12);
+    let top = coords.bottom + 6;
+    if (top + r.height > window.innerHeight - 8) top = Math.max(8, coords.top - r.height - 6);
+    left = Math.max(8, Math.min(left, window.innerWidth - r.width - 8));
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    cm.addLineClass(line, 'gutter', 'tv-line-selected');
+    cm.addLineClass(line, 'background', 'tv-line-selected-bg');
+    fixedLineMenu = menu;
+    fixedLineMenuLine = line;
+    menu.__cm = cm;
+    setTimeout(() => {
+      document.addEventListener('mousedown', closeFixedLineMenu, true);
+      document.addEventListener('keydown', fixedLineMenuKey, true);
+    }, 0);
+  }
+
+  /** 固定页也支持双空格 / 三空格：> / <（和流水编辑器一致）。 */
+  function fixedSpace(cm) {
+    const cur = cm.getCursor();
+    const before = cm.getLine(cur.line).slice(0, cur.ch);
+    /* 新行第一个空格：默认每日；输入 19 后空格：自动补成 19日。 */
+    if (!cm.somethingSelected()) {
+      if (cur.ch === 0 && !before.trim()) {
+        cm.replaceSelection('每日 ');
+        cm._fixedSpaceRun = 0;
+        return;
+      }
+      if (cur.ch > 0 && /^\d{1,2}$/.test(before)) {
+        cm.replaceSelection('日 ');
+        cm._fixedSpaceRun = 0;
+        return;
+      }
+    }
+    const now = Date.now();
+    cm._fixedSpaceRun = (cm._fixedSpaceLast && now - cm._fixedSpaceLast < 360)
+      ? (cm._fixedSpaceRun || 0) + 1 : 1;
+    cm._fixedSpaceLast = now;
+    if (cm._fixedSpaceRun >= 2) {
+      const op = cm._fixedSpaceRun === 2 ? '>' : '<';
+      const cur = cm.getCursor();
+      const before = cm.getLine(cur.line).slice(0, cur.ch);
+      const next = op === '>' ? before.replace(/\s*$/, '') + ' > '
+        : before.replace(/\s*[<>]\s*$/, '') + ' < ';
+      cm.replaceRange(next, { line: cur.line, ch: 0 }, { line: cur.line, ch: cur.ch });
+      cm.setCursor({ line: cur.line, ch: next.length });
+      cm._fixedSpaceRun = cm._fixedSpaceRun === 2 ? 2 : 0;
+      return;
+    }
+    cm.replaceSelection(' ');
+  }
+
+  function fixedCanonicalSource() {
     if (!S.fixedSource) {
       S.fixedSource = TV.source.fixedSourceFromPlans(S.plans || [], S.dict, {
         mode: S.mode, lang: S.lang,
       });
     }
-    return S.fixedSource;
+    return String(S.fixedSource);
+  }
+
+  function fixedNodeToken(tok) {
+    if (!S.dict) return tok;
+    const aliases = S.dict.aliases || {};
+    const ids = aliases[tok] || aliases[tok.toLowerCase()] || [];
+    const id = (ids || []).find((x) => S.dict.nodes && S.dict.nodes[x]);
+    return id ? TV.dict.renderNode(S.dict, id, S.mode, S.lang) : tok;
+  }
+
+  function fixedViewSource() {
+    const src = fixedCanonicalSource().replace(/^(\s*(?:停用\s*)?)每月\s*(\d{1,2})\s*日/mg, '$1$2日');
+    let inPlan = false;
+    return src.split('\n').map((line) => {
+      const t = line.trim();
+      if (t === '[固定]' || t === '[分期]') { inPlan = true; return line; }
+      if (inPlan && /^\[[^\]]+\]$/.test(t)) inPlan = false;
+      if (!inPlan || !t || t.startsWith('//')) return line;
+      const clean = line.replace(/\s+\*[dmy]\b/gi, '');
+      if (S.mode !== 'CODE') return clean;
+      const m = clean.match(/^(\s*(?:停用\s+)?(?:每日|每月\s*\d{1,2}\s*日|\d{1,2}\s*日|每年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)\s+)(\S+)(\s*>\s*)(\S+)([\s\S]*)$/);
+      if (!m) return clean;
+      return m[1] + fixedNodeToken(m[2]) + m[3] + fixedNodeToken(m[4])
+        + TV.dict.maskNote(S.dict, m[5], S.mode, S.lang);
+    }).join('\n');
+  }
+
+  function planBindKey(p) {
+    return [p.from, p.to, p.amountCents, p.period, p.day, p.month,
+      String(p.note || ''), p.status].join('|');
+  }
+
+  /** 固定收支删除 / 内容改动 → 解绑原流水行（去掉行尾 *m/*d/*y），已发生流水内容不动。 */
+  function unbindInlinePlans(prev, next) {
+    const keep = new Set((next || []).map(planBindKey));
+    const lines = String(S.ledgerSource || '').replace(/\n+$/, '').split('\n');
+    let changed = false;
+    (prev || []).forEach((p) => {
+      if (!p || !p.inlineSource || !p.sourceLine) return;
+      if (keep.has(planBindKey(p))) return;
+      const idx = p.sourceLine - 1;
+      if (idx < 0 || idx >= lines.length) return;
+      const line = lines[idx].replace(/\s+\*[dmy]\b/gi, '');
+      if (line !== lines[idx]) {
+        lines[idx] = line;
+        changed = true;
+      }
+    });
+    if (!changed) return false;
+    S.ledgerSource = lines.join('\n') + '\n';
+    if (editorCtl) editorCtl.setTexts(S.ledgerSource, S.dictSource);
+    return true;
   }
 
   function compilePlansOnly() {
@@ -1247,7 +1543,10 @@
     const r = TV.source.compileFixed(S.fixedSource, S.dict, {
       now: new Date(), domain: S.domain,
     });
-    S.plans = r.plans || [];
+    const prevPlans = S.plans || [];
+    const nextPlans = r.plans || [];
+    unbindInlinePlans(prevPlans, nextPlans);
+    S.plans = nextPlans;
     S.fixedDiags = r.diagnostics || [];
     renderFixedErrors();
     renderFutureBlock(true);
@@ -1274,11 +1573,11 @@
       ]));
     }
     const list = (S.fixedDiags || []);
-    fixedCtl.note.textContent = t('fixedHint');
     if (!list.length) {
-      fixedCtl.errors.appendChild(el('span', { class: 'fixed-ok' }, ['语法 OK']));
+      fixedCtl.errors.hidden = true;
       return;
     }
+    fixedCtl.errors.hidden = false;
     list.slice(0, 6).forEach((d) => {
       fixedCtl.errors.appendChild(el('div', { class: 'fixed-error' }, [
         '第 ' + d.line + ' 行：' + d.message,
@@ -1290,16 +1589,9 @@
     if (fixedCtl || !TV.editor) return fixedCtl;
     clear(dom.fixedView);
     const inner = el('div', { class: 'fixed-inner' });
-    const head = el('div', { class: 'fixed-head' }, [
-      el('div', { class: 'fixed-title' }, [t('fixedTitle')]),
-      el('span', { class: 'fixed-sub' }, ['独立的表 · 定期向流水未来区域添加']),
-    ]);
-    const note = el('div', { class: 'fixed-note' }, [t('fixedHint')]);
     const host = el('div', { class: 'fixed-editor' });
     const summary = el('div', { class: 'fixed-summary' });
     const errors = el('div', { class: 'fixed-errors' });
-    inner.appendChild(head);
-    inner.appendChild(note);
     inner.appendChild(host);
     inner.appendChild(summary);
     inner.appendChild(errors);
@@ -1310,12 +1602,50 @@
       mode: 'txtvein-ledger',
       theme: 'txtvein',
       lineNumbers: true,
+      lineNumberFormatter: (n) => String(n).padStart(5, '\u2007'),
       lineWrapping: window.matchMedia('(max-width: 760px)').matches,
       tabSize: 2,
       indentUnit: 2,
+      extraKeys: { Space: (cmx) => fixedSpace(cmx) },
     });
     let timer = 0;
+    const hideFixedStates = () => {
+      cm.getAllMarks().filter((mk) => mk.__tvFixedState).forEach((mk) => {
+        try { mk.clear(); } catch (e) { /* ignore */ }
+      });
+      for (let i = 0; i < cm.lineCount(); i += 1) {
+        const text = cm.getLine(i);
+        const at = text.indexOf('//');
+        if (at < 0 || !/(?:生成|确认|作废)=/.test(text.slice(at))) continue;
+        const mark = cm.markText({ line: i, ch: at }, { line: i, ch: text.length }, {
+          replacedWith: el('span', { class: 'tv-fixed-state-hidden' }),
+          atomic: true,
+        });
+        mark.__tvFixedState = true;
+      }
+    };
+    cm.on('keydown', (cmx, ev) => { if (ev.key !== ' ') cmx._fixedSpaceRun = 0; });
+    /* 行号栏单击：只把光标放到该行行首，不整行选中；这样退格是并到上一行，不会删整行。 */
+    host.addEventListener('mousedown', (ev) => {
+      const t = ev.target && ev.target.closest ? ev.target.closest('.CodeMirror-linenumber') : null;
+      if (!t) return;
+      ev.preventDefault();
+      const n = Number(String(t.textContent || '').replace(/\u2007/g, '').trim());
+      if (!n) return;
+      cm.setCursor({ line: Math.max(0, n - 1), ch: 0 });
+      cm.focus();
+    }, true);
+    host.addEventListener('click', (ev) => {
+      const t = ev.target && ev.target.closest ? ev.target.closest('.CodeMirror-linenumber') : null;
+      if (!t) return;
+      ev.preventDefault();
+      const n = Number(String(t.textContent || '').replace(/\u2007/g, '').trim());
+      if (n) openFixedLineMenu(cm, Math.max(0, n - 1), ev.clientX, ev.clientY);
+    });
+    cm.on('changes', hideFixedStates);
+    setTimeout(hideFixedStates, 0);
     cm.on('change', () => {
+      if (fixedCtl && fixedCtl.suspend) return;
       clearTimeout(timer);
       timer = setTimeout(() => {
         S.fixedSource = cm.getValue();
@@ -1323,7 +1653,7 @@
         scheduleSave();
       }, 260);
     });
-    fixedCtl = { cm, note, head, errors, summary };
+    fixedCtl = { cm, errors, summary };
     renderFixedErrors();
     setTimeout(() => cm.refresh(), 0);
     return fixedCtl;
@@ -1334,31 +1664,28 @@
     if (!fixedCtl) return;
     const src = fixedViewSource();
     if (fixedCtl.cm.getValue() !== src) {
+      fixedCtl.suspend = true;
       fixedCtl.cm.setValue(src);
       fixedCtl.cm.clearHistory();
+      setTimeout(() => { if (fixedCtl) fixedCtl.suspend = false; }, 0);
     }
-    fixedCtl.head.firstChild.textContent = t('fixedTitle');
     renderFixedErrors();
     setTimeout(() => fixedCtl.cm.refresh(), 0);
   }
 
   function renderFixedHint() {
-    if (fixedCtl) {
-      fixedCtl.head.firstChild.textContent = t('fixedTitle');
-      renderFixedErrors();
-    }
+    if (fixedCtl) renderFixedErrors();
   }
 
 
   /* ---------------- 反馈栏 ---------------- */
   function defaultFeedback() {
-    const base = t('feedbackHint');
-    if (!lastEditorStatus || (S.view !== 'ledger' && S.view !== 'dict')) return base;
+    if (!lastEditorStatus || (S.view !== 'ledger' && S.view !== 'dict')) return '';
     const name = lastEditorStatus.file === 'dict' ? 'dict.tv' : 'ledger.tv';
     const state = lastEditorStatus.errors
       ? (S.lang === 'en' ? lastEditorStatus.errors + ' errors' : lastEditorStatus.errors + ' 个错误')
       : (S.lang === 'en' ? 'syntax OK' : '语法 OK');
-    return name + ' · Ln ' + lastEditorStatus.line + ', Col ' + lastEditorStatus.col + ' · ' + state + ' · ' + base;
+    return name + ' · Ln ' + lastEditorStatus.line + ', Col ' + lastEditorStatus.col + ' · ' + state;
   }
 
   function updateFeedback(msg, type, action) {
@@ -1368,7 +1695,9 @@
     feedbackFn = action && action.fn ? action.fn : null;
     dom.feedback.classList.toggle('is-error', type === 'error');
     dom.feedback.classList.toggle('is-ok', type === 'ok');
-    dom.feedbackText.textContent = msg || defaultFeedback();
+    const text = msg || defaultFeedback();
+    dom.feedbackText.textContent = text;
+    dom.feedback.hidden = !text;
     if (action && action.label && msg) {
       dom.feedbackAction.hidden = false;
       dom.feedbackAction.textContent = action.label;
@@ -1381,7 +1710,9 @@
         feedbackHold = false;
         feedbackFn = null;
         dom.feedback.classList.remove('is-error', 'is-ok');
-        dom.feedbackText.textContent = defaultFeedback();
+        const next = defaultFeedback();
+        dom.feedbackText.textContent = next;
+        dom.feedback.hidden = !next;
         dom.feedbackAction.hidden = true;
       }, 4800);
     }
@@ -1701,7 +2032,7 @@
     dom.reportView.appendChild(grid);
   }
 
-  const STAT_TYPE_EN = { 收入: 'Income', 负债: 'Liabilities', 权益: 'Equity', 资产: 'Assets', 费用: 'Expenses', 成本: 'Cost' };
+  const STAT_TYPE_EN = { 收入: 'Income', 负债: 'Debt', 权益: 'Equity', 资产: 'Asset', 费用: 'Expense', 成本: 'Cost' };
   const STAT_TABS = [
     { id: 'category', label: 'category' },
     { id: 'node', label: 'node' },
@@ -1718,8 +2049,11 @@
     return { start: yy + mm + '01', end: yy + mm + queryMonthEnd(yy, mm), all: false };
   }
   function statsDateIn(date, range) { return String(date) >= range.start && String(date) <= range.end; }
+  function statsEvents() {
+    return (S.events || []).concat(queryFutureEvents());
+  }
   function statsGroups(kind) {
-    return TV.stats.groupStats(S.dict.nodes || {}, S.events || [], statsMonthRange(), {
+    return TV.stats.groupStats(S.dict.nodes || {}, statsEvents(), statsMonthRange(), {
       keyOf: kind === 'category'
         ? (n) => n.category_key || ''
         : (n) => n.id,
@@ -1753,6 +2087,7 @@
     const o = opts || {};
     const nums = o.numCols || [];
     const wrap = el('div', { class: 'stats-table' });
+    if (o.list) wrap.dataset.list = o.list;
     if (o.total) {
       // 收入/负债/权益这些是**单独一行**的主标题，上下居中；
       // 合计金额另起一行靠右贴底，避免同一个格子里互相拉扯。
@@ -1839,13 +2174,13 @@
       resizable: true,
       selected: S.stats.selected,
       total,
-      onClick: (row) => { S.stats.selected = row.id; S.stats.pane = 'detail'; renderStatsPage(); },
+      onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; renderStatsPage(); },
     }));
     host.appendChild(section);
   }
 
   function statsLeftCategory(host, groups) {
-    groups.forEach((g) => statsGroupTable(host, g, S.lang === 'en' ? 'Category' : '分类', 'category'));
+    groups.forEach((g) => statsGroupTable(host, g, S.lang === 'en' ? 'Cat' : '分类', 'category'));
   }
 
   function statsLeftNode(host, groups) {
@@ -1867,7 +2202,7 @@
       cells: [statsTagLabel(id), String(x.n), statsMoney(x.cents)],
     }));
     host.appendChild(statsTable(S.lang === 'en' ? ['Tag', 'Count', 'Amount'] : ['标签', '次数', '金额'], rows, 'var(--stats-first, 90px) 52px 90px',
-      { numCols: [2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.pane = 'detail'; renderStatsPage(); } }));
+      { numCols: [2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; renderStatsPage(); } }));
   }
 
   function statsLeftEvent(host, range) {
@@ -1886,15 +2221,15 @@
       id,
       cells: [TV.dict.renderBehavior(S.dict, id, S.mode, S.lang), String(x.n), String(x.weight)],
     }));
-    host.appendChild(statsTable(S.lang === 'en' ? ['Behavior', 'Count', 'Weight'] : ['行为项', '次数', '强度'], rows, 'var(--stats-first, 90px) 52px 58px',
-      { numCols: [1, 2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.pane = 'detail'; renderStatsPage(); } }));
+    host.appendChild(statsTable(S.lang === 'en' ? ['Item', 'Count', 'Weight'] : ['行为项', '次数', '强度'], rows, 'var(--stats-first, 90px) 52px 58px',
+      { numCols: [1, 2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; renderStatsPage(); } }));
   }
 
   function statsRightEvents(selected, range) {
     const isCat = String(selected).startsWith('cat:');
     const rawCat = isCat ? String(selected).slice(4) : '';
     const isUncat = rawCat === '未分类' || rawCat === '';
-    const evs = (S.events || []).filter((e) => {
+    const evs = statsEvents().filter((e) => {
       if (!statsDateIn(e.date, range)) return false;
       if (!isCat) return e.from === selected || e.to === selected;
       const f = S.dict.nodes[e.from];
@@ -1907,11 +2242,12 @@
       cells: [String(i + 1), e.date,
         statsNodeLabel(e.from), statsNodeLabel(e.to),
         e.minutes > 0 ? TV.amount.formatTime(e.minutes) : statsMoney(e.amountCents),
-        (e.tagIds || []).map((id) => statsTagLabel(id)).join(' ') || '—'],
+        [TV.dict.maskNote(S.dict, String(e.note || '').trim(), S.mode, S.lang),
+          (e.tagIds || []).map((id) => statsTagLabel(id)).join(' ')].filter(Boolean).join(' ')],
     }));
     return statsTable(S.lang === 'en' ? ['#', 'Date', 'From', 'To', 'Amount', 'Note'] : ['序', '日期', '转出', '转入', '金额', '备注'], rows,
       '30px 58px minmax(50px,1fr) minmax(50px,1fr) 68px minmax(50px,.8fr)',
-      { numCols: [4], empty: S.lang === 'en' ? 'Pick a category on the left, or type a name/initial' : '点左侧分类，或输入名字/首字母' });
+      { numCols: [4], empty: S.lang === 'en' ? 'No entries in this range' : '本期没有这一类流水', list: 'list' });
   }
 
   function statsRightNotes(selected, range) {
@@ -1923,8 +2259,8 @@
         (n.keywordIds || []).map((id) => statsTagLabel(id)).join(' ') || '—',
         statsMoney(n.amountCents || 0)],
     }));
-    return statsTable(S.lang === 'en' ? ['#', 'Date', 'Category', 'Keyword', 'Amount'] : ['序', '日期', '分类', '关键词', '金额'], rows,
-      '30px 58px minmax(46px,.8fr) minmax(50px,1fr) 68px', { numCols: [4], empty: S.lang === 'en' ? 'Pick a note tag on the left' : '点左侧备注标签查看明细' });
+    return statsTable(S.lang === 'en' ? ['#', 'Date', 'Cat', 'Key', 'Amount'] : ['序', '日期', '分类', '关键词', '金额'], rows,
+      '30px 58px minmax(46px,.8fr) minmax(50px,1fr) 68px', { numCols: [4], empty: S.lang === 'en' ? 'No notes in this range' : '本期没有备注', list: 'note' });
   }
 
   function statsRightBehaviors(selected, range) {
@@ -1937,17 +2273,124 @@
           '×' + (b.weight || 1),
           (b.tagIds || []).map((id) => statsTagLabel(id)).join(' ') || '—'],
       }));
-    return statsTable(S.lang === 'en' ? ['#', 'Date', 'From', 'To', 'Weight', 'Tags'] : ['序', '日期', '转出', '转入', '强度', '标签'], rows,
-      '30px 58px minmax(46px,1fr) minmax(46px,1fr) 34px minmax(46px,.8fr)', { numCols: [4], empty: S.lang === 'en' ? 'Pick a behavior on the left' : '点左侧行为项查看明细' });
+    return statsTable(S.lang === 'en' ? ['#', 'Date', 'From', 'To', 'Wt', 'Tags'] : ['序', '日期', '转出', '转入', '强度', '标签'], rows,
+      '30px 58px minmax(46px,1fr) minmax(46px,1fr) 34px minmax(46px,.8fr)', { numCols: [4], empty: S.lang === 'en' ? 'No events in this range' : '本期没有行为记录', list: 'event' });
+  }
+
+  /** 当前选中项的显示名（分类 / 节点 / 标签 / 行为项）。 */
+  function statsSelectedName() {
+    const sel = S.stats.selected;
+    if (!sel) return '';
+    if (S.stats.tab === 'note') return statsTagLabel(sel);
+    if (S.stats.tab === 'event') return TV.dict.renderBehavior(S.dict, sel, S.mode, S.lang);
+    if (S.stats.tab === 'category') {
+      return String(sel).startsWith('cat:') ? statsCategoryLabel(String(sel).slice(4)) : '';
+    }
+    return statsNodeLabel(sel);
+  }
+
+  function statsSearchPlaceholder() {
+    const en = S.lang === 'en';
+    if (S.stats.tab === 'node') return en ? 'Name / code / initials' : '节点名 / 简码 / 首字母';
+    if (S.stats.tab === 'note') return en ? 'Note / initials' : '备注 / 首字母';
+    if (S.stats.tab === 'event') return en ? 'Event / initials' : '行为项 / 首字母';
+    return en ? 'Name / initials' : '分类名 / 首字母';
+  }
+
+  function statsEmptyHint() {
+    if (S.lang === 'en') return 'Pick a row, or type a name/initial';
+    return '点左侧' + t(S.stats.tab) + '，或输入'
+      + (S.stats.tab === 'node' ? '名字/简码/首字母' : '名字/首字母');
+  }
+
+  /**
+   * 清空后可以直接输入查询：分类 / 节点 / 备注 / 事件。
+   * 只有节点支持简码；其它类型只用名字 + 拼音首字母 + 英文首字母。
+   */
+  function statsSearchCandidates() {
+    const q = String((S.stats && S.stats.search) || '').trim().toLowerCase();
+    if (!q || !S.dict) return [];
+    const P = TV.pinyin || {};
+    const out = [];
+    const add = (id, name, meta, zh, en, codes) => {
+      const fields = [zh, en];
+      if (P.initialsOf) fields.push(P.initialsOf(zh));
+      if (P.latinInitials) fields.push(P.latinInitials(en));
+      (codes || []).forEach((c) => fields.push(c));
+      let score = 0;
+      fields.forEach((f) => {
+        const s = String(f || '').toLowerCase();
+        if (!s) return;
+        if (s === q) score = Math.max(score, 100);
+        else if (s.startsWith(q)) score = Math.max(score, 70);
+        else if (s.includes(q)) score = Math.max(score, 40);
+      });
+      if (score) out.push({ id, name, meta, score });
+    };
+    if (S.stats.tab === 'category') {
+      (S.dict.categories || []).forEach((c) => {
+        add('cat:' + c.key, statsCategoryLabel(c.key), statsTypeLabel(c.type), c.name, c.en_name, []);
+      });
+      add('cat:未分类', statsCategoryLabel('未分类'), '', '未分类', 'Other', []);
+    } else if (S.stats.tab === 'node') {
+      Object.keys(S.dict.nodes || {}).forEach((id) => {
+        const n = S.dict.nodes[id];
+        if (!n || n.system) return;
+        if (TV.stats && TV.stats.isHiddenAccount && TV.stats.isHiddenAccount(n)) return;
+        add(id, statsNodeLabel(id), [statsTypeLabel(n.type), n.zh_code].filter(Boolean).join(' · '),
+          n.zh_name, n.en_name, [n.zh_code, n.en_code]);
+      });
+    } else if (S.stats.tab === 'note') {
+      Object.keys(S.dict.tags || {}).forEach((id) => {
+        const g = S.dict.tags[id];
+        if (!g) return;
+        add(id, statsTagLabel(id), S.lang === 'en' ? 'Tag' : '标签', g.zh_name, g.en_name, []);
+      });
+    } else {
+      Object.keys(S.dict.behaviors || {}).forEach((id) => {
+        const h = S.dict.behaviors[id];
+        if (!h) return;
+        add(id, TV.dict.renderBehavior(S.dict, id, S.mode, S.lang), S.lang === 'en' ? 'Event' : '行为',
+          h.zh_name, h.en_name, []);
+      });
+    }
+    out.sort((a, b) => (b.score - a.score) || String(a.name).localeCompare(String(b.name), 'zh'));
+    return out.slice(0, 8);
+  }
+
+  function statsSelectSearch(cand) {
+    if (!cand) return;
+    S.stats.selected = cand.id;
+    S.stats.search = '';
+    S.stats.pane = 'detail';
+    renderStatsPage();
+  }
+
+  function statsSearchRows() {
+    const list = statsSearchCandidates();
+    const wrap = el('div', { class: 'stats-search-results' });
+    if (!list.length) {
+      wrap.appendChild(el('div', { class: 'stats-search-empty' }, [
+        S.lang === 'en' ? 'No match' : '没有匹配项',
+      ]));
+      return wrap;
+    }
+    list.forEach((cand) => {
+      const hit = el('button', { class: 'stats-search-hit', type: 'button' }, [
+        el('b', {}, [cand.name]),
+        el('span', {}, [cand.meta || '']),
+      ]);
+      hit.addEventListener('click', () => statsSelectSearch(cand));
+      wrap.appendChild(hit);
+    });
+    return wrap;
   }
 
   function renderStatsPage() {
-    if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', split: 380, qsplit: 0 };
-    /* 左表 / 查询区的宽度都存在本机；没存过再用默认比例。 */
+    if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', search: '', split: 380 };
+    /* 只记左表宽度；中间 / 查询两表永远平分剩余宽度。 */
     const savedLeft = Number(localStorage.getItem('txtvein:stats-left'));
     if (Number.isFinite(savedLeft) && savedLeft >= 150) S.stats.split = savedLeft;
-    const savedQueryW = Number(localStorage.getItem('txtvein:stats-query'));
-    if (Number.isFinite(savedQueryW) && savedQueryW >= 260) S.stats.qsplit = savedQueryW;
     if (!S.statsQuery) S.statsQuery = queryInitialState('month');
     if (!S.stats.first) {
       const savedFirst = Number(localStorage.getItem('txtvein:stats-first'));
@@ -1961,10 +2404,8 @@
     page.style.setProperty('--stats-first', (Number(S.stats.first) || 80) + 'px');
     const top = el('div', { class: 'stats-top' });
     const tabsWrap = el('div', { class: 'stats-tabs-wrap' });
-    /* 统计口径只有一种：字典里的私人结构。公共归属已作为错误路线移除，
-       这里只留一个不可点的说明标签。 */
-    tabsWrap.appendChild(el('span', { class: 'stats-scope', title: '统计口径：字典里的私人结构' }, [t('reportPrivate')]));
     tabsWrap.appendChild(el('b', { class: 'stats-title' }, [t('statsTitle')]));
+    /* 统计口径固定为字典里的私人结构；不再显示「私人结构 / 公共归属」任何控件。 */
     /* 年份紧跟在「统计」后面；月份行靠左，不再推到右端。 */
     const yearInput = el('input', { class: 'stats-year-input', type: 'text', inputmode: 'numeric', maxlength: '4', title: '年份' });
     yearInput.value = String(S.stats.year || new Date().getFullYear());
@@ -1977,6 +2418,7 @@
       if (y === Number(S.stats.year)) return;
       S.stats.year = y;
       S.stats.selected = '';
+      S.stats.search = '';
       S.stats.pane = 'list';
       renderStatsPage();
     };
@@ -1988,7 +2430,7 @@
     const tabs = el('div', { class: 'stats-tabs' });
     STAT_TABS.forEach((tab) => {
       const b = el('button', { class: 'stats-tab' + (S.stats.tab === tab.id ? ' is-active' : ''), type: 'button' }, [t(tab.label)]);
-      b.addEventListener('click', () => { S.stats.tab = tab.id; S.stats.selected = ''; S.stats.pane = 'list'; renderStatsPage(); });
+      b.addEventListener('click', () => { S.stats.tab = tab.id; S.stats.selected = ''; S.stats.search = ''; S.stats.pane = 'list'; renderStatsPage(); });
       tabs.appendChild(b);
     });
     tabsWrap.appendChild(tabs);
@@ -2000,6 +2442,7 @@
       b.addEventListener('click', () => {
         S.stats.month = Number(S.stats.month) === m ? 0 : m;
         S.stats.selected = '';
+        S.stats.search = '';
         S.stats.pane = 'list';
         renderStatsPage();
       });
@@ -2010,12 +2453,11 @@
 
     const split = el('div', { class: 'stats-split' });
     const left = el('aside', { class: 'stats-left' });
-    const gutter = el('div', { class: 'stats-gutter', title: '拖动调整宽度' });
+    const gutter = el('div', { class: 'stats-gutter', title: '拖动调整左侧统计表宽度' });
     const right = el('main', { class: 'stats-right' });
-    const gutter2 = el('div', { class: 'stats-gutter stats-gutter-query', title: '拖动调整查询区宽度' });
     const queryAside = el('aside', { class: 'stats-query' });
     split.appendChild(left); split.appendChild(gutter); split.appendChild(right);
-    split.appendChild(gutter2); split.appendChild(queryAside);
+    split.appendChild(queryAside);
 
     left.appendChild(el('div', { class: 'stats-left-head' }, [
       el('b', {}, [t(S.stats.tab) + (S.lang === 'en' ? '' : '统计')]),
@@ -2026,35 +2468,95 @@
     else if (S.stats.tab === 'note') statsLeftNote(left, range);
     else statsLeftEvent(left, range);
 
-    const selectedName = S.stats.selected
-      ? (S.stats.tab === 'note' ? statsTagLabel(S.stats.selected)
-        : S.stats.tab === 'event' ? TV.dict.renderBehavior(S.dict, S.stats.selected, S.mode, S.lang)
-          : S.stats.tab === 'category' && String(S.stats.selected).startsWith('cat:')
-            ? statsCategoryLabel(String(S.stats.selected).slice(4))
-            : statsNodeLabel(S.stats.selected))
-      : '';
+    const selectedName = statsSelectedName();
     const rh = el('div', { class: 'stats-right-head' });
     const back = el('button', { class: 'stats-back', type: 'button' }, ['‹ 返回']);
-    back.addEventListener('click', () => { S.stats.pane = 'list'; renderStatsPage(); });
+    back.addEventListener('click', () => {
+      S.stats.pane = 'list';
+      S.stats.selected = '';
+      S.stats.search = '';
+      renderStatsPage();
+    });
     rh.appendChild(back);
-    rh.appendChild(el('b', {}, [t(S.stats.tab) + (S.lang === 'en' ? ' list' : '列表') + (selectedName ? ' · ' + selectedName : '')]));
+    rh.appendChild(el('b', { class: 'stats-list-title' }, [t(S.stats.tab) + (S.lang === 'en' ? '' : '列表')]));
     const clearBtn = el('button', { class: 'stats-clear', type: 'button' }, [t('clear')]);
-    clearBtn.addEventListener('click', () => { S.stats.selected = ''; S.stats.pane = 'list'; renderStatsPage(); });
     rh.appendChild(clearBtn);
+    /* 选中的名字在表头正中；左上是「分类列表 / 清空」，右上是查询输入框。 */
+    const selectedEl = el('span', { class: 'stats-selected' }, [selectedName]);
+    selectedEl.hidden = !selectedName;
+    rh.appendChild(selectedEl);
+    const search = el('input', {
+      class: 'stats-search-input',
+      type: 'search',
+      placeholder: statsSearchPlaceholder(),
+      autocomplete: 'off',
+      spellcheck: 'false',
+    });
+    search.value = S.stats.search || '';
+    rh.appendChild(el('div', { class: 'stats-search' }, [search]));
     right.appendChild(rh);
+    const rightBody = el('div', { class: 'stats-right-body' });
+    right.appendChild(rightBody);
 
-    if (!S.stats.selected) {
-      right.appendChild(el('div', { class: 'stats-right-empty' }, [
-        t('statsSelect'),
-        el('small', {}, [S.lang === 'en' ? ' · Click any row on the left to show its full list' : ' · 点左侧任意一行，右侧显示对应完整列表']),
-      ]));
-    } else if (S.stats.tab === 'note') {
-      right.appendChild(statsRightNotes(S.stats.selected, range));
-    } else if (S.stats.tab === 'event') {
-      right.appendChild(statsRightBehaviors(S.stats.selected, range));
-    } else {
-      right.appendChild(statsRightEvents(S.stats.selected, range));
+    function paintSelected() {
+      const name = statsSelectedName();
+      selectedEl.textContent = name;
+      selectedEl.hidden = !name;
     }
+    function paintRight() {
+      clear(rightBody);
+      if (S.stats.selected) {
+        let table;
+        if (S.stats.tab === 'note') table = statsRightNotes(S.stats.selected, range);
+        else if (S.stats.tab === 'event') table = statsRightBehaviors(S.stats.selected, range);
+        else table = statsRightEvents(S.stats.selected, range);
+        rightBody.appendChild(table);
+        if (TV.statsCols) TV.statsCols.decorate(rightBody);
+        return;
+      }
+      if (String(S.stats.search || '').trim()) {
+        rightBody.appendChild(statsSearchRows());
+        return;
+      }
+      rightBody.appendChild(el('div', { class: 'stats-right-empty' }, [
+        statsEmptyHint(),
+        el('small', {}, [S.lang === 'en' ? ' · type a name/initial' : ' · 输入名字或首字母']),
+      ]));
+    }
+    search.addEventListener('input', () => {
+      S.stats.search = search.value;
+      /* 一开始输入就退出选中并显示匹配候选，不必先点清空。 */
+      if (S.stats.selected) {
+        S.stats.selected = '';
+        S.stats.pane = 'list';
+        left.querySelectorAll('.sd-row.is-active').forEach((row) => row.classList.remove('is-active'));
+      }
+      paintSelected();
+      paintRight();
+    });
+    search.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        const list = statsSearchCandidates();
+        if (list.length) statsSelectSearch(list[0]);
+      } else if (ev.key === 'Escape') {
+        S.stats.search = '';
+        search.value = '';
+        paintSelected();
+        paintRight();
+      }
+    });
+    clearBtn.addEventListener('click', () => {
+      S.stats.selected = '';
+      S.stats.search = '';
+      S.stats.pane = 'list';
+      search.value = '';
+      left.querySelectorAll('.sd-row.is-active').forEach((row) => row.classList.remove('is-active'));
+      paintSelected();
+      paintRight();
+      search.focus();
+    });
+    paintRight();
 
     page.appendChild(top);
     page.appendChild(split);
@@ -2064,51 +2566,28 @@
        它有独立的条件状态（S.statsQuery），默认本月。 */
     buildQueryPanel(queryAside, { key: 'Q', title: t('ledgerQuery') }, S.statsQuery, 0, { scope: 'stats' });
 
-    const setSplit = (lw, qw) => {
-      split.style.gridTemplateColumns = Math.round(lw) + 'px 5px minmax(200px, 1fr) 5px ' + Math.round(qw) + 'px';
+    const setSplit = (lw) => {
+      split.style.gridTemplateColumns = Math.round(lw) + 'px 5px minmax(200px, 1fr) minmax(200px, 1fr)';
     };
     const vw = Math.max(660, Math.round(split.clientWidth || window.innerWidth));
-    const leftW = Math.max(150, Math.min(Number(S.stats.split) || 430, vw - 10 - 260 - 200));
-    const qMax = Math.max(260, vw - leftW - 10 - 200);
-    const qW = Math.max(260, Math.min(Number(S.stats.qsplit) || Math.round(vw * 0.30), qMax));
+    const leftW = Math.max(150, Math.min(Number(S.stats.split) || 430, vw - 10 - 200 - 200));
     S.stats.split = Math.round(leftW);
-    S.stats.qsplit = Math.round(qW);
-    setSplit(leftW, qW);
+    setSplit(leftW);
 
     gutter.addEventListener('pointerdown', (ev) => {
       ev.preventDefault();
-      const qw = Math.round(queryAside.getBoundingClientRect().width) || S.stats.qsplit;
       const move = (e) => {
         const box = split.getBoundingClientRect();
-        const maxW = Math.min(560, Math.max(150, Math.round(box.width - qw - 10 - 200)));
+        const maxW = Math.min(560, Math.max(150, Math.round(box.width - 10 - 200 - 200)));
         const w = Math.max(150, Math.min(maxW, e.clientX - box.left));
         S.stats.split = Math.round(w);
-        setSplit(w, qw);
+        setSplit(w);
         if (TV.queryLayout) TV.queryLayout.refit();
       };
       const up = () => {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
         try { localStorage.setItem('txtvein:stats-left', String(S.stats.split)); } catch (e) { /* ignore */ }
-      };
-      window.addEventListener('pointermove', move);
-      window.addEventListener('pointerup', up);
-    });
-    gutter2.addEventListener('pointerdown', (ev) => {
-      ev.preventDefault();
-      const lw = Math.round(left.getBoundingClientRect().width) || S.stats.split;
-      const move = (e) => {
-        const box = split.getBoundingClientRect();
-        const maxW = Math.max(260, Math.round(box.width - lw - 10 - 200));
-        const w = Math.max(260, Math.min(maxW, box.right - e.clientX));
-        S.stats.qsplit = Math.round(w);
-        setSplit(lw, w);
-        if (TV.queryLayout) TV.queryLayout.refit();
-      };
-      const up = () => {
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-        try { localStorage.setItem('txtvein:stats-query', String(S.stats.qsplit)); } catch (e) { /* ignore */ }
       };
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
@@ -2142,6 +2621,7 @@
     dom.fixedView.hidden = S.view !== 'fixed';
     dom.reportView.hidden = S.view !== 'report';
     dom.motherView.hidden = S.view !== 'mother';
+    document.body.dataset.view = S.view;
     renderTabs();
     if (isEditor) {
       ensureEditor();
@@ -2299,7 +2779,7 @@
       const seg = full.split(' / ').slice(1);
       const path = seg.slice(-2).join(' / ') || full;
       out.push({
-        id, kind: 'mother', kindTag: '母树', name: n.zh_name,
+        id, kind: 'mother', kindTag: '节点', name: n.zh_name,
         label: n.zh_name, codeLabel: n.zh_code || n.en_code || '',
         path,
         score, sameLevel: systemDepth(id) === pref(id),
@@ -2435,7 +2915,7 @@
       }
       suggestions = sortForRole(suggestions, role);
       if (clean.length >= 2) {
-        /* 母树匹配固定在最后两个名额；已经作为私有节点锚点出现的不重复 */
+        /* 节点匹配固定在最后两个名额；已经作为私有节点锚点出现的不重复 */
         const anchors = new Set();
         suggestions.forEach((s) => {
           const n = S.dict.nodes[s.id];
@@ -2819,7 +3299,7 @@
       const canAdopt = isDictV4() && unknownToken && /未知|UNBOUND|没有|未绑定/.test(String(errors[0].message || ''));
       if (canAdopt) {
         toast('已存为待修复文本（X_）：' + errors[0].message, 'error', {
-          label: '从母树建',
+          label: '从节点建',
           fn: () => panels.motherPicker(app, unknownToken, () => repairLine(lineNo, line)),
         });
       } else {
@@ -3152,7 +3632,7 @@
     if (isDictV4()) syncDictSourceAndCompile();
   }
 
-  /* 采纳母树：选分支或叶子 → 建档到用户分组 + 节点级固定绑定 */
+  /* 采纳节点：选分支或叶子 → 建档到用户分组 + 节点级固定绑定 */
   function adoptMother(targetId, token, domain) {
     if (!isDictV4()) return { ok: false, error: '当前字典不是 v4' };
     const pl = TV.dictV4.placementForTarget(targetId, TV.systemDict);
@@ -3999,6 +4479,14 @@
   function bindButtons() {
     dom.btnMode.addEventListener('click', () => setMode(S.mode === 'CODE' ? 'PLAIN' : 'CODE'));
     dom.btnLang.addEventListener('click', () => setLang(S.lang === 'zh' ? 'en' : 'zh'));
+    if (dom.btnTheme) {
+      dom.btnTheme.addEventListener('click', () => {
+        const theme = panels.toggleTheme();
+        if (app.refreshEditors) app.refreshEditors();
+        syncThemeButton();
+        toast(t('theme') + '：' + t(theme === 'paper' ? 'themePaper' : 'themeDark'), 'ok');
+      });
+    }
     dom.btnQuery.addEventListener('click', () => setView('query'));
     dom.btnLedger.addEventListener('click', () => setView('ledger'));
     dom.btnDict.addEventListener('click', () => setView('dict'));

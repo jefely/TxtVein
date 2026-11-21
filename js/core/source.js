@@ -247,8 +247,8 @@
   const PLAN_HEADER = '[固定]';
   const INSTALLMENT_HEADER = '[分期]';
   const PLAN_GAP = 20;
-  const PLAN_COMMENT = '// 与流水同形：每日 / 每月16日 / 每年11月16日 + 转出 > 转入 金额 < 标签 *d|*m|*y  // 备注';
-  const INSTALLMENT_COMMENT = '// 分期：同上 + 期数=N 首月=YYMM 本金=… 利息=…；备注后用 | 接 生成=/确认=/作废=';
+  const PLAN_COMMENT = '// 与流水同形：每日 / 19日 / 每年11月16日 + 转出 > 转入 金额 < 备注';
+  const INSTALLMENT_COMMENT = '// 分期：还款日 支付节点 > 收款节点 每期计算表达式 < 首月日期/期数';
 
   function planSections(source) {
     const lines = S(source).replace(/\r\n?/g, '\n').split('\n');
@@ -369,8 +369,7 @@
     }
     const tags = (plan.tagIds || []).map((id) => ' < ' + name('tag', id)).join('');
     let head = (plan.status === 'canceled' ? '停用 ' : '')
-      + planSchedule(plan) + ' ' + from + ' > ' + to + ' ' + formatYuanExact(plan.amountCents) + tags
-      + ' *' + (plan.period || 'm');
+      + planSchedule(plan) + ' ' + from + ' > ' + to + ' ' + formatYuanExact(plan.amountCents) + tags;
     if (plan.kind === 'installment') {
       const inst = plan.inst || {};
       const periods = Number(inst.periods) || Number(plan.periods) || 0;
@@ -382,8 +381,128 @@
     }
     const note = S(plan.note).trim();
     const state = planStateText(plan);
-    const comment = note ? (state ? note + ' | ' + state : note) : state;
-    return head + (comment ? ' // ' + comment : '');
+    if (plan.noteInline && note) head += ' < ' + note;
+    const commentNote = plan.noteInline ? '' : note;
+    const comment = commentNote ? (state ? commentNote + ' | ' + state : commentNote) : state;
+    const source = S(plan.sourceDate).trim();
+    return head + (source ? ' < ' + source : '') + (comment ? ' // ' + comment : '');
+  }
+
+  /** 只允许 + - * / 和括号的算术表达式（不 eval，拒绝其它字符）。 */
+  function evalArithmetic(src) {
+    const s = String(src || '').replace(/\s+/g, '');
+    let i = 0;
+    const peek = () => s[i];
+    const number = () => {
+      const m = s.slice(i).match(/^\d+(?:\.\d+)?/);
+      if (!m) throw new Error('number');
+      i += m[0].length;
+      const n = Number(m[0]);
+      if (!Number.isFinite(n)) throw new Error('number');
+      return n;
+    };
+    const factor = () => {
+      if (peek() === '+') { i += 1; return factor(); }
+      if (peek() === '-') { i += 1; return -factor(); }
+      if (peek() === '(') {
+        i += 1;
+        const v = expr();
+        if (peek() !== ')') throw new Error('paren');
+        i += 1;
+        return v;
+      }
+      return number();
+    };
+    const term = () => {
+      let v = factor();
+      while (peek() === '*' || peek() === '/') {
+        const op = s[i];
+        i += 1;
+        const r = factor();
+        if (op === '/') {
+          if (r === 0) throw new Error('zero');
+          v /= r;
+        } else v *= r;
+      }
+      return v;
+    };
+    const expr = () => {
+      let v = term();
+      while (peek() === '+' || peek() === '-') {
+        const op = s[i];
+        i += 1;
+        const r = term();
+        v = op === '+' ? v + r : v - r;
+      }
+      return v;
+    };
+    try {
+      const v = expr();
+      if (i !== s.length || !Number.isFinite(v)) return null;
+      return v;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * 分期紧凑写法：
+   *   `20000/12+2000/12 < 2612/12`：本金/期数 + 利息/期数；
+   *   `(20000+2000)/12 < 2612/12`：任意 + - * / () 表达式；
+   *   `9900/7 < 2612/7`：剩余应还 / 剩余期数。
+   * `< 首月/期数` 的期数可单列；不写 `/N` 时从表达式最后的分母推断。
+   * 统一补成标准字段，但固定页写回仍保留用户原行。
+   */
+  function compactInstallmentRest(rest) {
+    const text = String(rest || '').trim();
+    const head = text.match(/^(\S+)\s*>\s*(\S+)\s+([\s\S]+)$/);
+    if (!head) return rest;
+    const from = head[1];
+    const to = head[2];
+    const body = head[3].trim();
+    let exprText = '';
+    let first = '';
+    let explicit = 0;
+    let tail = '';
+    const marker = body.match(/<\s*(\d{4})(?:\s*\/\s*(\d{1,3}))?/);
+    if (marker) {
+      exprText = body.slice(0, marker.index).trim();
+      first = marker[1];
+      explicit = Number(marker[2] || 0);
+      tail = body.slice(marker.index + marker[0].length).trim();
+    } else {
+      const trailing = body.match(/^([\s\S]+?)\s+(\d{4})(?:\s*\/\s*(\d{1,3}))?$/);
+      if (!trailing) return rest;
+      exprText = trailing[1].trim();
+      first = trailing[2];
+      explicit = Number(trailing[3] || 0);
+    }
+    if (!exprText || !/[+\-*/()]/.test(exprText)) return rest;
+    const monthly = evalArithmetic(exprText);
+    if (!(monthly > 0)) return rest;
+    let periods = explicit;
+    if (!periods) {
+      const split = exprText.match(/^\s*([\d.]+)\s*\/\s*(\d{1,3})\s*\+\s*([\d.]+)\s*\/\s*(\d{1,3})\s*$/);
+      if (split && Number(split[2]) === Number(split[4])) periods = Number(split[2]);
+      else {
+        const div = exprText.match(/\/\s*(\d{1,3})\s*$/);
+        if (div) periods = Number(div[1]);
+      }
+    }
+    if (!(periods >= 1) || periods > 360) return rest;
+    const split = exprText.match(/^\s*([\d.]+)\s*\/\s*(\d{1,3})\s*\+\s*([\d.]+)\s*\/\s*(\d{1,3})\s*$/);
+    let principalText = '';
+    let interestText = '0';
+    if (split && Number(split[2]) === periods && Number(split[4]) === periods) {
+      principalText = split[1];
+      interestText = split[3];
+    } else {
+      /* 任意表达式只知道月供；总额 = 月供 × 期数，最后一期再用总额补差。 */
+      principalText = (monthly * periods).toFixed(2);
+    }
+    return from + ' > ' + to + ' ' + monthly.toFixed(2) + ' *m 期数=' + periods
+      + ' 首月=' + first + ' 本金=' + principalText + ' 利息=' + interestText
+      + (tail ? ' ' + tail : '');
   }
 
   function parsePlanLineText(raw, dict, opts, lineNo, kind) {
@@ -392,6 +511,7 @@
     let text = S(raw).trim();
     if (!text) return null;
     let note = '';
+    let noteInline = false;
     let state = { generated: [], confirmed: [], voided: [] };
     const ci = text.indexOf('//');
     if (ci >= 0) {
@@ -399,8 +519,16 @@
       text = text.slice(0, ci).trim();
       const bar = comment.indexOf('|');
       if (bar >= 0) {
-        note = comment.slice(0, bar).trim();
-        state = parsePlanState(comment.slice(bar + 1), state);
+        const left = comment.slice(0, bar).trim();
+        const right = parsePlanState(comment.slice(bar + 1), { generated: [], confirmed: [], voided: [] });
+        const leftIsStateOnly = /^(?:\s*(?:生成|确认|作废|generated|confirmed|voided)=\d{4,8}(?:,\d{4,8})*\s*)+$/.test(left);
+        if (leftIsStateOnly) {
+          state = parsePlanState(left, right);
+          note = '';
+        } else {
+          note = left;
+          state = right;
+        }
       } else {
         const only = parsePlanState(comment, { generated: [], confirmed: [], voided: [] });
         const hasState = only.generated.length || only.confirmed.length || only.voided.length;
@@ -413,8 +541,8 @@
     if (!text) return null;
     let status = 'active';
     if (/^停用(\s|$)/.test(text)) { status = 'canceled'; text = text.replace(/^停用\s*/, ''); }
-    const sm = text.match(/^(每日|每月\s*(\d{1,2})\s*日|每年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日)\s+(.+)$/);
-    if (!sm) return { error: '固定收支行格式：每月16日 微信 > 房租 1000 *m', line: lineNo };
+    const sm = text.match(/^(每日|(?:每月\s*)?(\d{1,2})\s*日|每年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日)\s+(.+)$/);
+    if (!sm) return { error: '固定收支行格式：19日 微信 > 房租 1000 *m', line: lineNo };
     let period = 'm';
     let day = 0;
     let month = 0;
@@ -422,6 +550,23 @@
     else if (sm[2]) { period = 'm'; day = Number(sm[2]); }
     else { period = 'y'; month = Number(sm[3]); day = Number(sm[4]); }
     let rest = sm[5];
+    if (type === 'installment') rest = compactInstallmentRest(rest);
+    let sourceDate = '';
+    const sd = rest.match(/\s<\s*(\d{6})(?=\s|$)/);
+    if (sd) {
+      sourceDate = sd[1];
+      rest = (rest.slice(0, sd.index) + ' ' + rest.slice(sd.index + sd[0].length)).trim();
+    }
+    /* 固定页里 `*m < 文本` 或没有 *m 的行尾 `< 文本` 是备注，不是标签；
+     * 有 *m 且 < 在 *m 之前时仍是标签，兼容旧写法。 */
+    let tailNote = rest.match(/\s+\*[dmy]\s+<\s*([^<]+?)\s*$/i);
+    if (!tailNote && !/\*[dmy]\b/i.test(rest)) tailNote = rest.match(/\s+<\s*([^<]+?)\s*$/);
+    if (tailNote) {
+      const extra = tailNote[1].trim();
+      note = note ? note + ' · ' + extra : extra;
+      noteInline = true;
+      rest = rest.slice(0, tailNote.index).trim();
+    }
     let periods = 0;
     let firstMonth = '';
     let principalCents = 0;
@@ -498,6 +643,8 @@
       tagIds: (ev.tagIds || []).slice(),
       line: lineNo,
       raw: S(raw).trim(),
+      sourceDate,
+      noteInline,
     };
   }
 
@@ -558,7 +705,10 @@
       const to = (cross ? tn.domain + ':' : '') + (codeMap.get(e.to) || '?');
       const amt = e.minutes > 0 ? amount.formatTime(e.minutes) : formatYuanExact(e.amountCents);
       const tags = (e.tagIds || []).map((id) => codeMap.get(id)).filter(Boolean).map((c) => ' < ' + c).join('');
-      const note = S(e.note).trim() ? ' // ' + S(e.note).trim().replace(/\/\//g, '/ /') : '';
+      const rawNote = S(e.note).trim();
+      const note = rawNote
+        ? (rawNote.startsWith('<') ? ' ' + rawNote : ' // ' + rawNote.replace(/\/\//g, '/ /'))
+        : '';
       lines.push(domainPrefix(e.domain) + e.date + ' ' + from + ' > ' + to + ' ' + amt + tags + note);
     });
     (behaviors || []).forEach((b) => {
@@ -580,19 +730,41 @@
     return lines.join('\n') + '\n';
   }
 
+  /** 只有真正的固定表行才原样保留；规则行 / 底层 ID 行不能写进固定表。 */
+  function isFixedRawLine(raw) {
+    return /^(?:停用\s+)?(?:每日|每月\s*\d{1,2}\s*日|\d{1,2}\s*日|每年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)\s+/.test(raw);
+  }
+
+  /** 原样保留用户输入的计划行，只更新末尾的 生成/确认/作废 状态。 */
+  function planSourceLine(plan) {
+    const raw = S(plan && plan.raw).trim();
+    if (!raw || !isFixedRawLine(raw)) return '';
+    const ci = raw.indexOf('//');
+    const state = planStateText(plan);
+    const note = S(plan && plan.note).trim();
+    const head = (ci >= 0 ? raw.slice(0, ci).trimEnd() : raw)
+      .replace(/\s+\*[dmy]\b/gi, '')
+      .replace(/^(\s*(?:停用\s*)?)每月\s*(\d{1,2})\s*日/, '$1$2日');
+    const inlineNote = plan.noteInline && note ? note : '';
+    const commentNote = inlineNote ? '' : note;
+    const merged = commentNote + (state ? (commentNote ? ' | ' : '') + state : '');
+    return head + (merged ? ' // ' + merged : '');
+  }
+
   /** 独立的固定表文本（[固定] + [分期] 两个区域，不需要前面的 20 行空行）。 */
   function fixedSourceFromPlans(plans, dict, opts) {
     const list = plans || [];
     const fixed = list.filter((p) => p.kind !== 'installment');
     const inst = list.filter((p) => p.kind === 'installment');
+    const line = (p) => planSourceLine(p) || planLineText(p, dict, opts);
     const out = [];
     out.push(PLAN_HEADER);
     out.push(PLAN_COMMENT);
-    fixed.forEach((p) => out.push(planLineText(p, dict, opts)));
+    fixed.forEach((p) => out.push(line(p)));
     out.push('');
     out.push(INSTALLMENT_HEADER);
     out.push(INSTALLMENT_COMMENT);
-    inst.forEach((p) => out.push(planLineText(p, dict, opts)));
+    inst.forEach((p) => out.push(line(p)));
     return out.join('\n') + '\n';
   }
 
@@ -1135,6 +1307,17 @@
   }
 
   function parseLedgerLine(raw, dict, opts, ctxState) {
+    const text = S(raw);
+    const m = text.match(/<\s*(?:固定(?:每月|每日|每年)|\d{4}分期)[^<]*$/);
+    if (!m) return parseLedgerLineCore(raw, dict, opts, ctxState);
+    const clean = text.slice(0, m.index).trimEnd();
+    const r = parseLedgerLineCore(clean, dict, opts, ctxState);
+    const note = '< ' + m[0].replace(/^<\s*/, '').trim();
+    (r.events || []).forEach((e) => { e.note = note; });
+    return r;
+  }
+
+  function parseLedgerLineCore(raw, dict, opts, ctxState) {
     const o = opts || {};
     const now = o.now instanceof Date ? o.now : new Date();
     const diagnostics = [];
@@ -1660,6 +1843,7 @@
     planSectionBlock,
     withPlanSection,
     fixedSourceFromPlans,
+    planSourceLine,
     compileFixed,
     compileDictSource,
     compileLedgerSource,

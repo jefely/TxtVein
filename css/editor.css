@@ -8,11 +8,26 @@
   --tv-amount: #B5CEA8;
   --tv-note: #6A9955;
   --tv-editor-font-size: 13px;
+  --tv-font-query: 11.5px;
+  --tv-font-ledger: 13px;
+  --tv-font-dict: 13px;
+  --tv-font-mother: 12.5px;
+  --tv-font-fixed: 14px;
+  --tv-font-stats: 11.5px;
 }
 @font-face {
   font-family: "Cascadia Code Web";
   src: url("../assets/cascadia/CascadiaCode.woff2") format("woff2");
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+/* 只装了 400 的静态字重时，600/700 会走浏览器合成粗体（英文标题发虚）。
+   这里补一个 600–700 的可变字体，粗体用真字重渲染。 */
+@font-face {
+  font-family: "Cascadia Code Web";
+  src: url("../assets/cascadia/CascadiaCode-VF.woff2") format("woff2");
+  font-weight: 600 700;
   font-style: normal;
   font-display: swap;
 }
@@ -180,7 +195,7 @@
 }
 
 /* 语义层：识别成功=亮（像运算符），链接=青，未识别=灰白，坏行=波浪线 */
-.cm-s-txtvein .tv-def { color: #D4D4D4 !important; font-weight: 600; }
+.cm-s-txtvein .tv-def { color: #D4D4D4 !important; }
 .cm-s-txtvein .tv-link { color: #4EC9B0 !important; }
 .cm-s-txtvein .tv-unknown { color: var(--tv-invalid) !important; }
 .cm-s-txtvein .tv-error {
@@ -199,7 +214,7 @@
 .cm-s-txtvein .cm-variable-2 { color: #4EC9B0; }
 .cm-s-txtvein .cm-tag { color: #4EC9B0; }
 .cm-s-txtvein .cm-string { color: #CE9178; }
-.cm-s-txtvein .cm-type { color: #D7BA7D; font-weight: 600; }
+.cm-s-txtvein .cm-type { color: #D7BA7D; }
 .cm-s-txtvein .cm-dict-en,
 .cm-s-txtvein .cm-dict-en.tv-def { color: #8f8f8f !important; font-weight: 400; }
 .cm-s-txtvein .cm-meta { color: #D7BA7D; }
@@ -768,7 +783,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .cm-s-txtvein .cm-variable-2 { color: #7ee787 !important; }
 .cm-s-txtvein .cm-tag { color: #79c0ff !important; }
 .cm-s-txtvein .cm-string { color: #ffa657 !important; }
-.cm-s-txtvein .cm-type { color: #D7BA7D !important; font-weight: 600; }
+.cm-s-txtvein .cm-type { color: #D7BA7D !important; }
 .cm-s-txtvein .cm-meta { color: #e3b341 !important; }
 .cm-s-txtvein .cm-def { color: #f2cc60 !important; }
 .cm-s-txtvein .cm-invalid-line,
@@ -875,8 +890,9 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .fixed-summary {
   flex: 0 0 auto;
   display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
+  gap: 14px;
+  flex-wrap: nowrap;
+  overflow: hidden;
   padding: 4px 14px;
   font-family: var(--mono);
   font-size: 10.5px;
@@ -884,8 +900,10 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
   background: #0a0a0a;
   border-top: 1px solid #1c1c1c;
 }
+.fixed-summary > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fixed-errors .fixed-ok { color: #6f9a7a; }
 .fixed-errors .fixed-error { color: #d98a8a; line-height: 1.7; }
+body[data-view="fixed"] .fixed-editor { height: calc(100dvh - 214px); }
 
 /* 弹窗：NT 式窄卡片，字段纵向排列（手机竖屏） */
 .modal { padding: 12px; z-index: 500; }
@@ -1062,11 +1080,12 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .q-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e0e0e0; }
 .q-muted { color: #8a8a8a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .q-num { text-align: right; color: #f0f0f0; font-variant-numeric: tabular-nums; white-space: nowrap; }
-/* 对齐口径（用户 2026-11-21）：金额靠右、备注靠左，其余居中。
-   表头与数据行同一套，避免两行字对不齐。 */
+/* 对齐口径：数据行金额靠右、备注靠左，其余居中；
+   表头文字全部水平居中（用户 2026-11-21 追加）。 */
 .q-row > span { text-align: center; }
 .q-row > span.q-num { text-align: right; }
 .q-row > span.q-note { text-align: left; }
+.q-row.is-head > span { text-align: center !important; }
 .q-empty { padding: 20px 10px; color: #7f7f7f; font-size: 12px; text-align: center; }
 
 /* 列宽手柄：只是 7px 宽的可视/光标区，命中判定由 JS 按坐标做。
@@ -1221,38 +1240,36 @@ body.q-col-resizing .q-row.is-head > span { cursor: col-resize; }
   overflow: hidden;
 }
 .stats-top-row { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 0; }
-.stats-tabs-wrap { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.stats-tabs-wrap { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; --stats-ctl-w: 56px; --stats-ctl-h: 27px; }
 .stats-tabs { display: flex; gap: 3px; flex: 0 0 auto; }
-.stats-title { flex: 0 0 auto; font-size: 13px; color: #e8e8e8; font-weight: 600; padding-right: 4px; }
-/* 统计口径说明：不可点，只是标签。 */
-.stats-scope {
-  flex: 0 0 auto;
-  padding: 1px 6px;
-  border: 1px solid #333;
-  border-radius: 3px;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: #8a8a8a;
-  white-space: nowrap;
-}
+.stats-title { flex: 0 0 auto; font-size: 13px; color: #e8e8e8; font-weight: 600; }
 .stats-tab {
-  height: 27px;
-  padding: 0 12px;
+  flex: 0 0 auto;
+  width: var(--stats-ctl-w);
+  height: var(--stats-ctl-h);
+  padding: 0;
   border: 1px solid transparent;
   border-radius: 3px;
   background: transparent;
   color: #aaa;
   font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .stats-tab:hover { color: #fff; background: #252526; }
 .stats-tab.is-active { color: #fff; background: #2b2b2b; border-color: #3a3a3a; }
+html[data-lang="en"] .stats-tab { font-size: 11.5px; }
 .stats-months { display: flex; align-items: center; justify-content: flex-start; gap: 3px; width: 100%; overflow-x: auto; scrollbar-width: none; }
 .stats-months::-webkit-scrollbar { display: none; }
 .stats-year { font-family: var(--mono); font-size: 10px; color: #8a8a8a; margin-right: 3px; white-space: nowrap; }
 .stats-year-input {
   flex: 0 0 auto;
-  width: 52px;
-  height: 25px;
+  width: var(--stats-ctl-w);
+  height: var(--stats-ctl-h);
   padding: 0 4px;
   border: 1px solid #3a3a3a;
   border-radius: 3px;
@@ -1311,8 +1328,8 @@ body.q-col-resizing .q-row.is-head > span { cursor: col-resize; }
 .stats-item.is-active { background: #1d1d1d; box-shadow: inset 2px 0 0 #4daafc; }
 .stats-item-name { width: 100%; font-size: 12px; color: #d8d8d8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stats-item-meta { width: 100%; font-family: var(--mono); font-size: 9px; color: #777; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stats-gutter { cursor: col-resize; background: #151515; border-right: 1px solid #222; touch-action: none; }
-.stats-gutter:hover { background: #2a2a2a; }
+.stats-gutter { cursor: col-resize; background: transparent; border-right: 1px solid #222; touch-action: none; }
+.stats-gutter:hover { background: rgba(255, 255, 255, 0.05); }
 .stats-right { min-width: 0; min-height: 0; overflow: auto; background: #050505; }
 /* 统计页第三区：与流水查询同一个面板组件（单张）。 */
 .stats-query {
@@ -1340,13 +1357,61 @@ body.q-col-resizing .q-row.is-head > span { cursor: col-resize; }
   height: 32px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 6px;
   padding: 0 9px;
   background: #151515;
   border-bottom: 1px solid #2a2a2a;
 }
 .stats-right-head b { font-size: 12px; color: #e8e8e8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 选中项名字：相对表头居中；左上仍是「分类列表 + 清空」，右侧是查询框。 */
+.stats-selected {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 38%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #e8e8e8;
+  pointer-events: none;
+}
+.stats-search { margin-left: auto; flex: 0 1 190px; min-width: 80px; }
+.stats-search-input {
+  width: 100%;
+  height: 23px;
+  padding: 0 7px;
+  border: 1px solid #333;
+  border-radius: 3px;
+  background: #0b0b0b;
+  color: #e0e0e0;
+  font-family: var(--mono);
+  font-size: 11px;
+  outline: 0;
+}
+.stats-search-input::placeholder { color: #6f6f6f; }
+.stats-search-input:focus { border-color: #4daafc; }
+.stats-right-body { min-height: 0; }
+.stats-search-results { display: flex; flex-direction: column; gap: 4px; padding: 8px 9px 22px; }
+.stats-search-hit {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+  background: transparent;
+  color: #e0e0e0;
+  text-align: left;
+  cursor: pointer;
+}
+.stats-search-hit:hover { background: #121212; border-color: #3a3a3a; }
+.stats-search-hit b { font-size: 12px; font-weight: 600; color: #e8e8e8; }
+.stats-search-hit span { margin-left: auto; font-family: var(--mono); font-size: 10px; color: #8a8273; }
+.stats-search-empty { padding: 20px 12px; color: #8a8a8a; font-size: 12px; text-align: center; }
 .stats-clear {
   flex: 0 0 auto;
   height: 22px;
@@ -1453,15 +1518,16 @@ body.q-col-resizing .q-row.is-head > span { cursor: col-resize; }
   .menu-btn { font-size: 12px; padding: 5px 7px; }
   .stats-top-row { gap: 6px; }
   .stats-months { padding-bottom: 2px; }
-  .stats-tab { flex: 1 1 auto; }
 }
 
 @media (max-width: 600px) {
   .stats-top { padding: 4px 6px; }
   .stats-top-row { gap: 4px; }
-  .stats-title { font-size: 12px; padding-right: 0; }
-  .stats-tab { padding: 0 7px; font-size: 11px; }
-  .stats-year-input { width: 50px; height: 25px; font-size: 11px; }
+  .stats-tabs-wrap { gap: 2px; --stats-ctl-w: 56px; --stats-ctl-h: 26px; }
+  .stats-tabs { gap: 2px; }
+  .stats-title { font-size: 12px; }
+  .stats-tab { padding: 0; font-size: 12px; }
+  .stats-year-input { width: var(--stats-ctl-w); height: var(--stats-ctl-h); font-size: 11px; }
   .stats-months { gap: 2px; }
   .stats-month {
     flex: 1 1 0;
@@ -1477,6 +1543,7 @@ body.q-col-resizing .q-row.is-head > span { cursor: col-resize; }
   .stats-left-head b { font-size: 12px; }
   .stats-left-head span { display: none; }
   .stats-right-head { padding: 0 6px; height: 30px; }
+  .stats-search { flex-basis: 120px; }
   .stats-right .sd-row { gap: 3px; padding: 6px 5px; font-size: 10.5px; }
   .stats-back { padding: 0 5px; font-size: 9px; }
   .stats-clear { padding: 0 6px; font-size: 9px; }
@@ -1501,6 +1568,8 @@ body.q-col-resizing .q-row.is-head > span { cursor: col-resize; }
     font-size: 10px;
   }
   .stats-right-head b { flex: 1 1 auto; }
+  .stats-selected { display: none !important; }
+  .stats-search { flex-basis: 140px; }
   .stats-right .sd-row { gap: 4px; padding: 5px 6px; font-size: 9.5px; }
 }
 
@@ -1548,7 +1617,8 @@ body.q-col-resizing .q-row.is-head > span { cursor: col-resize; }
 
 /* ===== 可配置 token 颜色 ===== */
 .cm-s-txtvein .cm-date { color: var(--tv-date); }
-.cm-s-txtvein .cm-node { color: var(--tv-node); }
+.cm-s-txtvein .cm-node-code { color: var(--tv-node-code); }
+.cm-s-txtvein .cm-node-name { color: var(--tv-node-name); }
 .cm-s-txtvein .cm-operator { color: var(--tv-operator); }
 .cm-s-txtvein .cm-amount { color: var(--tv-amount); }
 .cm-s-txtvein .cm-note { color: var(--tv-note); }
@@ -1932,3 +2002,156 @@ body.q-col-resizing .q-row.is-head > span { cursor: col-resize; }
   text-align: right !important;
 }
 .stats-left .sd-total-blank { min-height: 1px; }
+
+/* 类型标题行：靠左、去掉下面横线；标题 / 金额合计 / 列头三行压紧 */
+.stats-right .sd-row.is-head > span { position: relative; text-align: center !important; }
+/* 统计中间列表的数据列与查询表一致：序 / 日期 / 转出 / 转入居中，金额靠右，备注靠左 */
+.stats-right .stats-table[data-list] .sd-row:not(.is-head) > span:not(.sd-num):not(:last-child) {
+  text-align: center;
+}
+.stats-right .sd-row.is-head > span:hover .q-col-handle::after { background: currentColor; opacity: 0.45; }
+.stats-right .sd-row.is-head .q-col-handle { top: -3px; bottom: -3px; }
+body.s-col-resizing { cursor: col-resize; user-select: none; }
+
+/* 中间列表列宽：最后一列自动吃剩余（分类/节点表的「备注」列） */
+.stats-right .stats-table[data-list="list"] .sd-row {
+  grid-template-columns: var(--s-c-seq, 30px) var(--s-c-date, 58px) var(--s-c-from, 80px)
+    var(--s-c-to, 80px) var(--s-c-amt, 68px) minmax(var(--s-note-min, 50px), 1fr);
+}
+.stats-right .stats-table[data-list="note"] .sd-row {
+  grid-template-columns: var(--s-c-seq, 30px) var(--s-c-date, 58px) var(--s-c-cat, 60px)
+    var(--s-c-key, 70px) minmax(var(--s-note-min, 58px), 1fr);
+}
+.stats-right .stats-table[data-list="event"] .sd-row {
+  grid-template-columns: var(--s-c-seq, 30px) var(--s-c-date, 58px) var(--s-c-from, 60px)
+    var(--s-c-to, 60px) var(--s-c-weight, 34px) minmax(var(--s-note-min, 46px), 1fr);
+}
+
+/* 中间列表：标题 / 清空 / 表头 / 行字号与右侧「流水查询」统一 */
+.stats-right-head .stats-list-title { font-weight: 600; }
+.stats-right-head .stats-clear { height: 23px; font-size: 11px; }
+.stats-right .sd-row { font-size: 11.5px; }
+.stats-right .sd-row.is-head { font-size: 10.5px; color: #9a9a9a; }
+
+/* 类型标题行：靠左、靠下、去掉下面横线；标题 / 金额合计 / 列头三行压紧 */
+.stats-left .sd-row.is-total.is-total-title > .sd-total-title {
+  text-align: left !important;
+  align-self: end !important;
+}
+.stats-left .sd-row.is-total-title {
+  min-height: 22px !important;
+  padding: 2px 7px !important;
+  border-bottom: 0 !important;
+  align-items: end !important;
+}
+/* 列头：第一列「分类」居中；数值列（期初余额 / 本期新增…）靠右，与金额对齐 */
+.stats-left .sd-row.is-head > span { text-align: center !important; }
+.stats-left .sd-row.is-head > span.sd-num { text-align: right !important; }
+.stats-left .sd-row.is-total:not(.is-total-title) {
+  min-height: 14px !important;
+  padding: 0 7px 0 !important;
+}
+.stats-left .sd-row.is-head {
+  min-height: 22px !important;
+  padding: 2px 7px !important;
+}
+
+/* ================= 页面字号（设置页写入 :root，两套主题共用） ================= */
+.editor-pane[data-file="ledger"] .CodeMirror {
+  font-size: var(--tv-font-ledger, 13px);
+  line-height: calc(var(--tv-font-ledger, 13px) * 1.6923);
+}
+.editor-pane[data-file="dict"] .CodeMirror {
+  font-size: var(--tv-font-dict, 13px);
+  line-height: calc(var(--tv-font-dict, 13px) * 1.6923);
+}
+.fixed-editor .CodeMirror {
+  font-size: var(--tv-font-fixed, 14px);
+  line-height: calc(var(--tv-font-fixed, 14px) * 1.5714);
+}
+
+/* 查询页 / 统计第三区查询：同一套 q-* 组件，各自读所在页面的字号 */
+#query-view { --q-page-font: var(--tv-font-query, 11.5px); }
+.stats-query { --q-page-font: var(--tv-font-stats, 11.5px); }
+.q-row { font-size: var(--q-page-font); }
+.q-row.is-head { font-size: calc(var(--q-page-font) - 1px); }
+.q-field > span { font-size: max(8px, calc(var(--q-page-font) - 2.5px)); }
+.q-input {
+  font-size: var(--q-page-font);
+  height: max(28px, calc(var(--q-page-font) * 2.2));
+}
+.q-title { font-size: calc(var(--q-page-font) + 1.5px); }
+.stats-query .q-title { font-size: calc(var(--q-page-font) + 0.5px); }
+.q-total { font-size: calc(var(--q-page-font) + 1.5px); }
+.q-clear {
+  font-size: max(9px, calc(var(--q-page-font) - 0.5px));
+  height: max(23px, calc(var(--q-page-font) * 2));
+}
+.q-empty { font-size: var(--q-page-font); }
+
+/* 统计页：表格 / 表头 / 类型标题跟着「统计」字号走 */
+.stats-page { --st-font: var(--tv-font-stats, 11.5px); }
+.stats-left .sd-row { font-size: var(--st-font); }
+.stats-left .sd-row.is-head { font-size: calc(var(--st-font) - 1px) !important; }
+.stats-left .sd-row.is-total-title { font-size: var(--st-font); }
+.stats-left .sd-total-title { font-size: var(--st-font); }
+.stats-left .sd-row.is-total .sd-num { font-size: calc(var(--st-font) - 1px) !important; }
+.stats-right .sd-row { font-size: var(--st-font); }
+.stats-right .sd-row.is-head { font-size: calc(var(--st-font) - 1px) !important; }
+.stats-left-head b,
+.stats-right-head .stats-list-title { font-size: calc(var(--st-font) + 0.5px); }
+.stats-left-head span { font-size: max(8px, calc(var(--st-font) - 2.5px)); }
+.stats-right-head .stats-selected { font-size: var(--st-font); }
+.stats-right-head .stats-clear {
+  font-size: max(9px, calc(var(--st-font) - 0.5px));
+  height: max(22px, calc(var(--st-font) * 2));
+}
+.stats-search-input { font-size: max(9px, calc(var(--st-font) - 0.5px)); }
+.stats-right-empty,
+.sd-empty,
+.stats-empty { font-size: var(--st-font); }
+.stats-left .sd-row.is-total-title { min-height: max(22px, calc(var(--st-font) * 1.9)) !important; }
+.stats-left .sd-row.is-head { min-height: max(22px, calc(var(--st-font) * 1.9)) !important; }
+.stats-left .sd-row.is-total:not(.is-total-title) { min-height: max(14px, calc(var(--st-font) * 1.2)) !important; }
+
+/* 母树页 */
+.mother-view { --mother-font: var(--tv-font-mother, 12.5px); }
+.mother-row {
+  font-size: var(--mother-font);
+  line-height: calc(var(--mother-font) * 1.65);
+}
+.mother-row.is-type { font-size: max(9px, calc(var(--mother-font) - 1.5px)); }
+.mother-bar .mother-search { font-size: var(--mother-font); }
+.mother-pane-head { font-size: max(9px, calc(var(--mother-font) - 0.5px)); }
+.mother-bind,
+.mother-en,
+.mother-count { font-size: max(8px, calc(var(--mother-font) - 1.5px)); }
+.mother-hint { font-size: max(9px, calc(var(--mother-font) - 0.5px)); }
+
+/* 统计金额合计行：数值比类型标题淡一档 */
+.stats-left .sd-row.is-total:not(.is-total-title) { color: #8f8f8f !important; }
+.stats-left .sd-row.is-total:not(.is-total-title) .sd-num { color: #8f8f8f !important; }
+
+
+/* 统计左表最左列（分类 / 类型名）不压暗 */
+.stats-left .sd-row:not(.is-total-title) > span:first-child { color: #ededed !important; }
+.stats-left .sd-row.is-head > span:first-child { color: #ededed !important; }
+
+.fixed-editor .CodeMirror-gutters { min-width: 44px; }
+.fixed-editor .CodeMirror-linenumber { padding-right: 6px; }
+.fixed-editor .CodeMirror-cursor { border-left: 2px solid var(--accent) !important; }
+.fixed-editor .CodeMirror-lines { padding: 8px 0 20px; }
+.fixed-editor .CodeMirror pre.CodeMirror-line { padding-left: 10px; }
+.fixed-editor .CodeMirror-activeline-background { background: #2a2d2e !important; }
+
+.cm-s-txtvein .cm-tag-code { color: var(--tv-tag-code) !important; font-weight: 600; }
+.cm-s-txtvein .cm-tag-name { color: var(--tv-tag-name) !important; }
+.cm-s-txtvein .cm-dict-cat { color: var(--tv-dict-cat) !important; font-weight: 600; }
+.fixed-editor .CodeMirror-linenumber { font-size: 11px; }
+.fixed-editor .CodeMirror-gutter-wrapper.tv-line-selected .CodeMirror-linenumber {
+  background: #3a3a3a;
+  color: #ffffff !important;
+  border-radius: 2px;
+}
+.fixed-editor .tv-fixed-state-hidden { display: inline-block; width: 0; height: 0; overflow: hidden; }
+.fixed-editor .CodeMirror-linebackground.tv-line-selected-bg { background: rgba(255, 255, 255, 0.055); }

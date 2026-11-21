@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon-ve.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="TxtVein">
-<meta name="app-version" content="2.8.1">
+<meta name="app-version" content="2.8.2">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -35,22 +35,23 @@
     <nav class="top-menu" aria-label="菜单">
       <button type="button" class="menu-btn" id="btn-import" data-i18n="import">导入</button>
       <button type="button" class="menu-btn" id="btn-export" data-i18n="export">导出</button>
-      <button type="button" class="menu-btn" id="btn-settings" data-i18n="settings">设置</button>
-      <button type="button" class="menu-btn" id="btn-help" data-i18n="help">帮助</button>
-      <button type="button" class="menu-btn" id="btn-mode" title="Ctrl+Shift+P" data-i18n="mask">掩码</button>
       <button type="button" class="menu-btn" id="btn-lang" title="Ctrl+Shift+L" data-i18n="language">语言</button>
+      <button type="button" class="menu-btn" id="btn-help" data-i18n="help">帮助</button>
+      <button type="button" class="menu-btn" id="btn-settings" data-i18n="settings">设置</button>
+      <button type="button" class="menu-btn" id="btn-theme" title="主题 · 深色" data-i18n="theme">主题</button>
+      <button type="button" class="menu-btn" id="btn-mode" title="Ctrl+Shift+P" data-i18n="mask">掩码</button>
     </nav>
     <div class="top-right">
       <button class="chip" id="btn-candidates" title="未知节点候选" hidden data-i18n="candidates">候选</button>
     </div>
   </header>
   <nav class="page-tabs" id="page-tabs" aria-label="页面">
-    <button class="page-tab" id="btn-query" data-view="query" data-i18n="query">查询</button>
-    <button class="page-tab is-active" id="btn-ledger" data-view="ledger" data-i18n="ledger">流水</button>
-    <button class="page-tab" id="btn-dict" data-view="dict" data-i18n="dict">字典</button>
-    <button class="page-tab" id="btn-mother" data-view="mother" data-i18n="mother">母树</button>
-    <button class="page-tab" id="btn-fixed" data-view="fixed" data-i18n="fixed">固定</button>
     <button class="page-tab" id="btn-report" data-view="report" data-i18n="report">统计</button>
+    <button class="page-tab" id="btn-query" data-view="query" data-i18n="query">查询</button>
+    <button class="page-tab" id="btn-dict" data-view="dict" data-i18n="dict">字典</button>
+    <button class="page-tab is-active" id="btn-ledger" data-view="ledger" data-i18n="ledger">流水</button>
+    <button class="page-tab" id="btn-fixed" data-view="fixed" data-i18n="fixed">固定</button>
+    <button class="page-tab" id="btn-mother" data-view="mother" data-i18n="mother">节点</button>
   </nav>
   <main class="main" id="main">
     <section class="editor-view" id="editor-view"></section>
@@ -102,6 +103,7 @@
 
 <script src="js/core/version.js"></script>
 <script src="js/core/text.js"></script>
+<script src="js/core/pinyin.js"></script>
 <script src="js/core/system-dict-core.js"></script>
 <script src="js/core/system-dict.js"></script>
 <script src="js/core/user-dict.js"></script>
@@ -148,6 +150,7 @@
 <script src="js/ui/panels.js"></script>
 <script src="js/ui/plan-view.js"></script>
 <script src="js/ui/query-cols.js"></script>
+<script src="js/ui/stats-cols.js"></script>
 <script src="js/ui/glass.js"></script>
 <script src="js/ui/app.js"></script>
 </body>

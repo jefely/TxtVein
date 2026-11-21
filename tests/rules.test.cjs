@@ -159,7 +159,27 @@ test('未来区：每月固定往后 6 个月，每日只有今天，分期按�
   const inst = rows.filter((r) => r.kind === 'installment');
   assert.deepEqual(inst.map((r) => r.date), ['261210', '270110']);
   assert.equal(inst[0].periodIndex, '1/2');
-  assert.equal(inst[0].note, '分期还款 第 1/2 期');
+  assert.equal(inst[0].note, '< 2612分期 第1/2期');
+  const longRows = TV.rules.planOccurrences(b.plans, PLAN_NOW, b.events, 24);
+  const rentLong = longRows.filter((r) => r.plan.period === 'm' && r.plan.kind !== 'installment')
+    .map((r) => r.date);
+  assert.equal(rentLong.length, 23);
+  assert.equal(rentLong[rentLong.length - 1], '281016');
+});
+
+test('每日固定：当天常驻，可重复确认多条', () => {
+  const b = compileFixed(fixedBook(['每日 wx1 > din 5 < 学习']));
+  const p = b.plans[0];
+  const first = TV.rules.futureOccurrences(p, PLAN_NOW, [], 1);
+  assert.equal(first.length, 1);
+  assert.equal(first[0].kind, 'daily');
+  assert.equal(first[0].note, '< 固定每日 学习');
+  const ev1 = TV.rules.confirmOccurrence(p, TV.rules.occurrenceSpec(first[0]), PLAN_NOW, { dict: b.dict });
+  const ev2 = TV.rules.confirmOccurrence(p, TV.rules.occurrenceSpec(first[0]), PLAN_NOW, { dict: b.dict });
+  assert.equal(ev1.date, ev2.date);
+  assert.equal(ev1.note, '< 学习');
+  const again = TV.rules.futureOccurrences(p, PLAN_NOW, [ev1, ev2], 1);
+  assert.equal(again.length, 1, '确认多次后当天快捷项仍常驻');
 });
 
 test('每月固定：到期自动落账（日期=应发生日，备注=模板备注），分期/每日不自动', () => {
@@ -171,7 +191,7 @@ test('每月固定：到期自动落账（日期=应发生日，备注=模板备
   assert.equal(out.generated, 1);
   const ev = out.events[0];
   assert.equal(ev.date, '261116');
-  assert.equal(ev.note, '房租');
+  assert.equal(ev.note, '< 固定每月 房租');
   assert.ok(TV.rules.stateHas(b.plans.find((p) => p.period === 'm' && p.kind !== 'installment'), 'generated', '2611'));
   const again = TV.rules.materializeDue(b.plans, PLAN_NOW, { existing: b.events, dict: b.dict });
   assert.equal(again.generated, 0, '同一期不再生成');
@@ -199,12 +219,12 @@ test('确认：落成这一期自己的日期，并写进 确认=；作废：只
   const dec = rows.find((r) => r.plan.period === 'm' && r.date === '261216');
   const ev = TV.rules.confirmOccurrence(dec.plan, TV.rules.occurrenceSpec(dec), PLAN_NOW, { dict: b.dict });
   assert.equal(ev.date, '261216', '确认落在这一期自己的日期');
-  assert.equal(ev.note, '房租');
+  assert.equal(ev.note, '< 固定每月 房租');
   assert.ok(TV.rules.stateHas(dec.plan, 'confirmed', '2612'));
 
   const inst = rows.find((r) => r.kind === 'installment');
   const iev = TV.rules.confirmOccurrence(inst.plan, TV.rules.occurrenceSpec(inst), PLAN_NOW, { dict: b.dict });
-  assert.equal(iev.note, '分期还款 第 1/2 期');
+  assert.equal(iev.note, '< 2612分期 第1/2期');
 
   const voided = rows.find((r) => r.date === '270116');
   TV.rules.voidOccurrence(voided.plan, TV.rules.occurrenceSpec(voided));
@@ -240,4 +260,98 @@ test('固定表聚合：每月收入/支出、分期未还本金/利息', () => 
   const info = TV.rules.installmentInfo(b.plans.find((p) => p.kind === 'installment'), '2612');
   assert.equal(info.remainingPrincipalCents, 120000);
   assert.equal(info.remainingInterestCents, 10000);
+});
+
+test('固定表：月度日期可省略「每月」（19日）', () => {
+  const b = TV.source.compileFixed('[固定]\n19日 wx1 > rent 1000 *m\n', EX.dict, { now: NOW, domain: 'P' });
+  assert.equal(b.plans.length, 1);
+  assert.equal(b.plans[0].period, 'm');
+  assert.equal(b.plans[0].day, 19);
+  assert.equal(b.diagnostics.length, 0);
+});
+
+test('分期紧凑表达式：20000/12+2000/12，最后一期补差', () => {
+  const b = compileFixed(fixedBook([], ['5日 wx1 > cc 20000/12+2000/12 2610']));
+  assert.equal(b.diags.length, 0);
+  const p = b.plans[0];
+  assert.equal(p.periods, 12);
+  assert.equal(p.firstMonth, '2610');
+  assert.equal(p.amountCents, 183333);
+  assert.equal(p.principalCents, 2000000);
+  assert.equal(p.interestCents, 200000);
+  const rows = TV.rules.futureOccurrences(p, PLAN_NOW, [], 12);
+  const last = rows.find((x) => x.periodIndex === '12/12');
+  assert.ok(last, '最后一期应出现在未来区');
+  assert.equal(last.amountCents, 183337);
+  assert.equal(183333 * 11 + last.amountCents, 2200000);
+  const rowsShort = TV.rules.futureOccurrences(p, PLAN_NOW, [], 6);
+  assert.ok(rowsShort.some((x) => x.periodIndex === '12/12'), '分期不再只生 6 个月，最后一期也在');
+
+  /* 固定页写回时保留用户输入表达式，不自动展开成 期数=/首月=/本金= */
+  const kept = TV.source.fixedSourceFromPlans([p], b.dict, { mode: 'CODE', lang: 'zh' });
+  assert.ok(kept.includes('5日 wx1 > cc 20000/12+2000/12 2610'), kept);
+  assert.ok(!kept.includes('期数=12'), kept);
+  TV.rules.addPlanState(p, 'confirmed', '2612');
+  const kept2 = TV.source.fixedSourceFromPlans([p], b.dict, { mode: 'CODE', lang: 'zh' });
+  assert.ok(kept2.includes('5日 wx1 > cc 20000/12+2000/12 2610 // 确认=2612'), kept2);
+
+  /* 首月也可放在 < 后面，作为分期标记：... < 2610 */
+  const b2 = compileFixed(fixedBook([], ['5日 wx1 > cc 20000/12+2000/12 < 2610']));
+  assert.equal(b2.diags.length, 0);
+  assert.equal(b2.plans[0].firstMonth, '2610');
+  assert.equal(b2.plans[0].amountCents, 183333);
+
+  /* 只知道「总应还 / 期数」或「剩余应还 / 剩余期数」也行 */
+  const b3 = compileFixed(fixedBook([], ['5日 wx1 > cc 22000/12 2610']));
+  assert.equal(b3.diags.length, 0);
+  assert.equal(b3.plans[0].amountCents, 183333);
+  assert.equal(b3.plans[0].principalCents, 2200000);
+  assert.equal(b3.plans[0].interestCents, 0);
+  const b4 = compileFixed(fixedBook([], ['5日 wx1 > cc 9900/7 2610']));
+  assert.equal(b4.diags.length, 0);
+  assert.equal(b4.plans[0].periods, 7);
+  assert.equal(b4.plans[0].amountCents, 141429);
+  const rows4 = TV.rules.futureOccurrences(b4.plans[0], PLAN_NOW, [], 12);
+  const last4 = rows4.find((x) => x.periodIndex === '7/7');
+  assert.ok(last4);
+  assert.equal(last4.amountCents, 141426);
+  assert.equal(141429 * 6 + last4.amountCents, 990000);
+
+  /* 任意 + - * / () 表达式；首月后期数可单列 */
+  const b5 = compileFixed(fixedBook([], ['5日 wx1 > cc (20000+2000)/12 < 2612/12']));
+  assert.equal(b5.diags.length, 0);
+  assert.equal(b5.plans[0].periods, 12);
+  assert.equal(b5.plans[0].firstMonth, '2612');
+  assert.equal(b5.plans[0].amountCents, 183333);
+  assert.equal(b5.plans[0].principalCents, 2200000);
+  assert.equal(b5.plans[0].interestCents, 0);
+  const b6 = compileFixed(fixedBook([], ['5日 wx1 > cc 1000*(1+0.1)/4 < 2612/4']));
+  assert.equal(b6.diags.length, 0);
+  assert.equal(b6.plans[0].amountCents, 27500);
+  assert.equal(b6.plans[0].periods, 4);
+  assert.equal(b6.plans[0].principalCents, 110000);
+
+  /* 固定行的来源日期标记：< 261019 原样显示，不当作标签 */
+  const b7 = compileFixed(fixedBook(['19日 wx1 > cc 20 < 261019']));
+  assert.equal(b7.diags.length, 0);
+  assert.equal(b7.plans[0].sourceDate, '261019');
+  assert.deepEqual(b7.plans[0].tagIds, []);
+  const kept7 = TV.source.fixedSourceFromPlans(b7.plans, b7.dict, { mode: 'CODE', lang: 'zh' });
+  assert.ok(kept7.includes('19日 wx1 > cc 20 < 261019'), kept7);
+
+  /* 旧状态被误写进 note 时，不能重复成 生成=... | 生成=... */
+  const b8 = compileFixed(fixedBook(['19日 wx1 > cc 20 *m // 生成=2611 | 生成=2611']));
+  assert.equal(b8.plans[0].note, '');
+  assert.deepEqual(b8.plans[0].state.generated, ['2611']);
+  const kept8 = TV.source.fixedSourceFromPlans(b8.plans, b8.dict, { mode: 'CODE', lang: 'zh' });
+  assert.equal((kept8.match(/生成=2611/g) || []).length, 1, kept8);
+
+  /* *m 后面的 < 文本是备注，不是标签；固定页原样保留 */
+  const b9 = compileFixed(fixedBook(['19日 wx1 > cc 20 < 视频会员']));
+  assert.equal(b9.diags.length, 0);
+  assert.equal(b9.plans[0].note, '视频会员');
+  assert.equal(b9.plans[0].noteInline, true);
+  assert.deepEqual(b9.plans[0].tagIds, []);
+  const kept9 = TV.source.fixedSourceFromPlans(b9.plans, b9.dict, { mode: 'CODE', lang: 'zh' });
+  assert.ok(kept9.includes('19日 wx1 > cc 20 < 视频会员'), kept9);
 });

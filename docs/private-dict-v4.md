@@ -856,3 +856,31 @@ CODE/PLAIN 两版按模式+语言缓存。1000 行、4× CPU 降速实测：
 
 [`private-dict-v4.sample.dict.tv`](private-dict-v4.sample.dict.tv)：
 202 行、81 个节点 + 24 个统计分类 + 81 条固定绑定，由真实 `local/private.dict.tv` **无损**转换并逐节点校验。
+
+### 固定收支备注的英文简码 / 掩码
+
+`[备注]` 里这三条可写成四列（简码，名称，英文简码，英文名）：
+
+```text
+[备注]
+固定收支
+  FQ，分期，INST，Installment
+  GDD，固定每日，FD，Fixed Daily
+  GDM，固定每月，FM，Fixed Monthly
+```
+
+只写两列时，v4 也会自动补：
+
+| 中文名 | 中文简码 | 英文简码 | 英文名 |
+| --- | --- | --- | --- |
+| 分期 | FQ | INST | Installment |
+| 固定每日 | GDD | FD | Fixed Daily |
+| 固定每月 | GDM | FM | Fixed Monthly |
+
+掩码模式下备注里的标签名会换成简码（中文掩码用 GDM，英文用 FM），明文模式保持中文。
+
+### 备注段颜色 / 简码判重
+
+字典编辑器里 `[备注]，Notes` / `[行为]，Behavior` 段会单独着色：归属、简码、中文名、英文列各有颜色。
+
+简码判重按 **节点 / 备注标签 / 行为项** 三类分开；备注标签 `HF，话费` 即使节点里也有 `HF`，仍显示 `HF`，不会变成 `HF2`。

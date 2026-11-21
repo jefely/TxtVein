@@ -803,26 +803,26 @@ html[data-theme="paper"] .cm-s-txtvein .CodeMirror-gutters {
   background: #efeada !important;
   border-right: 1px solid #d8d1c1 !important;
 }
-html[data-theme="paper"] .cm-s-txtvein .CodeMirror-linenumber { color: #8a8273 !important; }
+html[data-theme="paper"] .cm-s-txtvein .CodeMirror-linenumber { color: var(--tv-linenumber) !important; }
 html[data-theme="paper"] .cm-s-txtvein .CodeMirror-cursor { border-left-color: #2b2924 !important; }
 html[data-theme="paper"] .cm-s-txtvein .CodeMirror-selected { background: #ddd5c2 !important; }
 html[data-theme="paper"] .cm-s-txtvein .CodeMirror-activeline-background { background: rgba(90, 80, 60, 0.05) !important; }
-html[data-theme="paper"] .cm-s-txtvein .cm-comment { color: #6b6558 !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-comment { color: var(--tv-note) !important; }
 html[data-theme="paper"] .cm-s-txtvein .cm-number,
-html[data-theme="paper"] .cm-s-txtvein .cm-atom { color: #7a4a20 !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-atom { color: var(--tv-date) !important; }
 html[data-theme="paper"] .cm-s-txtvein .cm-variable,
 html[data-theme="paper"] .cm-s-txtvein .cm-variable-2,
 html[data-theme="paper"] .cm-s-txtvein .cm-def,
-html[data-theme="paper"] .cm-s-txtvein .cm-tag { color: #2f5d50 !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-tag { color: var(--tv-node) !important; }
 html[data-theme="paper"] .cm-s-txtvein .cm-keyword,
 html[data-theme="paper"] .cm-s-txtvein .cm-string,
 html[data-theme="paper"] .cm-s-txtvein .cm-meta { color: #6a4f2a !important; }
-html[data-theme="paper"] .cm-s-txtvein .cm-operator { color: #4a463d !important; }
-html[data-theme="paper"] .cm-s-txtvein .cm-error { color: #8a3f3f !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-operator { color: var(--tv-operator) !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-error { color: var(--tv-invalid) !important; }
 html[data-theme="paper"] .cm-s-txtvein .tv-def { color: #2b2924 !important; }
-html[data-theme="paper"] .cm-s-txtvein .tv-link { color: #2f5d50 !important; }
-html[data-theme="paper"] .cm-s-txtvein .tv-unknown { color: #8a3f3f !important; }
-html[data-theme="paper"] .cm-s-txtvein .tv-error { color: #8a3f3f !important; background: rgba(138, 63, 63, 0.08) !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-link { color: var(--tv-node) !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-unknown { color: var(--tv-invalid) !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-error { color: var(--tv-invalid) !important; background: rgba(138, 63, 63, 0.08) !important; }
 html[data-theme="paper"] .cm-s-txtvein .cm-invalid-line { background: rgba(138, 63, 63, 0.06) !important; }
 
 /* 单输入气泡 / 展开条：纸墨按钮，关闭玻璃 */

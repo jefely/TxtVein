@@ -57,6 +57,16 @@ test('详情金额：¥3,512.34', () => {
   assert.equal(A.formatPlain(5), '¥0.05');
 });
 
+test('查询金额：无千分位、不强制两位小数', () => {
+  assert.equal(A.formatCompact(0), '¥0');
+  assert.equal(A.formatCompact(3500), '¥35');
+  assert.equal(A.formatCompact(3550), '¥35.5');
+  assert.equal(A.formatCompact(3555), '¥35.55');
+  assert.equal(A.formatCompact(123456789), '¥1234567.89');
+  assert.equal(A.formatCompact(-3500), '-¥35');
+  assert.equal(A.formatCompact(5), '¥0.05');
+});
+
 test('周期后缀拆分', () => {
   assert.deepEqual(A.splitPeriod('1000*m'), { token: '1000', period: 'm', ok: true });
   assert.deepEqual(A.splitPeriod('35'), { token: '35', period: '', ok: true });

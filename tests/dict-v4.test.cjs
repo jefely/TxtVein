@@ -403,3 +403,41 @@ test('空字典：v4 也能编译与往返', () => {
   assert.equal(r2.ok, true);
   assert.ok(r2.dict.nodes.N_sys_loss);
 });
+
+test('v4 备注：固定收支标签自动补英文简码 / 英文名，并可掩码', () => {
+  const src = '[备注]\n固定收支\n  FQ，分期，\n  GDD，固定每日，\n  GDM，固定每月，\n';
+  const r = V4.parse(src, { now: new Date('2026-01-01T00:00:00Z') });
+  assert.deepEqual(errors(r), []);
+  const tags = Object.values(r.dict.tags).filter((t) => !t.is_category);
+  const byName = (name) => tags.find((t) => t.zh_name === name);
+  assert.equal(byName('分期').en_code, 'INST');
+  assert.equal(byName('分期').en_name, 'Installment');
+  assert.equal(byName('固定每日').en_code, 'FD');
+  assert.equal(byName('固定每日').en_name, 'Fixed Daily');
+  assert.equal(byName('固定每月').en_code, 'FM');
+  assert.equal(byName('固定每月').en_name, 'Fixed Monthly');
+  assert.equal(TV.dict.maskNote(r.dict, '< 固定每月 话费', 'CODE', 'zh'), '< GDM 话费');
+  assert.equal(TV.dict.maskNote(r.dict, '< 固定每月 话费', 'CODE', 'en'), '< FM 话费');
+  assert.equal(TV.dict.maskNote(r.dict, '< 固定每月 话费', 'PLAIN', 'zh'), '< 固定每月 话费');
+});
+
+test('v4 简码判重按节点 / 备注标签分开：标签 HF 不会变成 HF2', () => {
+  const src = '[费用]\n餐饮\n  HF，话费\n[备注]\n日常\n  HF，话费\n';
+  const r = V4.parse(src, { now: new Date('2026-01-01T00:00:00Z') });
+  assert.deepEqual(errors(r), []);
+  const node = Object.values(r.dict.nodes).find((n) => !n.system && n.zh_code === 'HF');
+  const tag = Object.values(r.dict.tags).find((t) => !t.is_category && t.zh_code === 'HF');
+  assert.ok(node && tag);
+  const nodeId = Object.keys(r.dict.nodes).find((id) => r.dict.nodes[id] === node);
+  const tagId = Object.keys(r.dict.tags).find((id) => r.dict.tags[id] === tag);
+  assert.equal(TV.dict.renderNode(r.dict, nodeId, 'CODE', 'zh'), 'HF');
+  assert.equal(TV.dict.renderTag(r.dict, tagId, 'CODE', 'zh'), 'HF');
+  assert.equal(TV.dict.renderTag(r.dict, tagId, 'CODE', 'zh').endsWith('2'), false);
+});
+
+test('掩码模式分期备注只留 2/7', () => {
+  const src = '[备注]\n固定收支\n  FQ，分期，\n  GDD，固定每日，\n  GDM，固定每月，\n';
+  const r = V4.parse(src, { now: new Date('2026-01-01T00:00:00Z') });
+  assert.equal(TV.dict.maskNote(r.dict, '< 2612分期 第2/7期', 'CODE', 'zh'), '< 2612FQ 2/7');
+  assert.equal(TV.dict.maskNote(r.dict, '< 2612分期 第2/7期', 'PLAIN', 'zh'), '< 2612分期 第2/7期');
+});

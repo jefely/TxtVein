@@ -237,18 +237,28 @@
       && e.to === plan.to && Math.round(Number(e.amountCents) || 0) === cents);
   }
 
-  /** 分期某一期的备注：NT 用「分期还款 第 n/N 期」。 */
+  /** 固定收支生成的流水备注：固定每月/每日/每年 + 原备注。 */
+  function noteWithFixed(plan) {
+    const p = plan || {};
+    const n = S(p.note).trim();
+    const mark = p.period === 'd' ? '固定每日'
+      : p.period === 'y' ? '固定每年' : '固定每月';
+    return '< ' + mark + (n ? ' ' + n : '');
+  }
+
+  /** 分期某一期的备注：只写 2612分期 第4/7期。 */
   function installmentNote(plan, monthKey) {
     const info = installmentInfo(plan, monthKey);
-    if (!info.periods) return S(plan.note);
+    if (!info.periods) return '< ' + '分期还款';
     const n = (Number.isFinite(monthsBetweenKeys(info.firstMonth, monthKey))
       ? monthsBetweenKeys(info.firstMonth, monthKey) + 1 : 0);
-    return '分期还款 第 ' + Math.max(1, n) + '/' + info.periods + ' 期';
+    const tag = info.firstMonth ? info.firstMonth + '分期' : '分期还款';
+    return '< ' + tag + ' 第' + Math.max(1, n) + '/' + info.periods + '期';
   }
 
   /**
-   * 未来区：NT 的 buildVirtualFixed 同口径 —— 每月固定 / 分期 往后 6 个月，
-   * 每日只摆今天一条；已经生成 / 已确认 / 已作废的期不再出现。
+   * 未来区：每月固定往后 24 个月，分期一次铺完所有剩余期，每日只摆今天一条；
+   * 已经生成 / 已确认 / 已作废的期不再出现。
    * @returns {Array<{plan, month, date, kind, amountCents, note, periodIndex, principalCents, interestCents}>}
    */
   function futureOccurrences(plan, now, events, horizon) {
@@ -258,12 +268,12 @@
     const st = planState(plan);
     const skip = (key) => st.generated.includes(key) || st.confirmed.includes(key) || st.voided.includes(key);
     if (plan.period === 'd') {
-      if (skip(today)) return out;
-      if (hasSameDayEvent(events, plan, today)) return out;
+      /* 每日是「当天常驻快捷项」：不判断今天是否已添加，可重复确认多条；
+       * 只有固定表删掉这一行时才不再出现。 */
       out.push({
         plan, month: today, date: today, kind: 'daily',
         amountCents: Math.round(Number(plan.amountCents) || 0),
-        note: S(plan.note), periodIndex: '', principalCents: 0, interestCents: 0,
+        note: noteWithFixed(plan), periodIndex: '', principalCents: 0, interestCents: 0,
       });
       return out;
     }
@@ -283,17 +293,19 @@
         out.push({
           plan, month: mk, date: due, kind: 'yearly',
           amountCents: Math.round(Number(plan.amountCents) || 0),
-          note: S(plan.note), periodIndex: '', principalCents: 0, interestCents: 0,
+          note: noteWithFixed(plan), periodIndex: '', principalCents: 0, interestCents: 0,
         });
       }
       return out;
     }
     const cur = today.slice(0, 4);
-    const months = Math.max(1, Math.min(12, Number(horizon) || 6));
+    const months = Math.max(1, Math.min(360, Number(horizon) || 24));
     if (plan.kind === 'installment') {
       const info = installmentInfo(plan, cur);
       if (!info.periods || !info.firstMonth) return out;
-      for (let i = 0; i < months; i += 1) {
+      /* 分期一次铺完：从当前月一直排到最后一期，不再只给 6 个月。 */
+      const span = Math.max(months, (monthsBetweenKeys(cur, info.lastMonth) || 0) + 1);
+      for (let i = 0; i < span; i += 1) {
         const mk = addMonthKey(cur, i);
         if (!mk) continue;
         if (monthsBetweenKeys(info.firstMonth, mk) < 0) continue;
@@ -302,9 +314,15 @@
         if (!due || due < today) continue;
         if (skip(mk) || hasSameMonthEvent(events, plan, mk)) continue;
         const n = monthsBetweenKeys(info.firstMonth, mk) + 1;
+        /* 最后一期补掉「每期四舍五入」的差额，保证各期合计 = 本金 + 利息。 */
+        let amountCents = info.perPeriodCents;
+        if (n === info.periods) {
+          const adjusted = info.totalCents - info.perPeriodCents * (info.periods - 1);
+          if (adjusted > 0) amountCents = adjusted;
+        }
         out.push({
           plan, month: mk, date: due, kind: 'installment',
-          amountCents: info.perPeriodCents,
+          amountCents,
           note: installmentNote(plan, mk),
           periodIndex: n + '/' + info.periods,
           principalCents: info.principalPerCents,
@@ -322,13 +340,13 @@
       out.push({
         plan, month: mk, date: due, kind: 'monthly',
         amountCents: Math.round(Number(plan.amountCents) || 0),
-        note: S(plan.note), periodIndex: '', principalCents: 0, interestCents: 0,
+        note: noteWithFixed(plan), periodIndex: '', principalCents: 0, interestCents: 0,
       });
     }
     return out;
   }
 
-  /** 一条计划在未来区里的全部期（6 个月 / 今天一条）。 */
+  /** 一条计划在未来区里的全部期（每月 24 个月 / 分期全部 / 今天一条）。 */
   function planOccurrences(plans, now, events, horizon) {
     const out = [];
     (plans || []).forEach((p) => {
@@ -554,7 +572,7 @@
       tagIds: (plan.tagIds || []).slice(),
       chainId: '',
       planId: plan.id,
-      note: S(plan.note),
+      note: noteWithFixed(plan),
       raw: '[plan ' + plan.id + ']',
       crossDomain: !!(dict && dict.nodes[plan.from] && dict.nodes[plan.to]
         && dict.nodes[plan.from].domain !== dict.nodes[plan.to].domain),
@@ -607,6 +625,11 @@
     ev.amountCents = Math.round(Number(occurrence.amountCents == null
       ? plan.amountCents : occurrence.amountCents) || 0);
     ev.note = S(occurrence.note == null ? plan.note : occurrence.note);
+    /* 每日确认后的流水不再带「固定每日」前缀，只留原备注。 */
+    if (plan.period === 'd') {
+      const note = S(plan.note).trim();
+      ev.note = note ? '< ' + note : '';
+    }
     ev.periodIndex = S(occurrence.periodIndex || '');
     addPlanState(plan, 'confirmed', key);
     return ev;

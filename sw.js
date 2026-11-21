@@ -1,5 +1,5 @@
 /* TxtVein PWA shell. Keep the single-file app available offline. */
-const CACHE = 'txtvein-shell-v2.8.1';
+const CACHE = 'txtvein-shell-v2.8.2';
 const SHELL = [
   './TxtVein.html',
   './manifest.webmanifest',

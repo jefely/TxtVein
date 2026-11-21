@@ -1,13 +1,13 @@
 # TxtVein · 现状快照
 
-> 快照时间：**2026-11-21**（v2.8.1）。
+> 快照时间：**2026-11-21**（v2.8.2）。
 > 一句话：后台 ID 图是唯一数据事实；`ledger.tv` / `dict.tv` 是 CM5 源码编辑器里的投影与手稿；错误行是 `X_` 纯文本占位，不计算但不丢失。
 
 ---
 
 ## 一、这是什么
 
-**TxtVein（文脉）v2.8.1**：纯文本、无分录、双极图论账本，外加备注层和行为层。
+**TxtVein（文脉）v2.8.2**：纯文本、无分录、双极图论账本，外加备注层和行为层。
 
 - 会计层：`N_` 节点 + `E_` 原子边，进 A/B 余额。
 - 备注层：`T_` 标签 + `X_` 备注/错误/注释，两级统计，不进余额。
@@ -22,20 +22,20 @@
 
 ```text
 D:\myproject\TxtVein\
-├─ TxtVein.html          1,412.0 KB 单文件成品（内置 Cascadia Code 字体）
+├─ TxtVein.html          1,536.0 KB 单文件成品（内置 Cascadia Code 字体）
 ├─ index.html            开发入口
 ├─ css/ (6)              base / ledger / report / panels / editor / paper
-├─ js/core/ (32)         text/system-dict-core/system-dict/user-dict/
+├─ js/core/ (33)         text/pinyin/system-dict-core/system-dict/user-dict/
 │                        tree-view/anchor/public-report/suggester/
 │                        text-bundle/nt-bridge/
 │                        amount/date/query-cols/dict/ids/parser/source/calc/
 │                        domain/rules/report/ledger-file/dict-file/
 │                        crypto/envelope/example/legacy
 ├─ js/browser/ (2)       store / files
-├─ js/ui/ (11)           dom/gate/editor/panes/report-view/input/panels/
-│                        plan-view/query-cols/glass/app
+├─ js/ui/ (12)           dom/gate/editor/panes/report-view/input/panels/
+│                        plan-view/query-cols/stats-cols/glass/app
 ├─ vendor/codemirror/    CM5 + hint/lint/matchbrackets/active-line
-├─ tests/ (24 个文件)     272 条 node --test
+├─ tests/ (25 个文件)     283 条 node --test
 ├─ tools/                build / check / cdp / e2e / smoke_file
 ├─ docs/screens/         01-editor / 02-report / 03-invalid / 04-mobile /
 │                        06-tree / 07-candidates / 08-tree-edit
@@ -49,7 +49,7 @@ D:\myproject\TxtVein\
 
 | 项 | 现状 |
 |---|---|
-| 单文件 | `TxtVein.html` **1,412.0 KB**；零外链、零 CDN；字体 base64 内嵌 |
+| 单文件 | `TxtVein.html` **1,536.0 KB**；零外链、零 CDN；字体 base64 内嵌 |
 | 数据事实 | 后台 ID 图；编辑器文本是投影 + 手稿；ID 不出现在 UI |
 | 源码编辑器 | 流水 `ledger.tv` / 字典 `dict.tv` 双 CM5；行号、高亮、单波浪线（只标出错 token）、补全、运算符工具条 |
 | 相对日期 | 输入框 `-1/-2` 提交时固化；直接编辑在日期 token 后按空格立即固化；`0/+1` 同理 |
@@ -57,9 +57,10 @@ D:\myproject\TxtVein\
 | 时间单位 | `d/h/m`：`1d=1440m`、`1h=60m`；输入 `1d2h30m`，后台存整数分钟 `1590`，`ledger.txt` 写 `1590m`，界面显示 `1d2h30m` |
 | 后台单位 | 金额只存整数分 `amountCents`；时间只存整数分钟 `minutes`；行为强度只存整数 `weight` |
 | 账本域 | 顶部域栏已移除；所有流水同一列表；不写域即 `P`，只有显式写 `F`/`C`/`H` 才记录对应域 |
-| 界面 | 深色 / 电纸书两套主题；字号 15px / 编辑器 14px；字体栈 Cascadia Code + 内置 CascadiaCode.woff2；电纸书补漏覆盖气泡 / 行号菜单 / 查询金额 / 标题 / 原生控件 |
-| 页签 | 查询 / 流水 / 字典 / 母树 / 固定 / 统计；顶栏菜单只放 导入/导出/设置/帮助/掩码/语言 |
-| 反馈 | 输入框上方反馈栏；输入改成右下角可拖动 TV 气泡，点击展开单输入框 |
+| 界面 | 深色 / 电纸书两套主题；字号按页面分开（查询 / 流水 / 字典 / 节点 / 固定 / 统计，9–24px，两套主题共用）；字体栈 Cascadia Code + 内置 CascadiaCode.woff2（400）+ CascadiaCode-VF.woff2（600–700 真粗体，防英文标题合成粗体发虚）；语义高亮只改颜色、不加粗；电纸书补漏覆盖气泡 / 行号菜单 / 查询金额 / 标题 / 原生控件 |
+| 主题设置 | 深色 / 电纸书**各有一套颜色**；**字号只有一套**（`txtvein.prefs.v3` 的 `fonts`，六页各一个值；v3 旧单字号迁移到流水 / 字典；v1/v2 自动迁移）；顶栏「语言」后新增「主题」按钮，中英切换显示 Theme / Dark / E-ink |
+| 页签 | 统计 / 查询 / 字典 / 流水 / 固定 / 节点；顶栏菜单只放 导入/导出/语言/帮助/设置/主题/掩码 |
+| 反馈 | 输入框上方反馈栏；无反馈时只保留编辑器光标/错误，固定页与其它页不再显示快捷键提示；输入改成右下角可拖动 TV 气泡，点击展开单输入框 |
 | 输入宏 | 输入框与编辑器都支持双击 `>`、三击 `<`；候选支持 `1 2 3`、鼠标点击、单击空格确认；缺省今日、域=P |
 | 4 态 | 编辑区可切掩码/明文 × 中/英；错误行原样保留，合法行重投影；跨域自动补 `P:`/`C:` 前缀 |
 | 会计 | `E_` 只认合法流水；双极平账、链式、时间代币、跨域、周期规则仍可用 |
@@ -71,22 +72,22 @@ D:\myproject\TxtVein\
 | 树编辑 | 报表行为树/备注树节点可点：重挂父级、合并；合并后引用改指目标，旧 code 保留别名 |
 | 明文单文件校验 | 导出前重读并比对流水/行为/节点/标签/行为项/备注/错误行数量；检查段落齐全、无后台 ID 泄露 |
 | 自动生成 | 备注标签自动；行为项自动（另一端已是行为项，或会计节点补行为角色）；会计节点只提议 |
-| 统计 | **照搬 NT 六类 × 四列**：收入/负债/权益/资产/费用/成本；分类按 `category_key`、节点按节点；费用第 1 列本期累计、第 4 列本期净出；期初虚拟账户隐藏；转出/转入永远正数；**只按字典私人结构统计**（公共归属模式已移除）；年份跟在「统计」后、月份靠左 |
-| 统计第三区 | 左侧统计表 / 中间详情列表 / 右侧「流水查询」三栏，两条分隔条可拖；查询区与流水查询同一面板组件（条件 / 结果 / 合计 / 清空），独立条件、默认本月；≤900px 隐藏第三区 |
-| 查询列宽 | 前五列可拖（双击复位），备注列自动吃剩余；金额靠右、备注靠左、其余居中；查询页与统计第三区共用一套列宽，存本机；规范见 [`docs/query-columns.md`](docs/query-columns.md) |
-| 固定收支 | **独立固定表**（`fixed.tv`，`[固定]` + `[分期]` 两段）；行形同流水，末尾挂 `*m/*d/*y`；每月到期自动落账，每日 / 分期在流水末尾的只读未来行里点行号确认（落成该期日期）或作废；与 NT 的 `scheduled` / `planKey` / `voidedPlans` 互通 |
+| 统计 | **照搬 NT 六类 × 四列**：收入/负债/权益/资产/费用/成本；分类按 `category_key`、节点按节点；费用第 1 列本期累计、第 4 列本期净出；期初虚拟账户隐藏；转出/转入永远正数；**只按字典私人结构统计**（公共归属模式已移除）；年份跟在「统计」后、月份靠左；头部年份与四个页签同为 56×27px、间距 3px（窄屏 56×26、2px）；类型标题靠左、靠下、无下横线，标题/列头 22px、金额合计 14px；左表「分类」居中、数值列头靠右，中间列表列头居中；金额合计行数值颜色压淡；金额 0 显示 `0`；中间列表前几列可拖列宽、最后一列自动吃剩余（备注列），字号与右侧查询统一；数据行序/日期/转出/转入居中、金额靠右、备注靠左；备注为空留空；统计与流水查询纳入未来区每月固定收支 / 分期剩余期（未确认每日不纳入）；中间列表标题后接「清空」，选中名居中，清空后可输入分类 / 节点 / 备注 / 事件（节点支持简码，其余用名字 + 拼音/英文首字母） |
+| 统计第三区 | 左侧统计表 / 中间详情列表 / 右侧「流水查询」三栏；只保留左侧分隔条调左表宽度，中间与查询**自动平分剩余宽度**，右侧两表之间**无分隔手柄**（仅 1px 边界）；查询区与流水查询同一面板组件（条件 / 结果 / 合计 / 清空），独立条件、默认本月；转出/转入支持多个节点简码（空格/逗号），结果合并；≤900px 隐藏第三区 |
+| 查询列宽 | 前五列可拖（双击复位），备注列自动吃剩余；金额靠右、备注靠左、其余居中；查询页与统计第三区共用一套列宽，存本机；转出/转入支持多节点简码/名字（空格或中英文逗号分隔，字段内 OR、字段间 AND）；规范见 [`docs/query-columns.md`](docs/query-columns.md) |
+| 固定收支 | **独立固定表**（`fixed.tv`，`[固定]` + `[分期]` 两段）；固定行只写 `19日` / `每日` / `每年` 表示周期、不写 `*m/*d/*y`（周期标记只用于流水记录）；新行空格自动补 `每日 `，`19`+空格自动补 `19日 `；支持双击空格 `>` / 三击空格 `<`；固定行末尾 `< 261019` 作为来源日期标记（不参与标签）；流水行内联 `*m/*d/*y` 绑定期间保留、不自动剥离；分期支持 `20000/12+2000/12`、`(20000+2000)/12`、`22000/12`、`9900/7` 紧凑式，金额支持 `+ - * / ()`；首月写 `< 2612`，期数可单列 `< 2612/12`，最后一期补差；输入表达式原样保留、不自动展开，分期未来行只写 `< 2612分期 第4/7期`，每月固定写 `< 固定每月 话费`，每日写 `< 固定每日`（有备注接在后面）；固定页允许添加新行 / 注释，写回只改计划行不删除其它行；未来流水行只读，行号菜单「编辑」跳到固定行；固定页光标 / 行号列与流水字典一致，行号可点出操作菜单；顶部无标题说明、底部一行聚合；每月到期自动落账，每日未来行当天常驻、可重复确认多条；与 NT 的 `scheduled` / `planKey` / `voidedPlans` 互通 |
 | 报表 | 双极四列 + 能量审计 + 时间 + 链式因果 + 顶部行为/备注统计 + 行为树/备注树 |
 | 存储 | localStorage 加密保险库；PBKDF2 150k → AES-GCM-256；CAS 防多标签覆盖 |
-| 测试 | **272** Node · **191** 门禁 · **94 + 64** E2E · 单文件冒烟通过 |
+| 测试 | **283** Node · **198** 门禁 · **118 + 64** E2E · 单文件冒烟通过 |
 | 字典 v4 | **已实施**：节点级固定绑定 / 无损转换 / 整页母树（点选绑定） / 同支推荐 / 语义校验 / 语义染色 / 录入流（编辑器同源 / 修正模式按波浪线启用 / 输入框收窄 / 自动别名不落盘 / v4 不自动建行为项 / 颜色与字号可配 / 改字典按 ID 重投影流水）；待打磨拖拽与状态栏计数 |
 
-最近验证（2026-11-21，v2.8.1）：
+最近验证（2026-11-21，v2.8.2）：
 
 ```text
-node --test tests/*.test.cjs             272 pass / 0 fail
-node tools/build.cjs                     TxtVein.html 1,412.0 KB
-node tools/check.cjs                     191 pass / 0 fail
-python tools/e2e.py    (http://8899)     94 pass / E2E PASSED
+node --test tests/*.test.cjs             283 pass / 0 fail
+node tools/build.cjs                     TxtVein.html 1,536.0 KB
+node tools/check.cjs                     198 pass / 0 fail
+python tools/e2e.py    (http://8899)     119 pass / E2E PASSED
 python tools/e2e_v4.py (http://8899)     64 pass / E2E v4 PASSED
 python tools/smoke_file.py               setup + render + reload unlock
 ```
@@ -123,12 +124,12 @@ python tools/e2e.py             71 pass / 0 fail
 python tools/smoke_file.py      setup + render + reload unlock；manifest CORS 为 file:// 既有警告
 ```
 
-最近验证（2026-11-15）：
+最近验证（2026-11-21）：
 
 ```text
-node --test tests/*.test.cjs    198 pass / 0 fail
-node tools/check.cjs            158 pass / 0 fail
-python tools/e2e.py             56 pass / 0 fail
+node --test tests/*.test.cjs    283 pass / 0 fail
+node tools/check.cjs            198 pass / 0 fail
+python tools/e2e.py             119 pass / 0 fail
 python tools/smoke_file.py      setup + render + reload unlock, 0 runtime errors
 ```
 
@@ -173,6 +174,8 @@ js/core/calc.js       只消费 E_；行为/备注结构隔离
 10. **单文件是构建产物**；改 `index.html` / `css/` / `js/` 后跑 `node tools/build.cjs`。
 11. **统计只有私人结构**：统计按字典 `category_key` / 节点 ID 算；没有「公共归属」模式，不要再加回切换按钮。
 12. **查询列宽是本地偏好**：前五列可拖、备注列自动吃剩余；列宽存 `txtvein.query.cols.v1`，不写进账本；查询页与统计第三区共用。
+13. **主题设置按主题分套、字号共用**：`txtvein.prefs.v3` 里 `dark` / `paper` 各一套颜色；`fonts` 是六页共用字号；纸主题的 token 色必须读 `--tv-*`，不要再写死。
+14. **统计页不再有口径控件**：不显示「私人结构」标签，也不加回「公共归属」；头部年份与四个页签同尺寸、同间距。
 
 ---
 

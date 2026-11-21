@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.8.1-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-2.8.2-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-green.svg" alt="License">
   <img src="https://img.shields.io/badge/data-100%25%20Local-black.svg" alt="Local First">
 </p>
@@ -140,18 +140,19 @@ wx1 > din 35 < 咖啡 < 拿铁
 - 编辑器光标处同样支持双击/三击空格；补全弹窗可用鼠标点击。
 - 简码候选支持鼠标点击、`↑↓` + `Tab/Enter`（数字键留给金额，不再用序号选择）；默认日期今日，`P` 域不写前缀。
 - **代码页内** `ledger.tv` / `dict.tv` 两个 CM5 编辑器，行号、语法高亮、单波浪线、补全、运算符工具条。
-- **顶栏菜单**：导入 / 导出 / 设置 / 帮助 / 掩码 / 语言，放在 logo 后面；
-- **六个圆角页签**：查询 / 流水 / 字典 / 母树 / 固定 / 统计；
-- **统计页四页签**：分类 / 节点 / 备注 / 事件（行为）；分类与节点都是 NT 同款的 **六类 × 四列**（收入 / 负债 / 权益 / 资产 / 费用 / 成本），每类合计逐列相加；转出 / 转入永远是正数，期初虚拟账户隐藏；左侧完整统计表、中间对应完整列表、右侧第三区「流水查询」，两处分隔条可拖宽；支持 1–12 月切换。统计口径只有**字典里的私人结构**，不再有「公共归属」模式；年份跟在「统计」后面、月份靠左。规范见 [`docs/stats.md`](docs/stats.md)
-- **查询页**：一屏三段独立查询，默认今天 / 本月 / 本年，每段独立日期、转出、转入、金额、备注条件和「清空」；前五列可拖列宽，备注列自动吃剩余宽度，金额靠右、备注靠左、其余居中。规范见 [`docs/query-columns.md`](docs/query-columns.md)。
-- **固定页**：一张独立的固定表（`[固定]` + `[分期]` 两个区域），纯文本编辑；行形同流水，末尾挂 `*m/*d/*y`。与 NT 账本同口径：每月到期自动落账；每日 / 分期在流水末尾的未来记录里点最左边的行号，选「确认」落成该期日期，删除 / 剪切 = 作废。规范见 [`docs/fixed-plans.md`](docs/fixed-plans.md)；
+- **顶栏菜单**：导入 / 导出 / 语言 / 帮助 / 设置 / 主题 / 掩码，放在 logo 后面；
+- **两套主题设置**：深色 / 电纸书各存一套颜色；**字号只有一套，两套主题共用**。设置页可分别为查询 / 流水 / 字典 / 节点 / 固定 / 统计六页设字号（9–24 px）；顶栏「主题」一键切换，切主题只换颜色。规范见 [`docs/theme-prefs.md`](docs/theme-prefs.md)。
+- **六个圆角页签**：统计 / 查询 / 字典 / 流水 / 固定 / 节点；
+- **统计页四页签**：分类 / 节点 / 备注 / 事件（行为）；分类与节点都是 NT 同款的 **六类 × 四列**（收入 / 负债 / 权益 / 资产 / 费用 / 成本），每类合计逐列相加；转出 / 转入永远是正数，期初虚拟账户隐藏；左侧完整统计表、中间对应完整列表、右侧第三区「流水查询」；只保留左侧分隔条调统计表宽度，中间与查询两表自动平分剩余宽度、**右侧两表之间无分隔手柄**；支持 1–12 月切换。统计口径只有**字典里的私人结构**（未来区每月固定收支 / 分期剩余期也纳入，未确认每日不纳入），不再有「公共归属」模式；年份跟在「统计」后面、月份靠左。类型标题（收入 / 负债…）靠左、靠下、下面不加横线；标题 / 列头行 22px，金额合计行 14px、数值颜色压淡；中间列表列头全部居中，统计左表「分类」居中、数值列头靠右。金额为 0 时显示 `0`，不显示 `0.0`。中间列表前几列可拖列宽、最后一列（分类/节点表的备注）自动吃剩余，表头/清空字号与右侧查询统一；数据行序 / 日期 / 转出 / 转入居中、金额靠右、备注靠左；备注为空留空，不显示 `—`。中间列表清空后可直接输入分类 / 节点 / 备注 / 事件查询：**节点支持简码**，其它用名字 + 拼音首字母 + 英文首字母；选中项名字在表头居中。规范见 [`docs/stats.md`](docs/stats.md)
+- **查询页**：一屏三段独立查询，默认今天 / 本月 / 本年，每段独立日期、转出、转入、金额、备注条件和「清空」；转出 / 转入支持**多个节点简码或名字**，用空格 / 中英文逗号分隔，字段内 OR、字段间 AND，查询页与统计第三区共用；前五列可拖列宽，备注列自动吃剩余宽度；数据行金额靠右、备注靠左、其余居中，**表头文字全部居中**；备注为空时留空；金额不显示千分位、不强制两位小数（`¥35` / `¥35.5` / `¥35.55`）。规范见 [`docs/query-columns.md`](docs/query-columns.md)。
+- **固定页**：一张独立的固定表（`[固定]` + `[分期]` 两个区域），纯文本编辑；固定行只写 `19日` / `每日` / `每年11月16日` 表示周期，不写 `*m/*d/*y`（这些只用于流水记录）；行形为 `周期 转出 > 转入 金额 < 备注`。顶部不再显示标题/说明，月度日期直接写 `19日`（也兼容 `每月19日`）；新行第一个空格自动补 `每日 `，输入 `19` 再空格自动补 `19日 `；固定行末尾可加 `< 261019` 标记来源日期；流水行内联 `*m/*d/*y` 绑定期间保留；固定页也支持双击空格 `>`、三击空格 `<`；分期可写紧凑式 `20000/12+2000/12`、`(20000+2000)/12`、`22000/12` 或 `9900/7`，金额支持 `+ - * / ()`；首月写 `< 2612`，期数可单列 `< 2612/12`；**写什么就保留什么，不自动展开**；最后一期自动补差；未来区分期行只写 `< 2612分期 第4/7期`；每月固定写 `< 固定每月 话费`，每日写 `< 固定每日`（有备注接在后面）；固定页允许随意添加新行 / 注释，写回状态时只改计划行、不会删除其它行；未来流水行只读，行号菜单「编辑」可跳到对应固定行修改；固定页光标恢复、行号列与流水/字典一致，点行号弹「删除 / 剪切 / 复制 / 粘贴 / 插入 / 上移」；底部只留一行聚合，语法错误时才多一行。与 NT 账本同口径：每月到期自动落账；每日未来行当天常驻、可重复确认多条；分期在流水末尾的未来记录里点最左边的行号，选「确认」落成该期日期，删除 / 剪切 = 作废。规范见 [`docs/fixed-plans.md`](docs/fixed-plans.md)；
 - **右下角 VE 气泡**：点击展开单输入框，可拖动位置；手机不再被固定输入条占住。
 - **相对日期**：单输入框和直接文本编辑都支持 `-1` / `-2`；直接编辑在日期 token 后按空格时立即固化成 `YYMMDD`，落盘仍是绝对日期。
 - **手机输入宏**：气泡与主编辑器里，软键盘快速连按两次空格 → `>`，三次 → `<`；不依赖物理键盘 keydown。
 - **手机编辑器**：窄屏自动换行，行号列固定在左侧，不随手指左右拖动。
-- **手机英文工具栏**：品牌与 Import / Export / Settings / Help / Mask / Language 同一行；锁按钮已移除，改为自动锁定。
-- **字体**：Cascadia Code；内置 `CascadiaCode.woff2`（SIL OFL 1.1），手机与离线环境也能用；高对比深黑，编辑器不做灰底。
-- **输入框上方反馈栏**：有反馈显示反馈，无反馈显示光标、错误数和快捷键提示；蓝色状态条已移除。
+- **手机英文工具栏**：品牌与 Import / Export / Settings / Help / Mask / Language / Theme 同一行；锁按钮已移除，改为自动锁定。
+- **字体**：Cascadia Code；内置 `CascadiaCode.woff2`（400）与 `CascadiaCode-VF.woff2`（600–700 真粗体），SIL OFL 1.1，手机与离线环境也能用；粗体不再由浏览器合成，英文标题不糊。语义高亮（`tv-def` / `cm-type`）只改颜色、不加粗，字典/流水识别成功后不会忽粗忽细。
+- **输入框上方反馈栏**：有反馈显示反馈，无反馈时编辑器页显示光标、错误数，固定页和其它页面不再显示快捷键提示；蓝色状态条已移除。
 - **VS Code Dark+ 深灰**：15px 基准、14px 编辑器；去掉网格和光晕，字号不再依赖浏览器 110% 缩放。
 - **Ctrl+Space** 补全；**Ctrl+Enter** 编译；`>` / `<` / `*m` / `*d` / `*y` / `d` / `h` / `m` 可点工具条插入。
 - **顶部域栏已移除**：所有流水在同一个列表里；不写域即 `P`，只有显式写 `F` / `C` / `H` 才记录为对应域。
@@ -369,6 +370,7 @@ TxtVein/
 ├─ js/
 │  ├─ core/               ← 零 DOM，可在 Node 下直接测
 │  │  ├─ text.js          ← 归一化、切行、宽度
+│  │  ├─ pinyin.js        ← 拼音首字母 / 英文词首字母
 │  │  ├─ amount.js        ← 元/分、k 折叠、时间代币
 │  │  ├─ date.js          ← YYMMDD、相对日期、区间、周期
 │  │  ├─ query-cols.js    ← 流水查询列宽（纯计算）
@@ -397,15 +399,16 @@ TxtVein/
 │     ├─ panels.js        ← 规则/导入导出/帮助/密码
 │     ├─ plan-view.js     ← 未来记录 / 行号菜单
 │     ├─ query-cols.js    ← 查询列宽拖动 / 双击复位 / 作用域
+│     ├─ stats-cols.js    ← 统计中间列表列宽 / 备注自动列宽
 │     ├─ glass.js         ← 液态玻璃
 │     └─ app.js           ← 唯一状态与编排
 ├─ vendor/codemirror/     ← CM5 + hint/lint/matchbrackets/active-line（MIT）
-├─ tests/                 ← node --test（272 条）
+├─ tests/                 ← node --test（280 条）
 ├─ tools/
 │  ├─ build.cjs           ← 把 index.html 内联成单文件
-│  ├─ check.cjs           ← 工程门禁（191 项）
+│  ├─ check.cjs           ← 工程门禁（198 项）
 │  ├─ cdp.py              ← Chrome DevTools 小助手
-│  ├─ e2e.py              ← 浏览器端到端（94 项断言）
+│  ├─ e2e.py              ← 浏览器端到端（118 项断言）
 │  ├─ e2e_v4.py           ← v4 字典端到端（64 项断言）
 │  ├─ smoke_file.py       ← file:// 单文件冒烟
 │  └─ smoke.py            ← 快速截图/冒烟
@@ -427,18 +430,18 @@ TxtVein/
 ```powershell
 cd D:\myproject\TxtVein
 
-node --test tests/*.test.cjs      # 272 条核心测试
+node --test tests/*.test.cjs      # 280 条核心测试
 node tools/build.cjs              # 生成 TxtVein.html
-node tools/check.cjs              # 191 项工程门禁
+node tools/check.cjs              # 198 项工程门禁
 python serve.py 8899              # 另开一个终端（E2E 用）
-python tools/e2e.py               # 94 项浏览器断言（需先起 8899 服务）
+python tools/e2e.py               # 118 项浏览器断言（需先起 8899 服务）
 python tools/e2e_v4.py            # 64 项 v4 断言（导入/整页母树/点选绑定/采纳/输入流/编辑器/数字快捷键/金额）
 python tools/smoke_file.py        # file:// 单文件冒烟（含设密码 / 刷新解锁）
 ```
 
 > 也可以不服务器直接跑：`$env:TXTVEIN_URL='file:///D:/myproject/TxtVein/index.html'; python tools/e2e.py`。
 
-`e2e.py` 覆盖：设密码、CM5 双编辑器、三段查询、固定页、三栏统计、v3 行为项自动建、行为/备注/错误行、明文单文件导出回导、刷新解锁、错误密码、锁定。
+`e2e.py` 覆盖：设密码、CM5 双编辑器、三段查询（列宽拖动 / 对齐 / 金额格式）、固定页、三栏统计 + 第三区查询 + 中间列表搜索（简码 / 拼音首字母）、主题切换与两套字号颜色、v3 行为项自动建、行为/备注/错误行、明文单文件导出回导、刷新解锁、错误密码、锁定。
 
 > E2E 使用独立 Chrome profile（`_tmp_cdp_profile/`），不会碰你的日常浏览器。
 
@@ -488,7 +491,7 @@ python tools/smoke_file.py        # file:// 单文件冒烟（含设密码 / 刷
 | §14 验收 | `e2e.py` 逐条覆盖；见 `STATUS.md` |
 | §15 三大铁律 | README/实现均以此为准 |
 
-逐条验收对照见 [`docs/v1.1-acceptance.md`](docs/v1.1-acceptance.md)；分层与不变量见 [`docs/architecture.md`](docs/architecture.md)；公共母树 / 私人子树规范见 [`docs/mother-tree.md`](docs/mother-tree.md)，图论模型见 [`docs/mother-tree-graph.md`](docs/mother-tree-graph.md)，双语与简码见 [`docs/mother-tree-bilingual.md`](docs/mother-tree-bilingual.md)，私有树覆盖检查见 [`docs/private-tree-coverage.md`](docs/private-tree-coverage.md)，私有字典 v4 设计见 [`docs/private-dict-v4.md`](docs/private-dict-v4.md)，多层组合输入设计见 [`docs/multi-input.md`](docs/multi-input.md)，版本记录见 [`CHANGELOG.md`](CHANGELOG.md)。
+逐条验收对照见 [`docs/v1.1-acceptance.md`](docs/v1.1-acceptance.md)；分层与不变量见 [`docs/architecture.md`](docs/architecture.md)；公共母树 / 私人子树规范见 [`docs/mother-tree.md`](docs/mother-tree.md)，图论模型见 [`docs/mother-tree-graph.md`](docs/mother-tree-graph.md)，双语与简码见 [`docs/mother-tree-bilingual.md`](docs/mother-tree-bilingual.md)，私有树覆盖检查见 [`docs/private-tree-coverage.md`](docs/private-tree-coverage.md)，私有字典 v4 设计见 [`docs/private-dict-v4.md`](docs/private-dict-v4.md)，多层组合输入设计见 [`docs/multi-input.md`](docs/multi-input.md)，查询列宽见 [`docs/query-columns.md`](docs/query-columns.md)，两套主题设置见 [`docs/theme-prefs.md`](docs/theme-prefs.md)，版本记录见 [`CHANGELOG.md`](CHANGELOG.md)。
 
 ---
 

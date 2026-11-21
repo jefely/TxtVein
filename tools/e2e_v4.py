@@ -133,7 +133,7 @@ def main():
     b.call("Input.insertText", {"text": "kf"}, sid)
     time.sleep(0.4)
     bub = j(sid, "Array.from(document.querySelectorAll('#bubbles .bubble')).map(function(x){return x.innerText;})", b)
-    ok("mother suggestions last", len(bub) >= 1 and "母树" in bub[-1], bub[-2:])
+    ok("mother suggestions last", len(bub) >= 1 and "节点" in bub[-1], bub[-2:])
     j(sid, "window.TxtVein.inputApi.setValue('261119 wx', 999)", b)
     time.sleep(0.4)
     ok("from exact keeps suggestions",
@@ -190,14 +190,14 @@ def main():
     time.sleep(0.4)
     txt = j(sid, "document.querySelector('#modal-body').innerText", b)
     ok("v4 form has category", "统计分类" in txt)
-    ok("v4 form has binding", "母树绑定" in txt)
+    ok("v4 form has binding", "节点绑定" in txt)
     ok("v4 form no legacy fields", ("父节点" not in txt) and ("公共归属（可选）" not in txt))
     j(sid, "document.querySelector('#modal-close').click()", b)
     time.sleep(0.3)
 
-    # 采纳母树：页面工具栏「+ 从母树」→ 搜「咖啡」→ 采纳
+    # 采纳母树：页面工具栏「+ 从节点」→ 搜「咖啡」→ 采纳
     j(sid, """(function(){var x=Array.from(document.querySelectorAll('.mother-bar button'))
-      .find(function(b){return b.textContent.indexOf('从母树')>=0;}); if(x)x.click(); return !!x;})()""", b)
+      .find(function(b){return b.textContent.indexOf('从节点')>=0;}); if(x)x.click(); return !!x;})()""", b)
     time.sleep(0.4)
     j(sid, """(function(){var q=document.querySelector('#modal-body input'); q.value='咖啡'; q.dispatchEvent(new Event('input',{bubbles:true})); return true;})()""", b)
     ok("adopt suggestions", wait(sid, "document.querySelectorAll('.suggest-item').length > 0", b, 5))
@@ -350,7 +350,7 @@ def main():
          return ps.some(function(p){return p.period==='m' && p.amountCents===300 && p.status==='active';});})()""", b) is True)
     j(sid, "document.querySelector('#btn-fixed').click()", b); time.sleep(0.8)
     fixed_src = j(sid, "document.querySelector('.fixed-editor .CodeMirror').CodeMirror.getValue()", b)
-    ok("fixed table shows *m", "[固定]" in fixed_src and "*m" in fixed_src, fixed_src[:160])
+    ok("fixed table omits *m", "[固定]" in fixed_src and "*m" not in fixed_src, fixed_src[:160])
     ok("fixed table no raw IDs", "N_" not in fixed_src, fixed_src[:160])
     j(sid, "document.querySelector('#btn-ledger').click()", b); time.sleep(0.5)
     j(sid, "if(window.__txtvein.state().mode!=='CODE'){document.querySelector('#btn-mode').click();} true", b)

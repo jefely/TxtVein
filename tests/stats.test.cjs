@@ -184,7 +184,7 @@ test('statCells：A 极与 B 极方向相反，费用同 A 极、只差第 1 和
 
 test('统计金额：1 位小数、不带 ¥ / 千分位；负债负余额写「多还」', () => {
   assert.equal(ST.statMoney(123456, '资产', 'c1'), '1234.6');
-  assert.equal(ST.statMoney(0, '资产', 'c1'), '0.0');
+  assert.equal(ST.statMoney(0, '资产', 'c1'), '0');
   assert.equal(ST.statMoney(-30000, '负债', 'c1'), '多还 300.0');
   assert.equal(ST.statMoney(-30000, '资产', 'c4'), '-300.0');
   assert.equal(ST.statMoney(50000, '收入', 'c2'), '500.0');

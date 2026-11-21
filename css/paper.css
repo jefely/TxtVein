@@ -92,15 +92,34 @@ html[data-theme="paper"] .stats-left,
 html[data-theme="paper"] .stats-right,
 html[data-theme="paper"] .stats-top,
 html[data-theme="paper"] .stats-tabs-wrap { background: #f3efe3 !important; }
+/* 月份按钮下面那条线：深色主题的 #2a2a2a 在纸面上像黑线，换成灰线 */
+html[data-theme="paper"] .stats-top { border-bottom-color: #d8d1c1 !important; }
 html[data-theme="paper"] .stats-gutter {
-  background: #d8d1c1 !important;
+  background: transparent !important;
   border-right: 1px solid #d8d1c1 !important;
 }
-html[data-theme="paper"] .stats-gutter:hover { background: #b9b09c !important; }
+html[data-theme="paper"] .stats-gutter:hover { background: rgba(0, 0, 0, 0.04) !important; }
 html[data-theme="paper"] .stats-split { background: #f3efe3 !important; }
 html[data-theme="paper"] .stats-right-head,
 html[data-theme="paper"] .stats-left-head,
 html[data-theme="paper"] .stats-right-empty { background: #f3efe3 !important; color: #2b2924 !important; }
+html[data-theme="paper"] .stats-right-head { border-bottom-color: #d8d1c1 !important; }
+html[data-theme="paper"] .stats-selected { color: #111111 !important; }
+html[data-theme="paper"] .stats-search-input {
+  background: #f7f3e8 !important;
+  color: #2b2924 !important;
+  border-color: #b9b09c !important;
+}
+html[data-theme="paper"] .stats-search-input::placeholder { color: #8a8273 !important; }
+html[data-theme="paper"] .stats-search-input:focus { border-color: #3f6b52 !important; }
+html[data-theme="paper"] .stats-search-hit {
+  background: #f7f3e8 !important;
+  border-color: #d8d1c1 !important;
+}
+html[data-theme="paper"] .stats-search-hit:hover { background: #efeada !important; }
+html[data-theme="paper"] .stats-search-hit b { color: #111111 !important; }
+html[data-theme="paper"] .stats-search-hit span { color: #6c665a !important; }
+html[data-theme="paper"] .stats-search-empty { color: #6c665a !important; }
 html[data-theme="paper"] .stats-left .sd-row,
 html[data-theme="paper"] .stats-right .sd-row {
   background: #f3efe3 !important;
@@ -293,7 +312,7 @@ html[data-theme="paper"] .stats-left .sd-row.is-total {
   padding-top: 6px !important;
   padding-bottom: 0 !important;
 }
-html[data-theme="paper"] .stats-left .sd-row.is-total > span:first-child {
+html[data-theme="paper"] .stats-left .sd-row.is-total:not(.is-total-title) > span:first-child {
   align-self: center !important;
   font-weight: 700 !important;
   color: #111111 !important;
@@ -313,19 +332,20 @@ html[data-theme="paper"] .stats-left .sd-row.is-total-title {
   color: #111111 !important;
   font-weight: 700 !important;
   background: transparent !important;
-  align-items: center !important;
-  min-height: 30px !important;
-  padding: 6px 7px !important;
+  align-items: end !important;
+  min-height: 22px !important;
+  padding: 2px 7px !important;
+  border-bottom: 0 !important;
 }
 html[data-theme="paper"] .stats-left .sd-total-title {
   grid-column: 1 / -1;
-  align-self: center;
+  align-self: end !important;
 }
 html[data-theme="paper"] .stats-left .sd-row.is-total:not(.is-total-title) {
   background: #f3efe3 !important;
   align-items: end !important;
-  min-height: 28px !important;
-  padding: 0 7px 2px !important;
+  min-height: 14px !important;
+  padding: 0 7px 0 !important;
 }
 html[data-theme="paper"] .stats-left .sd-row.is-total:not(.is-total-title) .sd-num {
   align-self: end !important;
@@ -439,6 +459,11 @@ html[data-theme="paper"] .fixed-errors .fixed-error { color: #8a3f3f !important;
 /* 5. 统计右侧标题 / 弹窗标题（#e8e8e8 / #f2f2f2） */
 html[data-theme="paper"] .stats-right-head b { color: #111111 !important; }
 html[data-theme="paper"] .stats-right-head span { color: #6c665a !important; }
+html[data-theme="paper"] .stats-right-head .stats-clear {
+  background: #e9e3d3 !important;
+  color: #111111 !important;
+  border-color: #b9b09c !important;
+}
 html[data-theme="paper"] .modal-head h2,
 html[data-theme="paper"] #modal-title { color: #111111 !important; }
 
@@ -472,10 +497,6 @@ html[data-theme="paper"] .top-menu .menu-btn:active {
 }
 
 /* 7. 统计页：第三区（流水查询）与列表分组标题 */
-html[data-theme="paper"] .stats-scope {
-  color: #6c665a !important;
-  border-color: #b9b09c !important;
-}
 html[data-theme="paper"] .stats-query {
   background: #f3efe3 !important;
   border-left-color: #d8d1c1 !important;
@@ -495,3 +516,27 @@ html[data-theme="paper"] .stats-back {
 }
 html[data-theme="paper"] .stats-item-name { color: #2b2924 !important; }
 html[data-theme="paper"] .stats-item-meta { color: #6c665a !important; }
+
+/* 纸主题：合计行数值也压淡，不要和类型标题一样黑 */
+html[data-theme="paper"] .stats-left .sd-row.is-total:not(.is-total-title) { color: #6c665a !important; }
+html[data-theme="paper"] .stats-left .sd-row.is-total:not(.is-total-title) .sd-num { color: #6c665a !important; }
+
+/* 纸主题：统计左表分类列保持正文黑，不压灰 */
+html[data-theme="paper"] .stats-left .sd-row:not(.is-total-title) > span:first-child { color: #2b2924 !important; }
+html[data-theme="paper"] .stats-left .sd-row.is-head > span:first-child { color: #2b2924 !important; }
+
+
+
+html[data-theme="paper"] .fixed-editor .CodeMirror-gutter-wrapper.tv-line-selected .CodeMirror-linenumber {
+  background: #ddd5c2 !important;
+  color: #1f1e1a !important;
+}
+html[data-theme="paper"] .fixed-editor .CodeMirror-linebackground.tv-line-selected-bg {
+  background: rgba(70, 62, 48, 0.075) !important;
+}
+
+html[data-theme="paper"] .editor-pane .CodeMirror-gutters,
+html[data-theme="paper"] .fixed-editor .CodeMirror-gutters {
+  background: #f7f3e8 !important;
+  border-right: 1px solid #d8d1c1 !important;
+}

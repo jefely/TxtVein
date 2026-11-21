@@ -15,6 +15,7 @@
     CM.defineMode('txtvein-ledger', function () {
       let role = 'date';
       let toNode = false;
+      const nodeClass = (s) => (/^[A-Za-z0-9_.:+-]+$/.test(s) ? 'node-code' : 'node-name');
       return {
         token(stream) {
           if (stream.sol()) { role = 'date'; toNode = false; }
@@ -38,7 +39,7 @@
             && stream.match(/^[A-Za-z0-9_\u4e00-\u9fff.:-]+/)) {
             if (role === 'to') toNode = true;
             role = role === 'to' ? 'to' : 'from';
-            return 'node';
+            return nodeClass(stream.current());
           }
           if (stream.match(/^\*[dmy]\b/i)) return 'keyword';
           if (stream.match(/^-?\d+(?:\.\d+)?(?:k|min|[dhm′])+/i)) {
@@ -51,7 +52,7 @@
           }
           if (stream.match(/^#[^\s<>]+/)) return 'note';
           if (stream.match(/^[A-Za-z0-9_\u4e00-\u9fff.:-]+/)) {
-            if (role === 'to') return 'node';
+            if (role === 'to') return nodeClass(stream.current());
             return 'variable';
           }
           stream.next();
@@ -62,22 +63,44 @@
     CM.defineMode('txtvein-dict', function () {
       let header = false;
       let enTail = false;
+      let noteSection = false;
+      let afterComma = false;
       return {
         token(stream) {
           if (stream.sol()) {
             header = false;
             enTail = false;
+            afterComma = false;
           }
           if (stream.match(/^\/\//)) { stream.skipToEnd(); return 'comment'; }
           if (stream.match(/^(?:node|tag|item|alias)\b/i)) return 'keyword';
-          if (stream.match(/^\[(?:资产|费用|成本|负债|收入|权益)\]/)) { header = true; return 'type'; }
-          if (stream.match(/^\[(?:ACCOUNT|NOTE|BEHAVIOR|会计|备注|行为)\]$/i)) return 'atom';
-          if (stream.match(/^\[[PFCH]\]/i)) return 'atom';
+          if (stream.match(/^\[(?:备注|Notes?)\]/i)) { noteSection = true; return 'type'; }
+          if (stream.match(/^\[(?:行为|Behaviors?)\]/i)) { noteSection = true; return 'type'; }
+          if (stream.match(/^\[(?:资产|费用|成本|负债|收入|权益)[^\]]*\]/)) {
+            noteSection = false; header = true; return 'type';
+          }
+          if (stream.match(/^\[(?:ACCOUNT|NOTE|BEHAVIOR|会计)\]$/i)) { noteSection = false; return 'atom'; }
+          if (stream.match(/^\[[PFCH]\]/i)) { noteSection = false; return 'atom'; }
           if (stream.sol() && stream.match(/^[PFCH](?=\s)/i)) return 'atom';
           if (stream.match(/^[，,]/)) {
+            afterComma = true;
             if (/^\s*[A-Za-z]/.test(stream.string.slice(stream.pos))) enTail = true;
             return 'dict-en';
           }
+          if (noteSection) {
+            const first = /^\s*$/.test(stream.string.slice(0, stream.start));
+            if (afterComma) {
+              if (stream.match(/^[A-Za-z][A-Za-z0-9 _-]*/)) return 'dict-en';
+              if (stream.match(/^[\u4e00-\u9fff][\u4e00-\u9fffA-Za-z0-9_-]*/)) return 'tag-name';
+            } else {
+              if (stream.match(/^[A-Za-z0-9_-]+/)) return 'tag-code';
+              if (stream.match(/^[\u4e00-\u9fff][\u4e00-\u9fffA-Za-z0-9_-]*/)) {
+                return first ? 'dict-cat' : 'tag-name';
+              }
+            }
+          }
+          if (/^\s*$/.test(stream.string.slice(0, stream.start))
+            && stream.match(/^[^\s，,]+/)) return 'dict-cat';
           if ((header || enTail) && stream.match(/^[A-Za-z][A-Za-z -]*/)) return 'dict-en';
           if (stream.match(/^(?:资产|费用|成本|负债|收入|权益)\b/)) return 'type';
           if (stream.match(/^(?:fluid|ice|steam|outside|plain|gain|suppress|time)\b/i)) return 'atom';
@@ -429,8 +452,11 @@
       const vi = isTail && cm._virtualStart >= 0 ? line - cm._virtualStart : -1;
       const futureRow = isTail && vi >= 0 && vi < virtualRows.length ? virtualRows[vi] : null;
       if (isTail) {
-        /* 未来记录的删除 / 剪切 = 作废这一期（不改正文，NT 的 virtual delete 同义）；
-         * 粘贴 / 插入 / 上移会改正文，禁用；最后是「确认」。 */
+        /* 未来记录：确认放最左；删除 / 剪切 = 作废这一期（不改正文，NT 的 virtual delete 同义）；
+         * 粘贴 / 插入 / 上移会改正文，禁用。 */
+        add('确认', () => {
+          if (h.onConfirmVirtual && futureRow) h.onConfirmVirtual(futureRow);
+        }, !futureRow || !h.onConfirmVirtual, true);
         add('删除', futureRow && h.onVoidVirtual ? () => h.onVoidVirtual(futureRow) : null,
           !futureRow || !h.onVoidVirtual);
         add('剪切', futureRow && h.onVoidVirtual
@@ -440,9 +466,8 @@
         add('粘贴', null, true);
         add('插入', null, true);
         add('上移', null, true);
-        add('确认', () => {
-          if (h.onConfirmVirtual && futureRow) h.onConfirmVirtual(futureRow);
-        }, !futureRow || !h.onConfirmVirtual, true);
+        add('编辑', futureRow && h.onEditVirtual ? () => h.onEditVirtual(futureRow) : null,
+          !futureRow || !h.onEditVirtual);
         return placeLineMenu(cm, line, x, y, menu);
       }
       add('删除', () => removeEditorLine(cm, line));

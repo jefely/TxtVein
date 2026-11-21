@@ -23,6 +23,11 @@
   const S = (x) => String(x == null ? '' : x);
   const TYPE_EN = { 费用: 'Expense', 收入: 'Income', 资产: 'Asset', 负债: 'Liability', 成本: 'Cost', 权益: 'Equity' };
   const EN_TYPE = {};
+const TAG_EN_DEFAULTS = {
+  分期: ['INST', 'Installment'],
+  固定每日: ['FD', 'Fixed Daily'],
+  固定每月: ['FM', 'Fixed Monthly'],
+};
   Object.keys(TYPE_EN).forEach((k) => { EN_TYPE[TYPE_EN[k].toLowerCase()] = k; });
   const SECTION_EN = { note: 'Notes', behavior: 'Behavior' };
   const SEP = /[，,]/;
@@ -442,17 +447,20 @@
       const catId = catRec && codeIndex[kind].get(S(catRec.name).replace(/\s+/g, '')) ? codeIndex[kind].get(S(catRec.name).replace(/\s+/g, '')) : '';
       const kEnCode = fields[2] && !fields[2].empty ? fields[2].value : autoLower(kcode);
       const kEnName = fields[3] && !fields[3].empty ? fields[3].value : kname;
+      const fallbackEn = kind === 'tag' ? TAG_EN_DEFAULTS[kname] : null;
+      const finalEnCode = (!fields[2] || fields[2].empty) && fallbackEn ? fallbackEn[0] : kEnCode;
+      const finalEnName = (!fields[3] || fields[3].empty) && fallbackEn ? fallbackEn[1] : kEnName;
       map[kid] = {
-        zh_name: kname, en_name: kEnName, zh_code: kcode, en_code: kEnCode,
+        zh_name: kname, en_name: finalEnName, zh_code: kcode, en_code: finalEnCode,
         domain: kdm.domain, parent_id: catId || '', weight: 10, sort: 100, pin: 0,
         category_key: parent.key, created_at: now.toISOString(), source_line: lineNo,
       };
       if (kind === 'tag') map[kid].kind = D.tagKindOf(kname);
       codeIndex[kind].set(kcode, kid);
       D.addAlias(dict, kcode, kid);
-      D.addAlias(dict, kEnCode, kid);
+      D.addAlias(dict, finalEnCode, kid);
       D.addAlias(dict, kname, kid);
-      D.addAlias(dict, kEnName, kid);
+      D.addAlias(dict, finalEnName, kid);
       tokens.push({ line: lineNo, from: nameField.from, to: nameField.to, role: 'def' });
       tokens.push({ line: lineNo, from: fields[1].from, to: fields[1].to, role: 'def' });
       stack.push({ indent, kind: 'item', key: kkey });

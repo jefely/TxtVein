@@ -20,14 +20,15 @@ function read(rel) {
   return fs.readFileSync(p, 'utf8');
 }
 
-function fontData() {
-  const p = path.join(ROOT, 'assets', 'cascadia', 'CascadiaCode.woff2');
+function fontData(name) {
+  const p = path.join(ROOT, 'assets', 'cascadia', name || 'CascadiaCode.woff2');
   if (!fs.existsSync(p)) return '';
   return fs.readFileSync(p).toString('base64');
 }
 
 function inlineCss(html) {
-  const font = fontData();
+  const font = fontData('CascadiaCode.woff2');
+  const fontBold = fontData('CascadiaCode-VF.woff2');
   return html.replace(/<link\s+rel="stylesheet"\s+href="([^"]+)"\s*\/?>/g, (m, href) => {
     if (/^https?:/i.test(href)) throw new Error('不允许外链 CSS：' + href);
     let css = read(href);
@@ -35,6 +36,12 @@ function inlineCss(html) {
       css = css.replace(
         /url\(["']?\.\.\/assets\/cascadia\/CascadiaCode\.woff2["']?\)/g,
         'url("data:font/woff2;base64,' + font + '")',
+      );
+    }
+    if (fontBold) {
+      css = css.replace(
+        /url\(["']?\.\.\/assets\/cascadia\/CascadiaCode-VF\.woff2["']?\)/g,
+        'url("data:font/woff2;base64,' + fontBold + '")',
       );
     }
     return '<style>\n/* ' + href + ' */\n' + css + '\n</style>';

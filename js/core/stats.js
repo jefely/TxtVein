@@ -28,8 +28,8 @@
   const DEBIT_TYPES = ['资产', '费用', '成本'];
 
   const TYPE_EN = {
-    收入: 'Income', 负债: 'Liabilities', 权益: 'Equity',
-    资产: 'Assets', 费用: 'Expenses', 成本: 'Cost',
+    收入: 'Income', 负债: 'Debt', 权益: 'Equity',
+    资产: 'Asset', 费用: 'Expense', 成本: 'Cost',
   };
 
   const STAT_COLS = {
@@ -42,12 +42,12 @@
   };
 
   const STAT_COLS_EN = {
-    收入: ['Opening total', 'Income', 'Refund', 'Closing total'],
-    负债: ['Opening', 'New debt', 'Repayment', 'Closing'],
-    权益: ['Opening', 'Increase', 'Decrease', 'Closing'],
-    资产: ['Opening', 'Inflow', 'Outflow', 'Closing'],
-    费用: ['Cumulative', 'Spend', 'Refund', 'Net spend'],
-    成本: ['Opening', 'Added', 'Consumed', 'Closing'],
+    收入: ['Open', 'Income', 'Refund', 'Close'],
+    负债: ['Open', 'Borrow', 'Repay', 'Close'],
+    权益: ['Open', 'Add', 'Cut', 'Close'],
+    资产: ['Open', 'In', 'Out', 'Close'],
+    费用: ['Total', 'Spend', 'Refund', 'Net'],
+    成本: ['Open', 'Add', 'Used', 'Close'],
   };
 
   const FIELDS = ['c1', 'c2', 'c3', 'c4'];
@@ -237,7 +237,7 @@
   /** 统计分类显示名：优先 dict.categories 里的名字。 */
   function categoryLabel(categories, key, lang) {
     const k = S(key);
-    if (!k || k === '未分类') return lang === 'en' ? 'Uncategorized' : '未分类';
+    if (!k || k === '未分类') return lang === 'en' ? 'Other' : '未分类';
     const list = Array.isArray(categories) ? categories : [];
     const c = list.find((x) => x && x.key === k) || list.find((x) => x && x.name === k);
     if (!c) return k;
@@ -248,7 +248,7 @@
   function statMoney(cents, type, field) {
     const n = Math.round(Number(cents) || 0);
     const abs = Math.abs(n);
-    const txt = (abs / 100).toFixed(1);
+    const txt = abs === 0 ? '0' : (abs / 100).toFixed(1);
     /* 负债的负余额 = 多还；其余负余额保留负号（NT 口径） */
     if (n < 0 && typeOf(type) === '负债' && (field === 'c1' || field === 'c4')) {
       return '多还 ' + txt;

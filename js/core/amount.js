@@ -147,6 +147,20 @@
     return formatPlain(cents);
   }
 
+  /**
+   * 查询金额列：不千分位、不强制两位小数；整数元不带小数。
+   * 3500 → ¥35 · 3550 → ¥35.5 · 3555 → ¥35.55 · -3500 → -¥35
+   */
+  function formatCompact(cents) {
+    const n = Math.round(Number(cents) || 0);
+    const neg = n < 0;
+    const a = Math.abs(n);
+    const yuan = Math.floor(a / 100);
+    const rest = a % 100;
+    const frac = rest ? '.' + String(rest).padStart(2, '0').replace(/0+$/, '') : '';
+    return (neg ? '-¥' : '¥') + yuan + frac;
+  }
+
   /** 存储层：只输出总分钟数 + m，不分解 d/h；例如 1590 -> 1590m。 */
   function formatMinutes(minutes) {
     const n = Math.round(Number(minutes) || 0);
@@ -186,6 +200,7 @@
     splitPeriod,
     centsToDisplay,
     formatPlain,
+    formatCompact,
     formatYuan,
     formatTime,
     formatMinutes,

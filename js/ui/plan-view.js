@@ -37,11 +37,12 @@
 
   /**
    * 未来记录：按具体日期排好，行形与真实流水相同。
-   * 每月固定 / 分期往后 6 个月，每日只有今天；已生成 / 已确认 / 已作废的不出现。
+   * 每月固定往后 24 个月，分期一次铺完全部剩余期，每日只有今天；
+   * 已生成 / 已确认 / 已作废的不出现。
    * @returns {Array<{text, planId, month, date, kind, amountCents, note, periodIndex}>}
    */
   function futureLineRows(model, horizon) {
-    const rows = rules.planOccurrences(model.plans || [], model.now, model.events || [], horizon || 6);
+    const rows = rules.planOccurrences(model.plans || [], model.now, model.events || [], horizon || 24);
     const mode = model.mode === 'CODE' ? 'CODE' : 'PLAIN';
     return rows.map((r) => {
       const p = r.plan;
@@ -58,9 +59,12 @@
         .join('');
       const domain = String(p.domain || 'P').toUpperCase();
       const pre = domain === 'P' ? '' : domain + ' ';
+      let note = String(r.note || '').trim().replace(/\/\//g, '/ /');
+      note = TV.dict.maskNote(model.dict, note, model.mode, model.lang);
       return {
         text: pre + r.date + ' ' + from + ' > ' + to + ' '
-          + TV.source.formatYuanExact(r.amountCents) + tags,
+          + TV.source.formatYuanExact(r.amountCents) + tags
+          + (note ? (note.startsWith('<') ? ' ' + note : ' // ' + note) : ''),
         planId: p.id,
         month: r.month,
         date: r.date,

@@ -45,6 +45,7 @@ function walk(dir, out) {
 const CORE = [
   'js/core/version.js',
   'js/core/text.js',
+  'js/core/pinyin.js',
   'js/core/system-dict-core.js',
   'js/core/system-dict.js',
   'js/core/user-dict.js',
@@ -86,6 +87,7 @@ const UI = [
   'js/ui/panels.js',
   'js/ui/plan-view.js',
   'js/ui/query-cols.js',
+  'js/ui/stats-cols.js',
   'js/ui/glass.js',
   'js/ui/app.js',
 ];
@@ -145,6 +147,9 @@ if (!exists('TxtVein.html')) {
   ok('单文件包含全部 UI 模块', UI.every((f) => single.includes('/* ' + f + ' */')));
   ok('单文件无外链脚本', !/<script\s+src="/.test(single));
   ok('单文件无外链样式', !/<link\s+rel="stylesheet"/.test(single));
+  ok('单文件含真粗体字体（600–700）',
+    (single.match(/data:font\/woff2;base64,/g) || []).length >= 2
+    && exists('assets/cascadia/CascadiaCode-VF.woff2'));
   ok('单文件含 TxtVein 品牌', single.includes('TXTVEIN'));
   ok('单文件体积 < 1.5MB', Buffer.byteLength(single) < 1.5 * 1024 * 1024, (Buffer.byteLength(single) / 1024).toFixed(1) + 'KB');
 }
@@ -157,7 +162,7 @@ console.log('7) 数据文件与测试');
   'tests/split-dict.test.cjs', 'tests/tree-view.test.cjs', 'tests/anchor.test.cjs',
   'tests/public-report.test.cjs', 'tests/suggester.test.cjs',
   'tests/text-bundle.test.cjs', 'tests/nt-bridge.test.cjs', 'tests/dict-v4.test.cjs',
-  'tests/query-cols.test.cjs'].forEach((f) => ok(f, exists(f)));
+  'tests/query-cols.test.cjs', 'tests/pinyin.test.cjs'].forEach((f) => ok(f, exists(f)));
 ok('示例账本存在', exists('js/core/example.js'));
 ['vendor/codemirror/codemirror.min.js', 'vendor/codemirror/codemirror.min.css',
   'vendor/codemirror/addon/hint/show-hint.min.js', 'vendor/codemirror/addon/lint/lint.min.js',

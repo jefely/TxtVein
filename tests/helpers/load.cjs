@@ -7,6 +7,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const FILES = [
   'js/core/version.js',
   'js/core/text.js',
+  'js/core/pinyin.js',
   'js/core/system-dict-core.js',
   'js/core/system-dict.js',
   'js/core/user-dict.js',

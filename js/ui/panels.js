@@ -10,37 +10,134 @@
   const dictMod = TV.dict;
   const dateMod = TV.date;
 
-  const PREFS_KEY = 'txtvein.prefs.v1';
+  const PREFS_KEY = 'txtvein.prefs.v3';
+  const V2_PREFS_KEY = 'txtvein.prefs.v2';
+  const LEGACY_PREFS_KEY = 'txtvein.prefs.v1';
   const COLOR_DEFS = [
     ['invalid', '无效/未识别', '--tv-invalid', '#B9C2CE'],
     ['linenumber', '行号', '--tv-linenumber', '#8f8f8f'],
     ['lineerror', '问题行号', '--tv-lineerror', '#ff7a45'],
     ['date', '日期', '--tv-date', '#DCDCAA'],
-    ['node', '节点', '--tv-node', '#9CDCFE'],
+    ['nodecode', '节点简码', '--tv-node-code', '#9CDCFE'],
+    ['nodename', '节点名称', '--tv-node-name', '#9CDCFE'],
+    ['dictcat', '字典分类', '--tv-dict-cat', '#E8E8E8'],
+    ['tagcode', '备注简码', '--tv-tag-code', '#4ADE80'],
+    ['tagname', '备注名称', '--tv-tag-name', '#DCDCAA'],
     ['operator', '运算符', '--tv-operator', '#D4D4D4'],
     ['amount', '金额', '--tv-amount', '#B5CEA8'],
     ['note', '备注', '--tv-note', '#6A9955'],
   ];
+  /* 纸主题的默认色（旧版是写死的，现在只是 paper 那一套的初始值）。 */
   const PAPER_COLORS = {
     invalid: '#8a3f3f', linenumber: '#8a8273', lineerror: '#a04a2a', date: '#7a4a20',
-    node: '#2f5d50', operator: '#4a463d', amount: '#3f5f3f', note: '#6b6558',
-  };
-  const DEFAULT_PREFS = {
-    colors: COLOR_DEFS.reduce((m, x) => { m[x[0]] = x[3]; return m; }, {}),
-    fontSize: 13,
-    theme: 'dark',
+    nodecode: '#2f5d50', nodename: '#2f5d50', dictcat: '#6c665a', tagcode: '#2a6f3e', tagname: '#7a5a1e',
+    operator: '#4a463d', amount: '#3f5f3f', note: '#6b6558',
   };
 
-  function loadPrefs() {
-    const out = JSON.parse(JSON.stringify(DEFAULT_PREFS));
-    try {
-      const raw = localStorage.getItem(PREFS_KEY);
-      const p = raw ? JSON.parse(raw) : null;
-      if (p && p.colors) Object.keys(out.colors).forEach((k) => { if (p.colors[k]) out.colors[k] = p.colors[k]; });
-      if (p && Number(p.fontSize)) out.fontSize = Math.max(11, Math.min(22, Number(p.fontSize)));
-      if (p && (p.theme === 'paper' || p.theme === 'dark')) out.theme = p.theme;
-    } catch (e) { /* ignore */ }
+  /* 每个页面一套字号；两套主题共用这一套。 */
+  const PAGE_DEFS = [
+    ['query', '查询', 11.5],
+    ['ledger', '流水', 13],
+    ['dict', '字典', 13],
+    ['mother', '节点', 12.5],
+    ['fixed', '固定', 14],
+    ['stats', '统计', 11.5],
+  ];
+  const FONT_MIN = 9;
+  const FONT_MAX = 24;
+
+  function clampFont(n) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return 13;
+    return Math.round(Math.max(FONT_MIN, Math.min(FONT_MAX, v)) * 2) / 2;
+  }
+  function defaultFonts() {
+    return PAGE_DEFS.reduce((m, x) => { m[x[0]] = x[2]; return m; }, {});
+  }
+  /** 旧版只有一个编辑器字号：迁移时给「流水 / 字典」用，其余页面用各自默认值。 */
+  function normalizeFonts(raw, legacySize) {
+    const out = defaultFonts();
+    if (Number(legacySize)) {
+      out.ledger = clampFont(legacySize);
+      out.dict = clampFont(legacySize);
+    }
+    if (raw && typeof raw === 'object') {
+      PAGE_DEFS.forEach(([k]) => { if (Number(raw[k])) out[k] = clampFont(raw[k]); });
+    }
     return out;
+  }
+
+  function darkColors() {
+    return COLOR_DEFS.reduce((m, x) => { m[x[0]] = x[3]; return m; }, {});
+  }
+  function paperColors() {
+    return Object.assign({}, PAPER_COLORS);
+  }
+  /** 深色 / 电纸书各一套颜色；字号只有一套，两主题共用。 */
+  function defaultPrefs() {
+    return {
+      theme: 'dark',
+      dark: { colors: darkColors(), fontSize: 13 },
+      paper: { colors: paperColors(), fontSize: 13 },
+      fonts: defaultFonts(),
+    };
+  }
+  function normalizeSet(raw, fallback) {
+    const out = { colors: Object.assign({}, fallback), fontSize: 13 };
+    if (raw && raw.colors) {
+      /* 旧版只有 node 一个颜色：迁移到简码 / 名称两项。 */
+      if (raw.colors.node && !raw.colors.nodecode) out.colors.nodecode = raw.colors.node;
+      if (raw.colors.node && !raw.colors.nodename) out.colors.nodename = raw.colors.node;
+      Object.keys(out.colors).forEach((k) => { if (raw.colors[k]) out.colors[k] = raw.colors[k]; });
+    }
+    if (raw && Number(raw.fontSize)) {
+      out.fontSize = Math.max(11, Math.min(22, Number(raw.fontSize)));
+    }
+    return out;
+  }
+
+  function readStored(key) {
+    try {
+      return JSON.parse(localStorage.getItem(key) || 'null');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function loadPrefs() {
+    const out = defaultPrefs();
+    const v3 = readStored(PREFS_KEY);
+    if (v3 && (v3.dark || v3.paper)) {
+      out.theme = v3.theme === 'paper' ? 'paper' : 'dark';
+      out.dark = normalizeSet(v3.dark, darkColors());
+      out.paper = normalizeSet(v3.paper, paperColors());
+      const base = out.theme === 'paper' ? out.paper.fontSize : out.dark.fontSize;
+      out.fonts = normalizeFonts(v3.fonts, base);
+      return out;
+    }
+    const v2 = readStored(V2_PREFS_KEY);
+    if (v2 && (v2.dark || v2.paper)) {
+      out.theme = v2.theme === 'paper' ? 'paper' : 'dark';
+      out.dark = normalizeSet(v2.dark, darkColors());
+      out.paper = normalizeSet(v2.paper, paperColors());
+      /* v2 → v3：深色字号一次性对齐纸主题；颜色保持各自主题的默认/已存值。 */
+      out.dark.fontSize = out.paper.fontSize;
+      out.fonts = normalizeFonts(null, out.paper.fontSize);
+      return out;
+    }
+    /* v1 只有一套字号与颜色：深色沿用，纸主题字号也取同一值，保证两套一致。 */
+    const v1 = readStored(LEGACY_PREFS_KEY);
+    if (v1) {
+      out.theme = v1.theme === 'paper' ? 'paper' : 'dark';
+      out.dark = normalizeSet({ colors: v1.colors, fontSize: v1.fontSize }, darkColors());
+      out.paper.fontSize = out.dark.fontSize;
+      out.fonts = normalizeFonts(null, v1.fontSize);
+    }
+    return out;
+  }
+
+  function activeSet(p) {
+    return p.theme === 'paper' ? p.paper : p.dark;
   }
 
   function applyPrefs(p) {
@@ -51,9 +148,12 @@
     /* 原生控件（select 弹层 / range / 滚动条 / 日期选择器）跟 meta color-scheme 走；
        只给 body 换纸色而不改这里，纸主题里的下拉弹层仍是黑底。 */
     root.style.colorScheme = paper ? 'light' : 'dark';
-    const colors = paper ? PAPER_COLORS : p.colors;
-    COLOR_DEFS.forEach((x) => root.style.setProperty(x[2], colors[x[0]] || x[3]));
-    root.style.setProperty('--tv-editor-font-size', p.fontSize + 'px');
+    const set = activeSet(p);
+    COLOR_DEFS.forEach((x) => root.style.setProperty(x[2], set.colors[x[0]] || x[3]));
+    const fonts = normalizeFonts(p.fonts, set.fontSize || 13);
+    PAGE_DEFS.forEach(([key]) => root.style.setProperty('--tv-font-' + key, fonts[key] + 'px'));
+    /* 兼容旧规则：编辑器默认字号跟随「流水」。 */
+    root.style.setProperty('--tv-editor-font-size', fonts.ledger + 'px');
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', paper ? '#f3efe3' : '#050505');
     const scheme = document.querySelector('meta[name="color-scheme"]');
@@ -344,7 +444,7 @@
           toast('已补英文 ' + r.filled + ' 个节点' + (r.unbound ? '；未绑定跳过 ' + r.unbound + ' 个' : ''), 'ok');
         }) : null,
         v4 ? button('校验', '', () => validateDict(app)) : null,
-        v4 ? button('+ 从母树', '', () => motherPicker(app, '')) : null,
+        v4 ? button('+ 从节点', '', () => motherPicker(app, '')) : null,
         addBtn,
       ].filter(Boolean));
 
@@ -355,7 +455,7 @@
 
       open('字典 · ' + (current === 'nodes' ? '节点' : current === 'cats' ? '统计分类' : '标签'), [tabs, toolbar, list], closeFoot([
         el('span', { class: 'help-text' }, [v4
-          ? '三级：会计类型 → 统计分类 → 节点；归属（母树）只挂在统计分类上。'
+          ? '三级：会计类型 → 统计分类 → 节点；归属（节点）只挂在统计分类上。'
           : '流水只存 ID；改名只改这里，历史不断链。']),
       ]));
     }
@@ -410,7 +510,7 @@
       });
       const summary = Object.keys(counts).map((k) => k + ' ' + counts[k]).join(' · ');
       open('绑定校验 · ' + issues.length + ' 项', [
-        el('p', { class: 'help-text' }, ['只做确定性检查：未绑定、失效、类型不一致、名字更像另一支。母树只是先验框架，最终以你的绑定为准。', ' ', summary]),
+        el('p', { class: 'help-text' }, ['只做确定性检查：未绑定、失效、类型不一致、名字更像另一支。节点只是先验框架，最终以你的绑定为准。', ' ', summary]),
         body,
       ], closeFoot([button('关闭', '', close)]));
     }
@@ -493,7 +593,7 @@
         el('div', { class: 'form-row' }, [field('名称', name), field('会计类型', typeSel)]),
         field('英文名（可选）', enName),
         error,
-        el('p', { class: 'help-text' }, ['统计分类只是你的分组；母树绑定在节点的编辑卡里选，固定在该节点上。']),
+        el('p', { class: 'help-text' }, ['统计分类只是你的分组；节点绑定在节点的编辑卡里选，固定在该节点上。']),
       ], closeFoot(actions));
     }
 
@@ -709,9 +809,9 @@
         el('div', { class: 'form-row' }, [field('名称', zhName), field('简码', zhCode)]),
         el('div', { class: 'form-row' }, [field('英文名（可选）', enName), field('英文简码（可选）', enCode)]),
         el('div', { class: 'form-row' }, [field('统计分类', catSel), field('域', domain)]),
-        field('母树绑定（固定）', bindSel),
+        field('节点绑定（固定）', bindSel),
         error,
-        el('p', { class: 'help-text' }, ['母树只提供先验框架；账本运算与统计以本地分组/类型为准（私人结构）。绑定固定在这个节点上（分支或叶子），只影响母树对照，不改变统计口径。']),
+        el('p', { class: 'help-text' }, ['节点只提供先验框架；账本运算与统计以本地分组/类型为准（私人结构）。绑定固定在这个节点上（分支或叶子），只影响节点对照，不改变统计口径。']),
       ], closeFoot([submit]));
     }
 
@@ -818,7 +918,7 @@
         el('div', { class: 'form-row-3' }, [field('大类', type), field('A 极形态', form), field('域', domain)]),
         el('div', { class: 'form-row-3' }, [field('权重', weight), field('排序', sort), field('置顶', pin)]),
         field('父节点（可选）', parent),
-        field('母树绑定（可选）', el('div', { class: 'anchor-pick' }, [
+        field('节点绑定（可选）', el('div', { class: 'anchor-pick' }, [
           el('div', { class: 'anchor-row' }, [anchor, suggestBtn]),
           suggestBox,
         ])),
@@ -1368,7 +1468,7 @@
       const q = input({ value: token || '', placeholder: '输入词，例如 星巴克 / 早餐 / 地铁' });
       const results = el('div', { class: 'suggest-box' });
       const note = el('p', { class: 'help-text' }, [
-        '只列母树叶子。采纳后自动建节点，并挂到该叶子所属的统计分类（顶级分支）。',
+        '只列节点叶子。采纳后自动建节点，并挂到该叶子所属的统计分类（顶级分支）。',
       ]);
       function search() {
         clear(results);
@@ -1397,7 +1497,7 @@
           });
         }
         if (!list.length) {
-          results.appendChild(el('div', { class: 'import-note' }, ['没有匹配的母树叶子；可「新建节点」手动选分类。']));
+          results.appendChild(el('div', { class: 'import-note' }, ['没有匹配的节点叶子；可「新建节点」手动选分类。']));
           return;
         }
         list.forEach((x) => {
@@ -1420,13 +1520,13 @@
       }
       q.addEventListener('input', () => { clearTimeout(q._t); q._t = setTimeout(search, 160); });
       q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
-      open('从母树建节点', [field('搜索母树叶子', q), results, note], closeFoot([
+      open('从节点建节点', [field('搜索节点叶子', q), results, note], closeFoot([
         button('取消', '', close),
       ]));
       setTimeout(search, 0);
     }
 
-    /* 整页「母树」：左私人字典，右母树；点母树分支/叶子即绑定 */
+    /* 整页「节点」：左私人字典，右节点；点节点分支/叶子即绑定 */
     function renderMotherPage(app, host) {
       const s = app.getState();
       clear(host);
@@ -1452,10 +1552,10 @@
 
       const qPriv = input({ placeholder: '搜索私人节点 / 简码 / 绑定' });
       qPriv.className = 'mother-search';
-      const qMom = input({ placeholder: '搜索母树分支 / 叶子 / 推荐码' });
+      const qMom = input({ placeholder: '搜索节点分支 / 叶子 / 推荐码' });
       qMom.className = 'mother-search';
 
-      const hint = el('div', { class: 'mother-hint' }, ['左：点一个私人节点选中；右：点母树的分支或叶子即绑定。']);
+      const hint = el('div', { class: 'mother-hint' }, ['左：点一个私人节点选中；右：点节点的分支或叶子即绑定。']);
       const left = el('div', { class: 'mother-tree' });
       const right = el('div', { class: 'mother-tree' });
 
@@ -1480,7 +1580,7 @@
           const hit = right.querySelector('[data-id="' + n.anchor_id + '"]');
           if (hit) hit.classList.add('is-bound');
         }
-        hint.textContent = '已选：' + (n ? (n.zh_code || '—') + '，' + n.zh_name : '') + '；点右边母树的分支或叶子即绑定。';
+        hint.textContent = '已选：' + (n ? (n.zh_code || '—') + '，' + n.zh_name : '') + '；点右边节点的分支或叶子即绑定。';
       }
 
       function nodeRow(id, depth) {
@@ -1617,7 +1717,7 @@
         button('校验', '', () => validateDict(app)),
         button('+ 分类', '', () => categoryForm(app)),
         button('+ 节点', '', () => nodeForm(app)),
-        button('+ 从母树', '', () => motherPicker(app, '')),
+        button('+ 从节点', '', () => motherPicker(app, '')),
       ]);
 
       page.appendChild(bar);
@@ -1631,7 +1731,7 @@
         ]),
         el('div', { class: 'mother-pane' }, [
           el('div', { class: 'mother-pane-head' }, [
-            el('b', {}, ['母树']),
+            el('b', {}, ['节点']),
             el('span', { class: 'mother-count' }, ['先选左边节点，再点分支/叶子']),
           ]),
           right,
@@ -1643,16 +1743,32 @@
 
     function showSettings(app) {
       const p = loadPrefs();
-      const font = el('input', { type: 'number', min: '11', max: '22', value: String(p.fontSize) });
-      font.addEventListener('input', () => {
-        p.fontSize = Math.max(11, Math.min(22, Number(font.value) || 13));
-        savePrefs(p);
-        if (app.refreshEditors) app.refreshEditors();
+      const setOf = () => activeSet(p);
+      const fontInputs = {};
+      const fontRows = PAGE_DEFS.map(([key, label, def]) => {
+        const input = el('input', {
+          type: 'number', min: String(FONT_MIN), max: String(FONT_MAX), step: '0.5',
+          value: String(p.fonts[key] || def),
+        });
+        input.addEventListener('input', () => {
+          p.fonts[key] = clampFont(input.value);
+          savePrefs(p);
+          if (app.refreshEditors) app.refreshEditors();
+        });
+        input.addEventListener('change', () => {
+          input.value = String(p.fonts[key]);
+        });
+        fontInputs[key] = input;
+        return el('div', { class: 'settings-row' }, [
+          el('span', {}, [label]), input, el('span', { class: 'help-text' }, ['px']),
+        ]);
       });
+      const colorInputs = {};
       const colorRows = COLOR_DEFS.map((x) => {
-        const swatch = el('input', { type: 'color', value: p.colors[x[0]] || x[3] });
+        const swatch = el('input', { type: 'color', value: setOf().colors[x[0]] || x[3] });
+        colorInputs[x[0]] = swatch;
         swatch.addEventListener('input', () => {
-          p.colors[x[0]] = swatch.value;
+          setOf().colors[x[0]] = swatch.value;
           savePrefs(p);
         });
         return el('div', { class: 'settings-row' }, [
@@ -1661,6 +1777,18 @@
           el('code', {}, [x[3]]),
         ]);
       });
+      /* 切主题时把字号 / 色块换成另一套的值，不关面板。 */
+      const scopeNote = el('p', { class: 'help-text' });
+      function paintSettings() {
+        PAGE_DEFS.forEach(([key, , def]) => {
+          if (fontInputs[key]) fontInputs[key].value = String(p.fonts[key] || def);
+        });
+        COLOR_DEFS.forEach((x) => {
+          if (colorInputs[x[0]]) colorInputs[x[0]].value = setOf().colors[x[0]] || x[3];
+        });
+        scopeNote.textContent = '当前改的是「' + (p.theme === 'paper' ? '电纸书' : '深色')
+          + '」这一套颜色；页面字号两套主题共用。';
+      }
       const themeSel = el('select', { class: 'input pv-select', style: 'min-width:120px' }, [
         el('option', { value: 'dark' }, ['深色']),
         el('option', { value: 'paper' }, ['电纸书']),
@@ -1669,8 +1797,10 @@
       themeSel.addEventListener('change', () => {
         p.theme = themeSel.value === 'paper' ? 'paper' : 'dark';
         savePrefs(p);
+        paintSettings();
         if (app.refreshEditors) app.refreshEditors();
       });
+      paintSettings();
       const glassSection = [];
       if (TV.glass && TV.glass.getParams) {
         const gp = TV.glass.getParams();
@@ -1722,22 +1852,31 @@
         el('h3', { class: 'settings-h' }, ['主题']),
         el('div', { class: 'settings-row' }, [
           el('span', {}, ['界面主题']), themeSel,
-          el('span', { class: 'help-text' }, ['电纸书：暖纸底 / 墨色字 / 关闭发光与玻璃']),
+          el('span', { class: 'help-text' }, ['深色 / 电纸书各有一套颜色；字号共用']),
+        ]),
+        el('h3', { class: 'settings-h' }, ['页面字号']),
+        el('p', { class: 'help-text' }, ['两套主题共用；单位 px（9–24）。']),
+        el('div', { class: 'settings-font-grid' }, fontRows),
+        el('h3', { class: 'settings-h' }, ['颜色']),
+        scopeNote,
+        ...colorRows,
+        el('p', { class: 'help-text' }, ['颜色只保存在本机浏览器；字号两套主题共用；都不写入账本。']),
+        el('div', { class: 'settings-row' }, [
+          button('恢复默认字号', '', () => {
+            p.fonts = defaultFonts();
+            savePrefs(p);
+            paintSettings();
+            if (app.refreshEditors) app.refreshEditors();
+          }),
+          button('恢复默认颜色', '', () => {
+            const fallback = p.theme === 'paper' ? paperColors() : darkColors();
+            COLOR_DEFS.forEach((x) => { setOf().colors[x[0]] = fallback[x[0]]; });
+            savePrefs(p);
+            paintSettings();
+            if (app.refreshEditors) app.refreshEditors();
+          }),
         ]),
         ...glassSection,
-        el('h3', { class: 'settings-h' }, ['字号']),
-        el('div', { class: 'settings-row' }, [
-          el('span', {}, ['编辑器字号']), font, el('span', { class: 'help-text' }, ['11–22 px']),
-        ]),
-        el('h3', { class: 'settings-h' }, ['颜色']),
-        ...colorRows,
-        el('p', { class: 'help-text' }, ['颜色与字号只保存在本机浏览器；不写入账本。']),
-        el('div', {}, [button('恢复默认颜色', '', () => {
-          const d = JSON.parse(JSON.stringify(DEFAULT_PREFS));
-          savePrefs(d);
-          close();
-          showSettings(app);
-        })]),
       ]);
     }
 
@@ -1767,6 +1906,16 @@
       showSettings,
       showPassword,
       confirm,
+      /* 顶栏「主题」按钮：深色 ↔ 电纸书；两套字号 / 颜色互不影响。 */
+      toggleTheme() {
+        const p = loadPrefs();
+        p.theme = p.theme === 'paper' ? 'dark' : 'paper';
+        savePrefs(p);
+        return p.theme;
+      },
+      getTheme() {
+        return loadPrefs().theme;
+      },
     };
   }
 

@@ -91,7 +91,7 @@ def drag(b, sid, x1, y1, dx):
     """Pointer drag for column-width handles (button must be on every move)."""
     b.call("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x1, "y": y1}, sid)
     b.call("Input.dispatchMouseEvent", {
-        "type": "mousePressed", "x": x1, "y": y1, "button": "left", "clickCount": 1,
+        "type": "mousePressed", "x": x1, "y": y1, "button": "left", "buttons": 1, "clickCount": 1,
     }, sid)
     for i in range(1, 6):
         b.call("Input.dispatchMouseEvent", {
@@ -103,6 +103,22 @@ def drag(b, sid, x1, y1, dx):
         "type": "mouseReleased", "x": x1 + dx, "y": y1, "button": "left", "clickCount": 1,
     }, sid)
     time.sleep(0.45)
+
+
+def js_drag_handle(b, sid, sel, dx):
+    """Synthetic pointer drag on a column handle (bypasses sticky-header hit-testing)."""
+    j(sid, """(function(){
+      var hd=document.querySelector(%s); if(!hd) return false;
+      var cell=hd.parentElement, r=hd.getBoundingClientRect();
+      var x=r.left+r.width/2, y=r.top+r.height/2;
+      function pe(type,cx){return new PointerEvent(type,{bubbles:true,pointerId:1,pointerType:'mouse',
+        button:0,buttons:type==='pointerup'?0:1,clientX:cx,clientY:y});}
+      hd.dispatchEvent(pe('pointerdown',x));
+      cell.dispatchEvent(pe('pointermove',x+%d));
+      cell.dispatchEvent(pe('pointerup',x+%d));
+      return true;
+    })()""" % (json.dumps(sel), dx, dx), b)
+    time.sleep(0.35)
 
 
 def setup(b, sid):
@@ -138,7 +154,7 @@ def main():
     ok("hud removed", j(sid, "!document.querySelector('#hud')", b))
     ok("domain bar removed", j(sid, "!document.querySelector('#domains')", b))
     ok("all records one stream", j(sid, "window.__txtvein.state().domain", b) == "")
-    ok("six page tabs", j(sid, "Array.from(document.querySelectorAll('.page-tab')).map(function(x){return x.innerText;}).join('/')", b) == "查询/流水/字典/母树/固定/统计")
+    ok("six page tabs", j(sid, "Array.from(document.querySelectorAll('.page-tab')).map(function(x){return x.innerText;}).join('/')", b) == "统计/查询/字典/流水/固定/节点")
     shot(b, sid, os.path.join(ROOT, "shots", "01-editor.png"))
 
     print("== input macros / mouse / space ==")
@@ -303,16 +319,39 @@ def main():
     time.sleep(0.7)
     ok("report", "统计" in j(sid, "document.querySelector('#report-view').innerText", b))
     ok("stats tabs", j(sid, "document.querySelectorAll('.stats-tab').length", b) == 4)
-    ok("private scope only", j(sid, "!document.querySelector('.report-mode-btn')", b) is True
-       and j(sid, "document.querySelector('.stats-scope').textContent", b) == "私人结构")
-    ok("no public scope button", "公共归属" not in j(sid, "document.querySelector('#report-view').innerText", b))
-    ok("stats third query", j(sid, "document.querySelectorAll('.stats-query .q-row:not(.is-head)').length", b) >= 1)
+    ok("no stats scope controls", j(sid, "!document.querySelector('.stats-scope') && !document.querySelector('.report-mode-btn')", b) is True
+       and "私人结构" not in j(sid, "document.querySelector('#report-view').innerText", b)
+       and "公共归属" not in j(sid, "document.querySelector('#report-view').innerText", b))
+    ok("stats third query", j(sid, """(function(){
+      var rows=document.querySelectorAll('.stats-query .q-row:not(.is-head)').length;
+      var m=document.querySelector('.stats-right');
+      var q=document.querySelector('.stats-query');
+      var g=document.querySelector('.stats-gutter-query');
+      if(!rows || !m || !q || g) return false;
+      var rw=Math.abs(m.getBoundingClientRect().width - q.getBoundingClientRect().width);
+      return rw <= 2;
+    })()""", b) is True)
     ok("stats months", j(sid, "document.querySelectorAll('.stats-month').length", b) == 12)
     ok("stats year after title", j(sid, """(function(){
       var wrap=document.querySelector('.stats-tabs-wrap');
       var kids=Array.from(wrap.children);
       var y=wrap.querySelector('.stats-year-input');
-      return !!y && kids.indexOf(y) === 2 && kids[1].classList.contains('stats-title');
+      return !!y && kids.indexOf(y) === 1 && kids[0].classList.contains('stats-title');
+    })()""", b) is True)
+    ok("stats controls same size", j(sid, """(function(){
+      var y=document.querySelector('.stats-year-input');
+      var yr=y.getBoundingClientRect();
+      return Array.from(document.querySelectorAll('.stats-tab')).every(function(t){
+        var r=t.getBoundingClientRect();
+        return Math.abs(r.width - yr.width) < 1 && Math.abs(r.height - yr.height) < 1;
+      });
+    })()""", b) is True)
+    ok("stats control gaps equal", j(sid, """(function(){
+      var wrap=document.querySelector('.stats-tabs-wrap');
+      var tabs=document.querySelector('.stats-tabs');
+      var a=parseFloat(getComputedStyle(wrap).columnGap) || 0;
+      var c=parseFloat(getComputedStyle(tabs).columnGap) || 0;
+      return a > 0 && Math.abs(a - c) < 0.5;
     })()""", b) is True)
     ok("stats months left", j(sid, """(function(){
       var m=document.querySelector('.stats-months');
@@ -323,7 +362,129 @@ def main():
     ok("stats detail", j(sid, "document.querySelectorAll('.stats-left .sd-row:not(.is-head)').length", b) >= 2)
     j(sid, "Array.from(document.querySelectorAll('.stats-left .sd-row')).find(function(r){return !r.classList.contains('is-head') && !r.classList.contains('is-total');}).click()", b)
     time.sleep(0.3)
-    ok("stats right list", j(sid, "document.querySelectorAll('.stats-right .sd-row:not(.is-head)').length", b) >= 1)
+    ok("stats right list", j(sid, """(function(){
+      var rows=Array.from(document.querySelectorAll('.stats-right .sd-row:not(.is-head)'));
+      if(!rows.length) return false;
+      return rows.every(function(r){
+        var t=r.children[r.children.length-1].textContent.trim();
+        return t !== '—' && t !== '-' && t !== '–';
+      });
+    })()""", b) is True)
+    # 统计页第三区「流水查询」同样支持多节点
+    def s_from(text):
+        j(sid, """(function(){var i=document.querySelector('.stats-query .q-field:nth-child(2) input');
+          i.value=%s; i.dispatchEvent(new Event('input',{bubbles:true})); return true;})()""" % json.dumps(text), b)
+        time.sleep(0.25)
+        return j(sid, "document.querySelectorAll('.stats-query .q-row:not(.is-head)').length", b)
+    s_sal = s_from("sal")
+    s_wx1 = s_from("wx1")
+    s_multi = s_from("sal,wx1")
+    s_space = s_from("sal wx1")
+    ok("stats query multi node", s_multi > 0 and s_multi == s_sal + s_wx1 and s_space == s_multi,
+       "%s + %s = %s / space %s" % (s_sal, s_wx1, s_multi, s_space))
+    s_from("")
+    ok("stats type title tight", j(sid, """(function(){
+      var t=document.querySelector('.stats-left .sd-total-title');
+      var row=t.parentElement;
+      var amt=document.querySelector('.stats-left .sd-row.is-total:not(.is-total-title)');
+      var head=document.querySelector('.stats-left .sd-row.is-head');
+      var cs=getComputedStyle(t), rs=getComputedStyle(row);
+      return cs.textAlign==='left' && cs.alignSelf==='end' && rs.borderBottomWidth==='0px' && rs.alignItems==='end'
+        && row.getBoundingClientRect().height < 26
+        && amt.getBoundingClientRect().height < 18
+        && head.getBoundingClientRect().height < 26;
+    })()""", b) is True)
+    ok("stats headers aligned", j(sid, """(function(){
+      var heads=Array.from(document.querySelectorAll('.stats-left .sd-row.is-head'));
+      var mid=Array.from(document.querySelectorAll('.stats-right .sd-row.is-head > span'));
+      if(!heads.length || !mid.length) return false;
+      var leftOk=heads.every(function(h){
+        var c=Array.from(h.children);
+        return c.length > 1
+          && getComputedStyle(c[0]).textAlign === 'center'
+          && c.slice(1).every(function(s){
+            return s.classList.contains('sd-num') && getComputedStyle(s).textAlign === 'right';
+          });
+      });
+      var midOk=mid.every(function(s){ return getComputedStyle(s).textAlign === 'center'; });
+      var rows=Array.from(document.querySelectorAll('.stats-right .sd-row:not(.is-head)'));
+      var dataOk=rows.length > 0 && rows.every(function(r){
+        var c=Array.from(r.children);
+        var last=getComputedStyle(c[c.length-1]).textAlign;
+        return c.length >= 6
+          && c.slice(0,4).every(function(s){ return getComputedStyle(s).textAlign === 'center'; })
+          && getComputedStyle(c[c.length-2]).textAlign === 'right'
+          && (last === 'left' || last === 'start');
+      });
+      return leftOk && midOk && dataOk;
+    })()""", b) is True)
+    ok("stats list fonts match query", j(sid, """(function(){
+      var m=document.querySelector('.stats-right .sd-row.is-head');
+      var q=document.querySelector('.stats-query .q-row.is-head');
+      var mc=document.querySelector('.stats-right-head .stats-clear');
+      var qc=document.querySelector('.stats-query .q-clear');
+      return !!m && !!q && !!mc && !!qc
+        && getComputedStyle(m).fontSize === getComputedStyle(q).fontSize
+        && getComputedStyle(mc).fontSize === getComputedStyle(qc).fontSize;
+    })()""", b) is True)
+    # 中间列表列宽：拖动「序」右边缘 +24px，备注列自动让宽；双击复位
+    before = j(sid, """(function(){
+      var h=document.querySelector('.stats-right .stats-table[data-list="list"] .sd-row.is-head');
+      var c=h.children; return [Math.round(c[0].getBoundingClientRect().width),
+        Math.round(c[c.length-1].getBoundingClientRect().width)];
+    })()""", b)
+    js_drag_handle(b, sid, '.stats-right .stats-table[data-list="list"] .sd-row.is-head > span:first-child .q-col-handle', 24)
+    after = j(sid, """(function(){
+      var h=document.querySelector('.stats-right .stats-table[data-list="list"] .sd-row.is-head');
+      var c=h.children; return [Math.round(c[0].getBoundingClientRect().width),
+        Math.round(c[c.length-1].getBoundingClientRect().width)];})()""", b)
+    j(sid, """(function(){
+      var h=document.querySelector('.stats-right .stats-table[data-list="list"] .sd-row.is-head');
+      var hd=h.children[0].querySelector('.q-col-handle');
+      hd.dispatchEvent(new MouseEvent('dblclick',{bubbles:true})); return true;})()""", b)
+    time.sleep(0.3)
+    reset = j(sid, """(function(){
+      var h=document.querySelector('.stats-right .stats-table[data-list="list"] .sd-row.is-head');
+      return Math.round(h.children[0].getBoundingClientRect().width);})()""", b)
+    ok("stats list resize", after[0] >= before[0] + 20
+       and after[1] <= before[1] - 20
+       and reset == before[0], "%s -> %s, note %s -> %s, reset %s" % (before[0], after[0], before[1], after[1], reset))
+    ok("stats header title/clear", j(sid, """(function(){
+      var h=document.querySelector('.stats-right-head');
+      var t=h.querySelector('.stats-list-title');
+      return !!t && t.nextElementSibling && t.nextElementSibling.classList.contains('stats-clear');
+    })()""", b) is True)
+    ok("stats selected centered", j(sid, """(function(){
+      var h=document.querySelector('.stats-right-head');
+      var s=h.querySelector('.stats-selected');
+      if(!s || s.hidden) return false;
+      var r=h.getBoundingClientRect(), x=s.getBoundingClientRect();
+      return Math.abs((r.left+r.width/2)-(x.left+x.width/2)) < 2;
+    })()""", b) is True)
+    j(sid, "document.querySelector('.stats-clear').click()", b)
+    time.sleep(0.2)
+    ok("stats clear focuses search",
+       j(sid, "document.activeElement === document.querySelector('.stats-search-input')", b) is True)
+    j(sid, "document.querySelectorAll('.stats-tab')[1].click()", b)
+    time.sleep(0.3)
+    j(sid, """(function(){var i=document.querySelector('.stats-search-input');
+      i.value='wx1'; i.dispatchEvent(new Event('input',{bubbles:true})); return true;})()""", b)
+    time.sleep(0.3)
+    ok("stats search node code", j(sid, "document.querySelectorAll('.stats-search-hit').length", b) >= 1)
+    j(sid, """(function(){var i=document.querySelector('.stats-search-input');
+      i.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); return true;})()""", b)
+    time.sleep(0.4)
+    ok("stats search selects", j(sid, "document.querySelector('.stats-selected').textContent", b) == "wx1")
+    j(sid, "document.querySelectorAll('.stats-tab')[2].click()", b)
+    time.sleep(0.3)
+    j(sid, """(function(){var i=document.querySelector('.stats-search-input');
+      i.value='kf'; i.dispatchEvent(new Event('input',{bubbles:true})); return true;})()""", b)
+    time.sleep(0.3)
+    ok("stats search pinyin initials", j(sid, "document.querySelectorAll('.stats-search-hit').length", b) >= 1)
+    j(sid, "document.querySelectorAll('.stats-tab')[0].click()", b)
+    time.sleep(0.3)
+    j(sid, "document.querySelector('.stats-clear').click()", b)
+    time.sleep(0.2)
     for _ in range(4):
         if j(sid, "document.querySelector('#btn-candidates').hidden", b) is True:
             break
@@ -342,9 +503,24 @@ def main():
     ok("query rows", wait(b, sid, "document.querySelectorAll('#query-view .q-panel').length === 3 && document.querySelectorAll('#query-view .q-row:not(.is-head)').length > 2", 4))
     dates = j(sid, "Array.from(document.querySelectorAll('#query-view .q-panel .q-field:first-child input')).map(function(x){return x.value;}).join('/')", b)
     ok("query default dates", len(dates.split('/')) == 3 and len(dates.split('/')[1]) == 4 and len(dates.split('/')[2]) == 2, dates)
-    j(sid, "document.querySelector('.q-panel[data-query=\"A\"] .q-field:first-child input').value='261115'; document.querySelector('.q-panel[data-query=\"A\"] .q-field:first-child input').dispatchEvent(new Event('input',{bubbles:true}));", b)
+    # 转出/转入支持多节点：逗号/空格分隔，字段内 OR
+    def q_from(text):
+        j(sid, """(function(){var i=document.querySelector('.q-panel[data-query="B"] .q-field:nth-child(2) input');
+          i.value=%s; i.dispatchEvent(new Event('input',{bubbles:true})); return true;})()""" % json.dumps(text), b)
+        time.sleep(0.25)
+        return j(sid, "document.querySelectorAll('.q-panel[data-query=\"B\"] .q-row:not(.is-head)').length", b)
+    n_sal = q_from("sal")
+    n_wx1 = q_from("wx1")
+    n_multi = q_from("sal,wx1")
+    n_space = q_from("sal wx1")
+    ok("query multi node", n_multi > 0 and n_multi == n_sal + n_wx1 and n_space == n_multi,
+       "%s + %s = %s / space %s" % (n_sal, n_wx1, n_multi, n_space))
+    q_from("")
+    q_date = j(sid, "document.querySelector('.q-panel[data-query=\"A\"] .q-row:not(.is-head)').children[1].textContent", b)
+    j(sid, """(function(){var i=document.querySelector('.q-panel[data-query="A"] .q-field:first-child input');
+      i.value=%s; i.dispatchEvent(new Event('input',{bubbles:true})); return true;})()""" % json.dumps(q_date), b)
     time.sleep(0.3)
-    ok("query filters", j(sid, "document.querySelectorAll('.q-panel[data-query=\"A\"] .q-row:not(.is-head)').length", b) >= 1)
+    ok("query filters", j(sid, "document.querySelectorAll('.q-panel[data-query=\"A\"] .q-row:not(.is-head)').length", b) >= 1, q_date)
     # 列宽：拖 B 的「转出」右边缘 +24px，只有它变宽、备注反向变窄，松手写本机
     qw_before = j(sid, """Array.from(document.querySelectorAll('#query-view .q-panel[data-query="B"] .q-row.is-head')[0].children)
       .map(function(c){return Math.round(c.getBoundingClientRect().width);})""", b)
@@ -360,18 +536,105 @@ def main():
        and qw_after[5] <= qw_before[5] - 12
        and qw_after[0] == qw_before[0] and qw_after[4] == qw_before[4], str(qw_before) + ' -> ' + str(qw_after))
     ok("query columns stored", j(sid, "!!localStorage.getItem('txtvein.query.cols.v1')", b) is True)
+    ok("query header centered", j(sid, """(function(){
+      return Array.from(document.querySelector('#query-view .q-row.is-head').children)
+        .every(function(c){return getComputedStyle(c).textAlign === 'center';});
+    })()""", b) is True)
+    ok("query data alignment", j(sid, """(function(){
+      var row=document.querySelector('#query-view .q-panel[data-query="B"] .q-row:not(.is-head)');
+      if(!row) return false;
+      var a=Array.from(row.children).map(function(c){return getComputedStyle(c).textAlign;});
+      return a[0]==='center' && a[1]==='center' && a[2]==='center' && a[3]==='center'
+        && a[4]==='right' && a[5]==='left';
+    })()""", b) is True)
+    ok("query amount compact", j(sid, """(function(){
+      var row=document.querySelector('#query-view .q-panel[data-query="B"] .q-row:not(.is-head)');
+      var s=row && row.children[4] ? row.children[4].textContent.trim() : '';
+      return /^¥\\d+(?:\\.\\d{1,2})?$/.test(s) && s.indexOf(',') < 0;
+    })()""", b) is True)
     j(sid, "document.querySelector('#btn-fixed').click()", b)
     ok("fixed editor", wait(b, sid, "!!document.querySelector('.fixed-editor .CodeMirror')", 4))
     fixed_src = j(sid, "document.querySelector('.fixed-editor .CodeMirror').CodeMirror.getValue()", b)
     ok("fixed table has two areas", "[固定]" in fixed_src and "[分期]" in fixed_src, fixed_src[:120])
     ok("fixed no raw IDs", "N_" not in fixed_src and "T_" not in fixed_src, fixed_src[:160])
+    ok("fixed space macro", j(sid, """(function(){
+      var cm=document.querySelector('.fixed-editor .CodeMirror').CodeMirror;
+      var orig=cm.getValue();
+      cm.setValue(orig+'\\nTEST');
+      var line=cm.lineCount()-1;
+      cm.setCursor({line:line,ch:4});
+      cm.focus();
+      var ta=cm.getInputField();
+      function sp(){ta.dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',keyCode:32,which:32,bubbles:true,cancelable:true}));}
+      sp(); sp(); var two=cm.getLine(line);
+      sp(); var three=cm.getLine(line);
+      cm.setValue(orig+'\\n');
+      var blank=cm.lineCount()-1;
+      cm.setCursor({line:blank,ch:0});
+      sp(); var daily=cm.getLine(blank);
+      cm.setValue(orig+'\\n19');
+      var dayLine=cm.lineCount()-1;
+      cm.setCursor({line:dayLine,ch:2});
+      sp(); var dayNo=cm.getLine(dayLine);
+      cm.setValue(orig); cm.clearHistory();
+      return two === 'TEST > ' && three === 'TEST < '
+        && daily === '每日 ' && dayNo === '19日 ';
+    })()""", b) is True)
+    ok("fixed line menu", j(sid, """(function(){
+      var cm=document.querySelector('.fixed-editor .CodeMirror').CodeMirror;
+      cm.focus();
+      var ln=cm.getWrapperElement().querySelector('.CodeMirror-linenumber');
+      if(!ln) return false;
+      ln.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:20,clientY:20}));
+      var menu=document.querySelector('.cm-line-menu');
+      if(!menu) return false;
+      var labels=Array.from(menu.querySelectorAll('button')).map(function(b){return b.textContent;}).join('/');
+      menu.remove();
+      return labels === '删除/剪切/复制/粘贴/插入/上移';
+    })()""", b) is True)
     ok("top menu order",
        j(sid, "Array.from(document.querySelectorAll('.top-menu .menu-btn')).map(function(x){return x.textContent.trim();}).join('/')", b)
-       == "导入/导出/设置/帮助/掩码/语言")
+       == "导入/导出/语言/帮助/设置/主题/掩码")
+    ok("theme button label", j(sid, "document.querySelector('#btn-theme').textContent", b) == "主题")
+    j(sid, "document.querySelector('#btn-theme').click()", b)
+    time.sleep(0.4)
+    ok("theme toggles to paper", j(sid, "document.documentElement.dataset.theme", b) == "paper")
+    j(sid, "document.querySelector('#btn-theme').click()", b)
+    time.sleep(0.4)
+    ok("theme toggles back", j(sid, "document.documentElement.dataset.theme", b) == "dark")
     j(sid, "document.querySelector('#btn-settings').click()", b)
     time.sleep(0.3)
     ok("settings opens", j(sid, "document.querySelector('#modal-title').textContent", b) == "设置")
-    ok("settings colors", j(sid, "document.querySelectorAll('#modal-body input[type=color]').length", b) == 8)
+    ok("settings colors", j(sid, "document.querySelectorAll('#modal-body input[type=color]').length", b) == 12)
+    ok("settings page fonts", j(sid, "document.querySelectorAll('#modal-body input[type=number]').length", b) == 6)
+    j(sid, """(function(){
+      var fs=document.querySelectorAll('#modal-body input[type=number]');
+      fs[1].value='15'; fs[1].dispatchEvent(new Event('input',{bubbles:true}));
+      var s=document.querySelector('#modal-body select');
+      s.value='paper'; s.dispatchEvent(new Event('change',{bubbles:true}));
+      return true;
+    })()""", b)
+    time.sleep(0.3)
+    ok("page fonts shared across themes", j(sid, "document.documentElement.dataset.theme", b) == "paper"
+       and j(sid, "document.querySelectorAll('#modal-body input[type=number]')[1].value", b) == "15"
+       and j(sid, "getComputedStyle(document.documentElement).getPropertyValue('--tv-font-ledger')", b).strip() == "15px"
+       and j(sid, "getComputedStyle(document.querySelector('.editor-pane[data-file=\"ledger\"] .CodeMirror')).fontSize", b) == "15px")
+    j(sid, """(function(){
+      var fs=document.querySelectorAll('#modal-body input[type=number]');
+      fs[0].value='14'; fs[0].dispatchEvent(new Event('input',{bubbles:true}));
+      return true;
+    })()""", b)
+    time.sleep(0.25)
+    ok("page fonts independent", j(sid, "getComputedStyle(document.documentElement).getPropertyValue('--tv-font-query')", b).strip() == "14px"
+       and j(sid, "getComputedStyle(document.documentElement).getPropertyValue('--tv-font-ledger')", b).strip() == "15px"
+       and j(sid, "getComputedStyle(document.querySelector('#query-view .q-row:not(.is-head)')).fontSize", b) == "14px")
+    j(sid, "Array.from(document.querySelectorAll('#modal-body button')).find(function(x){return x.textContent==='恢复默认字号';}).click()", b)
+    time.sleep(0.3)
+    ok("settings reset fonts", j(sid, "getComputedStyle(document.documentElement).getPropertyValue('--tv-font-query')", b).strip() == "11.5px"
+       and j(sid, "getComputedStyle(document.documentElement).getPropertyValue('--tv-font-ledger')", b).strip() == "13px")
+    j(sid, """(function(){var s=document.querySelector('#modal-body select');
+      s.value='dark'; s.dispatchEvent(new Event('change',{bubbles:true})); return true;})()""", b)
+    time.sleep(0.25)
     j(sid, """(function(){var c=document.querySelector('#modal-body input[type=color]');
       c.value='#112233'; c.dispatchEvent(new Event('input',{bubbles:true})); return true;})()""", b)
     time.sleep(0.2)
@@ -384,9 +647,11 @@ def main():
     j(sid, "document.querySelector('#modal-close').click()", b)
     j(sid, "document.querySelector('#btn-lang').click()", b)
     time.sleep(0.5)
-    ok("english tabs", j(sid, "document.querySelector('#page-tabs').innerText", b) == "Query\nLedger\nDictionary\nMother\nFixed\nStats")
+    ok("english tabs", j(sid, "document.querySelector('#page-tabs').innerText", b) == "Stats\nQuery\nDict\nLedger\nFixed\nNode")
     ok("english menu", "Settings" in j(sid, "document.querySelector('.top-menu').innerText", b)
-       and "Mask" in j(sid, "document.querySelector('.top-menu').innerText", b))
+       and "Mask" in j(sid, "document.querySelector('.top-menu').innerText", b)
+       and "Language" in j(sid, "document.querySelector('.top-menu').innerText", b)
+       and "Theme" in j(sid, "document.querySelector('.top-menu').innerText", b))
     j(sid, "document.querySelector('#btn-lang').click()", b)
     time.sleep(0.3)
 

@@ -774,23 +774,23 @@
    * 自动挑 wx1 / wx2 这类已固化的唯一后缀，保证屏幕上不出现两个 wx。
    */
   function displayCode(dict, id, lang) {
-    const x = dict.nodes[id] || dict.tags[id];
+    const x = dict.nodes[id] || dict.tags[id] || dict.behaviors[id];
     if (!x) return id;
+    const kindOf = (xid) => (dict.nodes[xid] ? 'node' : (dict.tags[xid] ? 'tag' : (dict.behaviors[xid] ? 'behavior' : '')));
+    const kind = kindOf(id);
     const domain = S(x.domain || 'P').toUpperCase();
     const primary = lang === 'en' ? (x.en_code || x.zh_code) : (x.zh_code || x.en_code);
     const arrAll = primary ? (dict.aliases[primary] || []) : [];
-    /* 只把同域目标算进多义判断：P 的 wx 不会因为 C 也有 wx 而变成 wx1。 */
-    const arr = arrAll.filter((other) => {
-      const y = dict.nodes[other] || dict.tags[other];
-      return y && S(y.domain || 'P').toUpperCase() === domain;
-    });
+    /* 简码按节点 / 标签 / 行为项分开判重：标签 HF 不会因为节点也有 HF 变成 HF2。 */
+    const arr = arrAll.filter((other) => kindOf(other) === kind
+      && S((dict.nodes[other] || dict.tags[other] || dict.behaviors[other] || {}).domain || 'P').toUpperCase() === domain);
     if (primary && arr.length === 1 && arr[0] === id) return primary;
     const esc = String(primary || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const suffixed = uniqueAliases(dict, id)
       .filter((a) => primary && new RegExp('^' + esc + '\\d+$').test(a))
       .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
     if (suffixed.length) return suffixed[0];
-    /* 还没有显式固化 wx1/wx2 时，按同域别名顺序临时编号，保证屏幕不出现两个 wx */
+    /* 还没有显式固化 wx1/wx2 时，按同域同 kind 别名顺序临时编号，保证屏幕不出现两个 wx */
     if (primary && arr.length > 1 && arr.includes(id)) return primary + (arr.indexOf(id) + 1);
     const ascii = uniqueAliases(dict, id).filter((a) => /^[A-Za-z0-9_]+$/.test(a));
     if (ascii.length) return ascii.sort((a, b) => a.length - b.length || a.localeCompare(b))[0];
@@ -819,6 +819,28 @@
       return primary || id;
     }
     return lang === 'en' ? (h.en_name || h.zh_name) : (h.zh_name || h.en_name);
+  }
+
+  /** 掩码模式下把备注里的标签名替换成简码；明文模式原样返回。 */
+  function maskNote(dict, text, mode, lang) {
+    let s = S(text);
+    if (mode !== 'CODE' || !s) return s;
+    const pairs = [];
+    Object.keys((dict && dict.tags) || {}).forEach((id) => {
+      const t = dict.tags[id];
+      if (!t) return;
+      const code = renderTag(dict, id, 'CODE', lang) || '';
+      if (!code || code === id) return;
+      [t.zh_name, t.en_name].forEach((name) => {
+        const n = S(name).trim();
+        if (n && n !== code && !pairs.some((p) => p[0] === n)) pairs.push([n, code]);
+      });
+    });
+    pairs.sort((a, b) => b[0].length - a[0].length);
+    pairs.forEach(([name, code]) => { s = s.split(name).join(code); });
+    /* 掩码下的分期标记只留 2/7，不再显示「第…期」 */
+    s = s.replace(/(<\s*\d{4}[A-Za-z0-9_]+)\s*第\s*(\d+)\s*\/\s*(\d+)\s*期/g, '$1 $2/$3');
+    return s;
   }
 
   function nodeLabel(dict, id, lang) {
@@ -893,7 +915,7 @@
     aliasIds, candidateInfo, rankCandidates, resolveAlias, resolveTag, ensureTag,
     collectMatches, collectPrefix,
     getAncestorPath, pathLabel, getSiblingNodes, getChildren, listNodes, searchNodes,
-    searchTags, bumpWeight, renderNode, renderTag, renderBehavior, nodeLabel, validateDict,
+    searchTags, bumpWeight, renderNode, renderTag, renderBehavior, maskNote, nodeLabel, validateDict,
     uniqueAliases, displayCode,
   };
 
