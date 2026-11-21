@@ -1324,14 +1324,14 @@ html[data-theme="paper"] .cm-s-txtvein .cm-atom { color: var(--tv-date) !importa
 html[data-theme="paper"] .cm-s-txtvein .cm-variable,
 html[data-theme="paper"] .cm-s-txtvein .cm-variable-2,
 html[data-theme="paper"] .cm-s-txtvein .cm-def,
-html[data-theme="paper"] .cm-s-txtvein .cm-tag { color: var(--tv-node) !important; }
+html[data-theme="paper"] .cm-s-txtvein .cm-tag { color: var(--tv-node-name) !important; }
 html[data-theme="paper"] .cm-s-txtvein .cm-keyword,
 html[data-theme="paper"] .cm-s-txtvein .cm-string,
 html[data-theme="paper"] .cm-s-txtvein .cm-meta { color: #6a4f2a !important; }
 html[data-theme="paper"] .cm-s-txtvein .cm-operator { color: var(--tv-operator) !important; }
 html[data-theme="paper"] .cm-s-txtvein .cm-error { color: var(--tv-invalid) !important; }
-html[data-theme="paper"] .cm-s-txtvein .tv-def { color: #2b2924 !important; }
-html[data-theme="paper"] .cm-s-txtvein .tv-link { color: var(--tv-node) !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-def:not(.cm-dict-en):not(.cm-dict-cat):not(.cm-node-code):not(.cm-node-name):not(.cm-tag-code):not(.cm-tag-name) { color: #2b2924 !important; }
+html[data-theme="paper"] .cm-s-txtvein .tv-link:not(.cm-dict-en):not(.cm-dict-cat):not(.cm-node-code):not(.cm-node-name):not(.cm-tag-code):not(.cm-tag-name) { color: var(--tv-node-code) !important; }
 html[data-theme="paper"] .cm-s-txtvein .tv-unknown { color: var(--tv-invalid) !important; }
 html[data-theme="paper"] .cm-s-txtvein .tv-error { color: var(--tv-invalid) !important; background: rgba(138, 63, 63, 0.08) !important; }
 html[data-theme="paper"] .cm-s-txtvein .cm-invalid-line { background: rgba(138, 63, 63, 0.06) !important; }
@@ -2676,8 +2676,8 @@ html[data-theme="paper"] .composer .entry::placeholder { color: #5f5a4e !importa
 }
 
 
-.cm-s-txtvein .tv-def { color: #D4D4D4 !important; }
-.cm-s-txtvein .tv-link { color: #4EC9B0 !important; }
+.cm-s-txtvein .tv-def:not(.cm-dict-en):not(.cm-dict-cat):not(.cm-node-code):not(.cm-node-name):not(.cm-tag-code):not(.cm-tag-name) { color: #D4D4D4 !important; }
+.cm-s-txtvein .tv-link:not(.cm-dict-en):not(.cm-dict-cat):not(.cm-node-code):not(.cm-node-name):not(.cm-tag-code):not(.cm-tag-name) { color: #4EC9B0 !important; }
 .cm-s-txtvein .tv-unknown { color: var(--tv-invalid) !important; }
 .cm-s-txtvein .tv-error {
   color: var(--tv-invalid) !important;
@@ -3258,7 +3258,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .cm-s-txtvein .cm-atom { color: #79c0ff !important; }
 .cm-s-txtvein .cm-number { color: #f2cc60 !important; }
 .cm-s-txtvein .cm-operator { color: var(--tv-operator) !important; }
-.cm-s-txtvein .cm-variable { color: #f2f2f2 !important; }
+.cm-s-txtvein .cm-variable { color: var(--tv-node-name) !important; }
 .cm-s-txtvein .cm-variable-2 { color: #7ee787 !important; }
 .cm-s-txtvein .cm-tag { color: #79c0ff !important; }
 .cm-s-txtvein .cm-string { color: #ffa657 !important; }
@@ -4026,26 +4026,38 @@ html[data-lang="en"] .stats-tab { font-size: 11.5px; }
 }
 @media (max-width: 900px) {
   .stats-split {
-    display: flex !important;
+    display: grid !important;
+    grid-auto-flow: column;
+    grid-auto-columns: 100%;
+    grid-template-columns: none !important;
+    grid-template-rows: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
   }
   .stats-split::-webkit-scrollbar { display: none; }
   .stats-gutter { display: none; }
   .stats-left, .stats-right, .stats-query {
-    flex: 0 0 100%;
     width: 100%;
-    height: auto;
-    align-self: stretch;
+    height: 100%;
+    min-width: 0;
     min-height: 0;
     border: 0;
+    align-self: stretch;
     scroll-snap-align: start;
   }
   .stats-left, .stats-right { overflow-y: auto; overflow-x: hidden; }
   .stats-query { display: flex !important; overflow: hidden; }
+  .stats-left .sd-row > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .stats-back { display: none; }
   .stats-right-head b { flex: 1 1 auto; }
   .stats-selected { display: none !important; }
@@ -4637,6 +4649,21 @@ button:focus:not(:focus-visible),
 .page-tab:focus:not(:focus-visible),
 .menu-btn:focus:not(:focus-visible) { outline: none; }
 
+@media (max-width: 900px) {
+  .stats-split { touch-action: pan-y; overscroll-behavior: contain; }
+}
+
+@media (max-width: 900px) {
+  .stats-left .stats-table { min-width: 0 !important; }
+  .stats-left .lst-group { min-width: 0; }
+}
+
+
+.stats-top,
+.stats-tabs-wrap,
+.q-head,
+.q-filters { background: #050505 !important; }
+
 </style>
 <style>
 /* css/paper.css */
@@ -5172,6 +5199,22 @@ html[data-theme="paper"] .editor-pane .CodeMirror-gutters,
 html[data-theme="paper"] .fixed-editor .CodeMirror-gutters {
   background: #f7f3e8 !important;
   border-right: 1px solid #d8d1c1 !important;
+}
+
+
+html[data-theme="paper"] .page-tab.is-active { background: #f7f3e8 !important; }
+html[data-theme="paper"] .editor-view,
+html[data-theme="paper"] .editor-shell,
+html[data-theme="paper"] .stats-page,
+html[data-theme="paper"] .query-view,
+html[data-theme="paper"] .fixed-view,
+html[data-theme="paper"] .report-view { background: #f7f3e8 !important; }
+html[data-theme="paper"] .stats-top,
+html[data-theme="paper"] .stats-tabs-wrap,
+html[data-theme="paper"] .q-head,
+html[data-theme="paper"] .q-filters {
+  background: #f7f3e8 !important;
+  border-color: #d8d1c1 !important;
 }
 
 </style>
@@ -21433,17 +21476,21 @@ const TAG_EN_DEFAULTS = {
       let enTail = false;
       let noteSection = false;
       let afterComma = false;
+      let field = 0;
+      let indent = 0;
       return {
         token(stream) {
           if (stream.sol()) {
             header = false;
             enTail = false;
             afterComma = false;
+            field = 0;
+            indent = String(stream.string || '').match(/^\s*/)[0].length;
           }
           if (stream.match(/^\/\//)) { stream.skipToEnd(); return 'comment'; }
           if (stream.match(/^(?:node|tag|item|alias)\b/i)) return 'keyword';
-          if (stream.match(/^\[(?:备注|Notes?)\]/i)) { noteSection = true; return 'type'; }
-          if (stream.match(/^\[(?:行为|Behaviors?)\]/i)) { noteSection = true; return 'type'; }
+          if (stream.match(/^\[(?:备注|Notes?)\]/i)) { noteSection = true; header = true; return 'type'; }
+          if (stream.match(/^\[(?:行为|Behaviors?)\]/i)) { noteSection = true; header = true; return 'type'; }
           if (stream.match(/^\[(?:资产|费用|成本|负债|收入|权益)[^\]]*\]/)) {
             noteSection = false; header = true; return 'type';
           }
@@ -21452,23 +21499,35 @@ const TAG_EN_DEFAULTS = {
           if (stream.sol() && stream.match(/^[PFCH](?=\s)/i)) return 'atom';
           if (stream.match(/^[，,]/)) {
             afterComma = true;
+            field += 1;
             if (/^\s*[A-Za-z]/.test(stream.string.slice(stream.pos))) enTail = true;
             return 'dict-en';
           }
           if (noteSection) {
             const first = /^\s*$/.test(stream.string.slice(0, stream.start));
-            if (afterComma) {
-              if (stream.match(/^[A-Za-z][A-Za-z0-9 _-]*/)) return 'dict-en';
-              if (stream.match(/^[\u4e00-\u9fff][\u4e00-\u9fffA-Za-z0-9_-]*/)) return 'tag-name';
-            } else {
+            if (field === 0) {
               if (stream.match(/^[A-Za-z0-9_-]+/)) return 'tag-code';
               if (stream.match(/^[\u4e00-\u9fff][\u4e00-\u9fffA-Za-z0-9_-]*/)) {
                 return first ? 'dict-cat' : 'tag-name';
               }
+            } else if (field === 1) {
+              if (stream.match(/^[^\s，,]+/)) return 'tag-name';
+            } else if (stream.match(/^[^\s，,]+/)) {
+              return 'dict-en';
             }
           }
-          if (/^\s*$/.test(stream.string.slice(0, stream.start))
+          if (header && stream.match(/^[A-Za-z][A-Za-z -]*/)) return 'dict-en';
+          if (field === 0 && indent === 0
+            && /^\s*$/.test(stream.string.slice(0, stream.start))
             && stream.match(/^[^\s，,]+/)) return 'dict-cat';
+          if (field === 1) {
+            if (stream.match(/^[^\s，,]+/)) return indent > 0 ? 'node-name' : 'dict-en';
+          }
+          if (field >= 2 && stream.match(/^[^\s，,]+/)) return 'dict-en';
+          if (field === 0) {
+            if (indent > 0 && stream.match(/^[A-Za-z0-9_-]+/)) return 'node-code';
+            if (stream.match(/^[^\s，,]+/)) return 'node-name';
+          }
           if ((header || enTail) && stream.match(/^[A-Za-z][A-Za-z -]*/)) return 'dict-en';
           if (stream.match(/^(?:资产|费用|成本|负债|收入|权益)\b/)) return 'type';
           if (stream.match(/^(?:fluid|ice|steam|outside|plain|gain|suppress|time)\b/i)) return 'atom';
@@ -28701,6 +28760,41 @@ const TAG_EN_DEFAULTS = {
   function statsNodeLabel(id) { return TV.dict.renderNode(S.dict, id, S.mode, S.lang); }
   function statsTypeLabel(type) { return S.lang === 'en' ? (STAT_TYPE_EN[type] || type) : type; }
 
+  function bindStatsTouch(split, left, right, queryAside) {
+    let start = null;
+    split.addEventListener('touchstart', (ev) => {
+      if (!ev.touches || ev.touches.length !== 1) return;
+      const t = ev.target;
+      if (t.closest && t.closest('input,textarea,select,button,.col-grip,.q-col-handle')) return;
+      const pane = t.closest ? t.closest('.stats-left,.stats-right,.stats-query') : null;
+      if (!pane) return;
+      const scroller = pane.classList.contains('stats-query')
+        ? (pane.querySelector('.q-table') || pane) : pane;
+      start = {
+        x: ev.touches[0].clientX, y: ev.touches[0].clientY,
+        sl: split.scrollLeft, st: scroller.scrollTop, scroller, moved: false,
+      };
+    }, { passive: true });
+    split.addEventListener('touchmove', (ev) => {
+      if (!start || !ev.touches || ev.touches.length !== 1) return;
+      const dx = ev.touches[0].clientX - start.x;
+      const dy = ev.touches[0].clientY - start.y;
+      if (!start.moved && Math.abs(dx) + Math.abs(dy) < 6) return;
+      start.moved = true;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        if (start.scroller.scrollHeight > start.scroller.clientHeight) {
+          start.scroller.scrollTop = start.st - dy;
+          ev.preventDefault();
+        }
+      } else {
+        split.scrollLeft = start.sl - dx;
+        ev.preventDefault();
+      }
+    }, { passive: false });
+    split.addEventListener('touchend', () => { start = null; });
+    split.addEventListener('touchcancel', () => { start = null; });
+  }
+
   function statsTable(headers, rows, template, opts) {
     const o = opts || {};
     const nums = o.numCols || [];
@@ -28776,6 +28870,13 @@ const TAG_EN_DEFAULTS = {
     return wrap;
   }
 
+  function statsFiveColTemplate() {
+    if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+      return 'minmax(0, 1.35fr) repeat(4, minmax(0, 1fr))';
+    }
+    return 'var(--stats-first, 80px) repeat(4,minmax(0,1fr))';
+  }
+
   function statsGroupTable(host, group, firstLabel, kind) {
     const fields = TV.stats.FIELDS;
     const headers = [firstLabel].concat(fields.map((f, i) => statsColLabel(group.type, i)));
@@ -28787,12 +28888,12 @@ const TAG_EN_DEFAULTS = {
         .concat(fields.map((f) => statsCellMoney(r[f], group.type, f))),
     }));
     const section = el('section', { class: 'lst-group' });
-    section.appendChild(statsTable(headers, rows, 'var(--stats-first, 80px) repeat(4,minmax(0,1fr))', {
+    section.appendChild(statsTable(headers, rows, statsFiveColTemplate(), {
       numCols: [1, 2, 3, 4],
       resizable: true,
       selected: S.stats.selected,
       total,
-      onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; renderStatsPage(); },
+      onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; S.stats.mobilePane = 1; renderStatsPage(); },
     }));
     host.appendChild(section);
   }
@@ -28820,7 +28921,7 @@ const TAG_EN_DEFAULTS = {
       cells: [statsTagLabel(id), String(x.n), statsMoney(x.cents)],
     }));
     host.appendChild(statsTable(S.lang === 'en' ? ['Tag', 'Count', 'Amount'] : ['标签', '次数', '金额'], rows, 'var(--stats-first, 90px) 52px 90px',
-      { numCols: [2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; renderStatsPage(); } }));
+      { numCols: [2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; S.stats.mobilePane = 1; renderStatsPage(); } }));
   }
 
   function statsLeftEvent(host, range) {
@@ -28840,7 +28941,7 @@ const TAG_EN_DEFAULTS = {
       cells: [TV.dict.renderBehavior(S.dict, id, S.mode, S.lang), String(x.n), String(x.weight)],
     }));
     host.appendChild(statsTable(S.lang === 'en' ? ['Item', 'Count', 'Weight'] : ['行为项', '次数', '强度'], rows, 'var(--stats-first, 90px) 52px 58px',
-      { numCols: [1, 2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; renderStatsPage(); } }));
+      { numCols: [1, 2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; S.stats.mobilePane = 1; renderStatsPage(); } }));
   }
 
   function statsRightEvents(selected, range) {
@@ -28980,7 +29081,7 @@ const TAG_EN_DEFAULTS = {
     if (!cand) return;
     S.stats.selected = cand.id;
     S.stats.search = '';
-    S.stats.pane = 'detail';
+    S.stats.pane = 'detail'; S.stats.mobilePane = 1;
     renderStatsPage();
   }
 
@@ -29005,7 +29106,7 @@ const TAG_EN_DEFAULTS = {
   }
 
   function renderStatsPage() {
-    if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', search: '', split: 380 };
+    if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', search: '', split: 380, mobilePane: 0 };
     /* 只记左表宽度；中间 / 查询两表永远平分剩余宽度。 */
     const savedLeft = Number(localStorage.getItem('txtvein:stats-left'));
     if (Number.isFinite(savedLeft) && savedLeft >= 150) S.stats.split = savedLeft;
@@ -29037,7 +29138,7 @@ const TAG_EN_DEFAULTS = {
       S.stats.year = y;
       S.stats.selected = '';
       S.stats.search = '';
-      S.stats.pane = 'list';
+      S.stats.pane = 'list'; S.stats.mobilePane = 0;
       renderStatsPage();
     };
     yearInput.addEventListener('change', applyYear);
@@ -29048,7 +29149,7 @@ const TAG_EN_DEFAULTS = {
     const tabs = el('div', { class: 'stats-tabs' });
     STAT_TABS.forEach((tab) => {
       const b = el('button', { class: 'stats-tab' + (S.stats.tab === tab.id ? ' is-active' : ''), type: 'button' }, [t(tab.label)]);
-      b.addEventListener('click', () => { S.stats.tab = tab.id; S.stats.selected = ''; S.stats.search = ''; S.stats.pane = 'list'; renderStatsPage(); });
+      b.addEventListener('click', () => { S.stats.tab = tab.id; S.stats.selected = ''; S.stats.search = ''; S.stats.pane = 'list'; S.stats.mobilePane = 0; renderStatsPage(); });
       tabs.appendChild(b);
     });
     tabsWrap.appendChild(tabs);
@@ -29061,7 +29162,7 @@ const TAG_EN_DEFAULTS = {
         S.stats.month = Number(S.stats.month) === m ? 0 : m;
         S.stats.selected = '';
         S.stats.search = '';
-        S.stats.pane = 'list';
+        S.stats.pane = 'list'; S.stats.mobilePane = 0;
         renderStatsPage();
       });
       months.appendChild(b);
@@ -29090,7 +29191,7 @@ const TAG_EN_DEFAULTS = {
     const rh = el('div', { class: 'stats-right-head' });
     const back = el('button', { class: 'stats-back', type: 'button' }, ['‹ 返回']);
     back.addEventListener('click', () => {
-      S.stats.pane = 'list';
+      S.stats.pane = 'list'; S.stats.mobilePane = 0;
       S.stats.selected = '';
       S.stats.search = '';
       renderStatsPage();
@@ -29146,7 +29247,7 @@ const TAG_EN_DEFAULTS = {
       /* 一开始输入就退出选中并显示匹配候选，不必先点清空。 */
       if (S.stats.selected) {
         S.stats.selected = '';
-        S.stats.pane = 'list';
+        S.stats.pane = 'list'; S.stats.mobilePane = 0;
         left.querySelectorAll('.sd-row.is-active').forEach((row) => row.classList.remove('is-active'));
       }
       paintSelected();
@@ -29167,7 +29268,7 @@ const TAG_EN_DEFAULTS = {
     clearBtn.addEventListener('click', () => {
       S.stats.selected = '';
       S.stats.search = '';
-      S.stats.pane = 'list';
+      S.stats.pane = 'list'; S.stats.mobilePane = 0;
       search.value = '';
       left.querySelectorAll('.sd-row.is-active').forEach((row) => row.classList.remove('is-active'));
       paintSelected();
@@ -29183,6 +29284,7 @@ const TAG_EN_DEFAULTS = {
     /* 第三区：与「流水查询」同一个面板组件，单张、不占 A/B/C。
        它有独立的条件状态（S.statsQuery），默认本月。 */
     buildQueryPanel(queryAside, { key: 'Q', title: t('ledgerQuery') }, S.statsQuery, 0, { scope: 'stats' });
+    bindStatsTouch(split, left, right, queryAside);
 
     const setSplit = (lw) => {
       split.style.gridTemplateColumns = Math.round(lw) + 'px 5px minmax(200px, 1fr) minmax(200px, 1fr)';
@@ -29215,12 +29317,25 @@ const TAG_EN_DEFAULTS = {
       requestAnimationFrame(() => TV.queryLayout.refit());
     }
 
-    /* 手机上三栏横向滑动；点左表进入中间时滚到对应栏。 */
+    /* 手机上三栏横向滑动；保留当前页，切换明文/掩码时不跳回第一页。 */
     if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
-      const target = S.stats.pane === 'detail' ? right : left;
+      split.addEventListener('scroll', () => {
+        if (!split.clientWidth) return;
+        S.stats.mobilePane = Math.max(0, Math.min(2, Math.round(split.scrollLeft / split.clientWidth)));
+      }, { passive: true });
+      const idx = Math.max(0, Math.min(2, Number(S.stats.mobilePane) || 0));
       requestAnimationFrame(() => {
-        try { split.scrollTo({ left: target.offsetLeft, behavior: 'auto' }); } catch (e) { /* ignore */ }
+        split.scrollTo({ left: idx * split.clientWidth, behavior: 'auto' });
+        if (window.__statsFit) window.removeEventListener('resize', window.__statsFit);
+        window.__statsFit = () => {
+          const top = split.getBoundingClientRect().top;
+          split.style.height = Math.max(120, Math.round(window.innerHeight - top)) + 'px';
+        };
+        window.__statsFit();
+        window.addEventListener('resize', window.__statsFit);
       });
+    } else {
+      split.style.height = '';
     }
   }
 

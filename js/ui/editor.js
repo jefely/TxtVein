@@ -65,17 +65,21 @@
       let enTail = false;
       let noteSection = false;
       let afterComma = false;
+      let field = 0;
+      let indent = 0;
       return {
         token(stream) {
           if (stream.sol()) {
             header = false;
             enTail = false;
             afterComma = false;
+            field = 0;
+            indent = String(stream.string || '').match(/^\s*/)[0].length;
           }
           if (stream.match(/^\/\//)) { stream.skipToEnd(); return 'comment'; }
           if (stream.match(/^(?:node|tag|item|alias)\b/i)) return 'keyword';
-          if (stream.match(/^\[(?:备注|Notes?)\]/i)) { noteSection = true; return 'type'; }
-          if (stream.match(/^\[(?:行为|Behaviors?)\]/i)) { noteSection = true; return 'type'; }
+          if (stream.match(/^\[(?:备注|Notes?)\]/i)) { noteSection = true; header = true; return 'type'; }
+          if (stream.match(/^\[(?:行为|Behaviors?)\]/i)) { noteSection = true; header = true; return 'type'; }
           if (stream.match(/^\[(?:资产|费用|成本|负债|收入|权益)[^\]]*\]/)) {
             noteSection = false; header = true; return 'type';
           }
@@ -84,23 +88,35 @@
           if (stream.sol() && stream.match(/^[PFCH](?=\s)/i)) return 'atom';
           if (stream.match(/^[，,]/)) {
             afterComma = true;
+            field += 1;
             if (/^\s*[A-Za-z]/.test(stream.string.slice(stream.pos))) enTail = true;
             return 'dict-en';
           }
           if (noteSection) {
             const first = /^\s*$/.test(stream.string.slice(0, stream.start));
-            if (afterComma) {
-              if (stream.match(/^[A-Za-z][A-Za-z0-9 _-]*/)) return 'dict-en';
-              if (stream.match(/^[\u4e00-\u9fff][\u4e00-\u9fffA-Za-z0-9_-]*/)) return 'tag-name';
-            } else {
+            if (field === 0) {
               if (stream.match(/^[A-Za-z0-9_-]+/)) return 'tag-code';
               if (stream.match(/^[\u4e00-\u9fff][\u4e00-\u9fffA-Za-z0-9_-]*/)) {
                 return first ? 'dict-cat' : 'tag-name';
               }
+            } else if (field === 1) {
+              if (stream.match(/^[^\s，,]+/)) return 'tag-name';
+            } else if (stream.match(/^[^\s，,]+/)) {
+              return 'dict-en';
             }
           }
-          if (/^\s*$/.test(stream.string.slice(0, stream.start))
+          if (header && stream.match(/^[A-Za-z][A-Za-z -]*/)) return 'dict-en';
+          if (field === 0 && indent === 0
+            && /^\s*$/.test(stream.string.slice(0, stream.start))
             && stream.match(/^[^\s，,]+/)) return 'dict-cat';
+          if (field === 1) {
+            if (stream.match(/^[^\s，,]+/)) return indent > 0 ? 'node-name' : 'dict-en';
+          }
+          if (field >= 2 && stream.match(/^[^\s，,]+/)) return 'dict-en';
+          if (field === 0) {
+            if (indent > 0 && stream.match(/^[A-Za-z0-9_-]+/)) return 'node-code';
+            if (stream.match(/^[^\s，,]+/)) return 'node-name';
+          }
           if ((header || enTail) && stream.match(/^[A-Za-z][A-Za-z -]*/)) return 'dict-en';
           if (stream.match(/^(?:资产|费用|成本|负债|收入|权益)\b/)) return 'type';
           if (stream.match(/^(?:fluid|ice|steam|outside|plain|gain|suppress|time)\b/i)) return 'atom';

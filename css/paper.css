@@ -540,3 +540,19 @@ html[data-theme="paper"] .fixed-editor .CodeMirror-gutters {
   background: #f7f3e8 !important;
   border-right: 1px solid #d8d1c1 !important;
 }
+
+/* 纸主题：激活页签、主窗口、统计/查询顶部两行同底色 */
+html[data-theme="paper"] .page-tab.is-active { background: #f7f3e8 !important; }
+html[data-theme="paper"] .editor-view,
+html[data-theme="paper"] .editor-shell,
+html[data-theme="paper"] .stats-page,
+html[data-theme="paper"] .query-view,
+html[data-theme="paper"] .fixed-view,
+html[data-theme="paper"] .report-view { background: #f7f3e8 !important; }
+html[data-theme="paper"] .stats-top,
+html[data-theme="paper"] .stats-tabs-wrap,
+html[data-theme="paper"] .q-head,
+html[data-theme="paper"] .q-filters {
+  background: #f7f3e8 !important;
+  border-color: #d8d1c1 !important;
+}

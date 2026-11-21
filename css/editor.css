@@ -195,8 +195,8 @@
 }
 
 /* 语义层：识别成功=亮（像运算符），链接=青，未识别=灰白，坏行=波浪线 */
-.cm-s-txtvein .tv-def { color: #D4D4D4 !important; }
-.cm-s-txtvein .tv-link { color: #4EC9B0 !important; }
+.cm-s-txtvein .tv-def:not(.cm-dict-en):not(.cm-dict-cat):not(.cm-node-code):not(.cm-node-name):not(.cm-tag-code):not(.cm-tag-name) { color: #D4D4D4 !important; }
+.cm-s-txtvein .tv-link:not(.cm-dict-en):not(.cm-dict-cat):not(.cm-node-code):not(.cm-node-name):not(.cm-tag-code):not(.cm-tag-name) { color: #4EC9B0 !important; }
 .cm-s-txtvein .tv-unknown { color: var(--tv-invalid) !important; }
 .cm-s-txtvein .tv-error {
   color: var(--tv-invalid) !important;
@@ -779,7 +779,7 @@ body, .app, .main, .editor-view, .query-view, .fixed-view, .report-view { backgr
 .cm-s-txtvein .cm-atom { color: #79c0ff !important; }
 .cm-s-txtvein .cm-number { color: #f2cc60 !important; }
 .cm-s-txtvein .cm-operator { color: var(--tv-operator) !important; }
-.cm-s-txtvein .cm-variable { color: #f2f2f2 !important; }
+.cm-s-txtvein .cm-variable { color: var(--tv-node-name) !important; }
 .cm-s-txtvein .cm-variable-2 { color: #7ee787 !important; }
 .cm-s-txtvein .cm-tag { color: #79c0ff !important; }
 .cm-s-txtvein .cm-string { color: #ffa657 !important; }
@@ -1550,26 +1550,38 @@ html[data-lang="en"] .stats-tab { font-size: 11.5px; }
 }
 @media (max-width: 900px) {
   .stats-split {
-    display: flex !important;
+    display: grid !important;
+    grid-auto-flow: column;
+    grid-auto-columns: 100%;
+    grid-template-columns: none !important;
+    grid-template-rows: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
   }
   .stats-split::-webkit-scrollbar { display: none; }
   .stats-gutter { display: none; }
   .stats-left, .stats-right, .stats-query {
-    flex: 0 0 100%;
     width: 100%;
-    height: auto;
-    align-self: stretch;
+    height: 100%;
+    min-width: 0;
     min-height: 0;
     border: 0;
+    align-self: stretch;
     scroll-snap-align: start;
   }
   .stats-left, .stats-right { overflow-y: auto; overflow-x: hidden; }
   .stats-query { display: flex !important; overflow: hidden; }
+  .stats-left .sd-row > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .stats-back { display: none; }
   .stats-right-head b { flex: 1 1 auto; }
   .stats-selected { display: none !important; }
@@ -2165,3 +2177,18 @@ body.s-col-resizing { cursor: col-resize; user-select: none; }
 button:focus:not(:focus-visible),
 .page-tab:focus:not(:focus-visible),
 .menu-btn:focus:not(:focus-visible) { outline: none; }
+
+@media (max-width: 900px) {
+  .stats-split { touch-action: pan-y; overscroll-behavior: contain; }
+}
+
+@media (max-width: 900px) {
+  .stats-left .stats-table { min-width: 0 !important; }
+  .stats-left .lst-group { min-width: 0; }
+}
+
+/* 页签激活色 = 主窗口 / 统计与查询顶部两行的底色（深色） */
+.stats-top,
+.stats-tabs-wrap,
+.q-head,
+.q-filters { background: #050505 !important; }

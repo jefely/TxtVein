@@ -22,7 +22,7 @@
 
 ```text
 D:\myproject\TxtVein\
-├─ TxtVein.html          1,529.2 KB 单文件成品（内置 Cascadia Code 字体）
+├─ TxtVein.html          1,534.2 KB 单文件成品（内置 Cascadia Code 字体）
 ├─ index.html            开发入口
 ├─ css/ (6)              base / ledger / report / panels / editor / paper
 ├─ js/core/ (33)         text/pinyin/system-dict-core/system-dict/user-dict/
@@ -49,7 +49,7 @@ D:\myproject\TxtVein\
 
 | 项 | 现状 |
 |---|---|
-| 单文件 | `TxtVein.html` **1,529.2 KB**；零外链、零 CDN；字体 base64 内嵌 |
+| 单文件 | `TxtVein.html` **1,534.2 KB**；零外链、零 CDN；字体 base64 内嵌 |
 | 数据事实 | 后台 ID 图；编辑器文本是投影 + 手稿；ID 不出现在 UI |
 | 源码编辑器 | 流水 `ledger.tv` / 字典 `dict.tv` 双 CM5；行号、高亮、单波浪线（只标出错 token）、补全、运算符工具条 |
 | 相对日期 | 输入框 `-1/-2` 提交时固化；直接编辑在日期 token 后按空格立即固化；`0/+1` 同理 |
@@ -85,7 +85,7 @@ D:\myproject\TxtVein\
 
 ```text
 node --test tests/*.test.cjs             285 pass / 0 fail
-node tools/build.cjs                     TxtVein.html 1,529.2 KB
+node tools/build.cjs                     TxtVein.html 1,534.2 KB
 node tools/check.cjs                     198 pass / 0 fail
 python tools/e2e.py    (http://8899)     119 pass / E2E PASSED
 python tools/e2e_v4.py (http://8899)     64 pass / E2E v4 PASSED

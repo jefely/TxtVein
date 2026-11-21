@@ -2084,6 +2084,41 @@
   function statsNodeLabel(id) { return TV.dict.renderNode(S.dict, id, S.mode, S.lang); }
   function statsTypeLabel(type) { return S.lang === 'en' ? (STAT_TYPE_EN[type] || type) : type; }
 
+  function bindStatsTouch(split, left, right, queryAside) {
+    let start = null;
+    split.addEventListener('touchstart', (ev) => {
+      if (!ev.touches || ev.touches.length !== 1) return;
+      const t = ev.target;
+      if (t.closest && t.closest('input,textarea,select,button,.col-grip,.q-col-handle')) return;
+      const pane = t.closest ? t.closest('.stats-left,.stats-right,.stats-query') : null;
+      if (!pane) return;
+      const scroller = pane.classList.contains('stats-query')
+        ? (pane.querySelector('.q-table') || pane) : pane;
+      start = {
+        x: ev.touches[0].clientX, y: ev.touches[0].clientY,
+        sl: split.scrollLeft, st: scroller.scrollTop, scroller, moved: false,
+      };
+    }, { passive: true });
+    split.addEventListener('touchmove', (ev) => {
+      if (!start || !ev.touches || ev.touches.length !== 1) return;
+      const dx = ev.touches[0].clientX - start.x;
+      const dy = ev.touches[0].clientY - start.y;
+      if (!start.moved && Math.abs(dx) + Math.abs(dy) < 6) return;
+      start.moved = true;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        if (start.scroller.scrollHeight > start.scroller.clientHeight) {
+          start.scroller.scrollTop = start.st - dy;
+          ev.preventDefault();
+        }
+      } else {
+        split.scrollLeft = start.sl - dx;
+        ev.preventDefault();
+      }
+    }, { passive: false });
+    split.addEventListener('touchend', () => { start = null; });
+    split.addEventListener('touchcancel', () => { start = null; });
+  }
+
   function statsTable(headers, rows, template, opts) {
     const o = opts || {};
     const nums = o.numCols || [];
@@ -2159,6 +2194,13 @@
     return wrap;
   }
 
+  function statsFiveColTemplate() {
+    if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+      return 'minmax(0, 1.35fr) repeat(4, minmax(0, 1fr))';
+    }
+    return 'var(--stats-first, 80px) repeat(4,minmax(0,1fr))';
+  }
+
   function statsGroupTable(host, group, firstLabel, kind) {
     const fields = TV.stats.FIELDS;
     const headers = [firstLabel].concat(fields.map((f, i) => statsColLabel(group.type, i)));
@@ -2170,12 +2212,12 @@
         .concat(fields.map((f) => statsCellMoney(r[f], group.type, f))),
     }));
     const section = el('section', { class: 'lst-group' });
-    section.appendChild(statsTable(headers, rows, 'var(--stats-first, 80px) repeat(4,minmax(0,1fr))', {
+    section.appendChild(statsTable(headers, rows, statsFiveColTemplate(), {
       numCols: [1, 2, 3, 4],
       resizable: true,
       selected: S.stats.selected,
       total,
-      onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; renderStatsPage(); },
+      onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; S.stats.mobilePane = 1; renderStatsPage(); },
     }));
     host.appendChild(section);
   }
@@ -2203,7 +2245,7 @@
       cells: [statsTagLabel(id), String(x.n), statsMoney(x.cents)],
     }));
     host.appendChild(statsTable(S.lang === 'en' ? ['Tag', 'Count', 'Amount'] : ['标签', '次数', '金额'], rows, 'var(--stats-first, 90px) 52px 90px',
-      { numCols: [2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; renderStatsPage(); } }));
+      { numCols: [2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; S.stats.mobilePane = 1; renderStatsPage(); } }));
   }
 
   function statsLeftEvent(host, range) {
@@ -2223,7 +2265,7 @@
       cells: [TV.dict.renderBehavior(S.dict, id, S.mode, S.lang), String(x.n), String(x.weight)],
     }));
     host.appendChild(statsTable(S.lang === 'en' ? ['Item', 'Count', 'Weight'] : ['行为项', '次数', '强度'], rows, 'var(--stats-first, 90px) 52px 58px',
-      { numCols: [1, 2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; renderStatsPage(); } }));
+      { numCols: [1, 2], resizable: true, selected: S.stats.selected, onClick: (row) => { S.stats.selected = row.id; S.stats.search = ''; S.stats.pane = 'detail'; S.stats.mobilePane = 1; renderStatsPage(); } }));
   }
 
   function statsRightEvents(selected, range) {
@@ -2363,7 +2405,7 @@
     if (!cand) return;
     S.stats.selected = cand.id;
     S.stats.search = '';
-    S.stats.pane = 'detail';
+    S.stats.pane = 'detail'; S.stats.mobilePane = 1;
     renderStatsPage();
   }
 
@@ -2388,7 +2430,7 @@
   }
 
   function renderStatsPage() {
-    if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', search: '', split: 380 };
+    if (!S.stats) S.stats = { tab: 'category', month: new Date().getMonth() + 1, selected: '', search: '', split: 380, mobilePane: 0 };
     /* 只记左表宽度；中间 / 查询两表永远平分剩余宽度。 */
     const savedLeft = Number(localStorage.getItem('txtvein:stats-left'));
     if (Number.isFinite(savedLeft) && savedLeft >= 150) S.stats.split = savedLeft;
@@ -2420,7 +2462,7 @@
       S.stats.year = y;
       S.stats.selected = '';
       S.stats.search = '';
-      S.stats.pane = 'list';
+      S.stats.pane = 'list'; S.stats.mobilePane = 0;
       renderStatsPage();
     };
     yearInput.addEventListener('change', applyYear);
@@ -2431,7 +2473,7 @@
     const tabs = el('div', { class: 'stats-tabs' });
     STAT_TABS.forEach((tab) => {
       const b = el('button', { class: 'stats-tab' + (S.stats.tab === tab.id ? ' is-active' : ''), type: 'button' }, [t(tab.label)]);
-      b.addEventListener('click', () => { S.stats.tab = tab.id; S.stats.selected = ''; S.stats.search = ''; S.stats.pane = 'list'; renderStatsPage(); });
+      b.addEventListener('click', () => { S.stats.tab = tab.id; S.stats.selected = ''; S.stats.search = ''; S.stats.pane = 'list'; S.stats.mobilePane = 0; renderStatsPage(); });
       tabs.appendChild(b);
     });
     tabsWrap.appendChild(tabs);
@@ -2444,7 +2486,7 @@
         S.stats.month = Number(S.stats.month) === m ? 0 : m;
         S.stats.selected = '';
         S.stats.search = '';
-        S.stats.pane = 'list';
+        S.stats.pane = 'list'; S.stats.mobilePane = 0;
         renderStatsPage();
       });
       months.appendChild(b);
@@ -2473,7 +2515,7 @@
     const rh = el('div', { class: 'stats-right-head' });
     const back = el('button', { class: 'stats-back', type: 'button' }, ['‹ 返回']);
     back.addEventListener('click', () => {
-      S.stats.pane = 'list';
+      S.stats.pane = 'list'; S.stats.mobilePane = 0;
       S.stats.selected = '';
       S.stats.search = '';
       renderStatsPage();
@@ -2529,7 +2571,7 @@
       /* 一开始输入就退出选中并显示匹配候选，不必先点清空。 */
       if (S.stats.selected) {
         S.stats.selected = '';
-        S.stats.pane = 'list';
+        S.stats.pane = 'list'; S.stats.mobilePane = 0;
         left.querySelectorAll('.sd-row.is-active').forEach((row) => row.classList.remove('is-active'));
       }
       paintSelected();
@@ -2550,7 +2592,7 @@
     clearBtn.addEventListener('click', () => {
       S.stats.selected = '';
       S.stats.search = '';
-      S.stats.pane = 'list';
+      S.stats.pane = 'list'; S.stats.mobilePane = 0;
       search.value = '';
       left.querySelectorAll('.sd-row.is-active').forEach((row) => row.classList.remove('is-active'));
       paintSelected();
@@ -2566,6 +2608,7 @@
     /* 第三区：与「流水查询」同一个面板组件，单张、不占 A/B/C。
        它有独立的条件状态（S.statsQuery），默认本月。 */
     buildQueryPanel(queryAside, { key: 'Q', title: t('ledgerQuery') }, S.statsQuery, 0, { scope: 'stats' });
+    bindStatsTouch(split, left, right, queryAside);
 
     const setSplit = (lw) => {
       split.style.gridTemplateColumns = Math.round(lw) + 'px 5px minmax(200px, 1fr) minmax(200px, 1fr)';
@@ -2598,12 +2641,25 @@
       requestAnimationFrame(() => TV.queryLayout.refit());
     }
 
-    /* 手机上三栏横向滑动；点左表进入中间时滚到对应栏。 */
+    /* 手机上三栏横向滑动；保留当前页，切换明文/掩码时不跳回第一页。 */
     if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
-      const target = S.stats.pane === 'detail' ? right : left;
+      split.addEventListener('scroll', () => {
+        if (!split.clientWidth) return;
+        S.stats.mobilePane = Math.max(0, Math.min(2, Math.round(split.scrollLeft / split.clientWidth)));
+      }, { passive: true });
+      const idx = Math.max(0, Math.min(2, Number(S.stats.mobilePane) || 0));
       requestAnimationFrame(() => {
-        try { split.scrollTo({ left: target.offsetLeft, behavior: 'auto' }); } catch (e) { /* ignore */ }
+        split.scrollTo({ left: idx * split.clientWidth, behavior: 'auto' });
+        if (window.__statsFit) window.removeEventListener('resize', window.__statsFit);
+        window.__statsFit = () => {
+          const top = split.getBoundingClientRect().top;
+          split.style.height = Math.max(120, Math.round(window.innerHeight - top)) + 'px';
+        };
+        window.__statsFit();
+        window.addEventListener('resize', window.__statsFit);
       });
+    } else {
+      split.style.height = '';
     }
   }
 
