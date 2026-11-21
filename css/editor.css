@@ -1560,7 +1560,7 @@ html[data-lang="en"] .stats-tab { font-size: 11.5px; }
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    touch-action: pan-y;
+    touch-action: pan-x pan-y;
     overscroll-behavior: contain;
   }
   .stats-split::-webkit-scrollbar { display: none; }
@@ -2179,7 +2179,7 @@ button:focus:not(:focus-visible),
 .menu-btn:focus:not(:focus-visible) { outline: none; }
 
 @media (max-width: 900px) {
-  .stats-split { touch-action: pan-y; overscroll-behavior: contain; }
+  .stats-split { touch-action: pan-x pan-y; overscroll-behavior: contain; }
 }
 
 @media (max-width: 900px) {

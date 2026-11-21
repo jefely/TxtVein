@@ -2110,10 +2110,8 @@
           start.scroller.scrollTop = start.st - dy;
           ev.preventDefault();
         }
-      } else {
-        split.scrollLeft = start.sl - dx;
-        ev.preventDefault();
       }
+      /* 横向不接管：交给原生 overflow + scroll-snap，保留查询页同款滑动动画。 */
     }, { passive: false });
     split.addEventListener('touchend', () => { start = null; });
     split.addEventListener('touchcancel', () => { start = null; });
